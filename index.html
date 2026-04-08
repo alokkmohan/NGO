@@ -689,6 +689,7 @@ async function doLogin(){
     const res  = await apiFetch({action:'login', email, password:pass});
     if(res.success){
       currentUser = res.user;
+      localStorage.setItem('ngo_session', JSON.stringify(currentUser));
       await loadSheetData();
       startApp();
     } else {
@@ -710,7 +711,8 @@ function doSignup(){
 }
 
 function doLogout(){
-  currentUser=null;
+  currentUser = null;
+  localStorage.removeItem('ngo_session');
   document.getElementById('main-screen').style.display='none';
   document.getElementById('auth-screen').style.display='flex';
 }
@@ -1444,9 +1446,24 @@ function generateReport(){
 }
 
 // ════════════════════════════════════
-// INIT
 // ════════════════════════════════════
-document.getElementById('tb-date').textContent=new Date().toLocaleDateString('en-IN',{day:'numeric',month:'long',year:'numeric'});
+// INIT — restore session on page load
+// ════════════════════════════════════
+(async function(){
+  const saved = localStorage.getItem('ngo_session');
+  if(saved){
+    try {
+      currentUser = JSON.parse(saved);
+      showLoader('Restoring session…');
+      await loadSheetData();
+      hideLoader();
+      initApp();
+    } catch(e){
+      localStorage.removeItem('ngo_session');
+      hideLoader();
+    }
+  }
+})();
 </script>
 </body>
 </html>
