@@ -255,8 +255,14 @@ tr:hover td{background:#FAFBFF}
       <div class="wform-group"><label>Districts of operation <span>*</span></label>
         <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;max-height:160px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:10px" id="dist-checks"></div>
       </div>
-      <div class="wform-group" style="margin-top:12px"><label>Thematic focus areas <span>*</span></label>
-        <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px" id="theme-checks"></div>
+      <div class="wform-group" style="margin-top:12px"><label>Thematic focus area <span>*</span></label>
+        <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px" id="theme-checks"></div>
+        <div style="margin-top:10px;display:flex;align-items:center;gap:8px">
+          <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;font-weight:600;color:var(--blue)">
+            <input type="checkbox" id="theme-other-chk" style="width:13px;height:13px" onchange="document.getElementById('theme-other-input').style.display=this.checked?'block':'none'"> Other (specify)
+          </label>
+        </div>
+        <input id="theme-other-input" style="display:none;margin-top:6px;width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px" placeholder="Enter your thematic focus area">
       </div>
       <div class="wform-group"><label>Programme / project name</label><input id="pf-prog" placeholder="e.g. Girls Education Initiative Phase II"></div>
       <div class="wizard-nav">
@@ -586,7 +592,19 @@ const UP_DISTRICTS = [
   'Sitapur','Sonbhadra','Sultanpur','Unnao','Varanasi'
 ];
 
-const THEMES = ['Girls Education','ICT/Digital','Community Engagement','Literacy','Inclusion (SC/ST/Divyang)','Teacher Training','Infrastructure'];
+// PAB (Programme Advisory Board) approved thematic areas
+const THEMES = [
+  'Girls Retention & Enrolment',
+  'Literacy & Learning Outcomes',
+  'ICT / Digital Education',
+  'Community & Parental Engagement',
+  'Inclusion (SC/ST/OBC/Divyang)',
+  'Teacher Capacity Building',
+  'Infrastructure & WASH',
+  'Vocational & Life Skills',
+  'Health & Nutrition',
+  'Governance & SMC Strengthening'
+];
 
 const THEME_COLORS = {
   'Girls Education':'#2E6DB4','ICT/Digital':'#1D9E75','Community Engagement':'#BA7517',
@@ -695,8 +713,8 @@ function buildDistChecks(containerId){
 
 function buildThemeChecks(containerId){
   document.getElementById(containerId).innerHTML = THEMES.map(t=>
-    `<label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer">
-      <input type="checkbox" value="${t}" style="width:13px;height:13px"> ${t}
+    `<label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;padding:5px 8px;border:1px solid var(--border);border-radius:6px;background:#fafafa">
+      <input type="radio" name="ngo_theme" value="${t}" style="width:13px;height:13px"> ${t}
     </label>`).join('');
 }
 
@@ -721,21 +739,33 @@ async function saveProfile(){
   currentUser.org    = document.getElementById('pf-org').value    || currentUser.org;
   currentUser.person = document.getElementById('pf-person').value || currentUser.name;
 
-  // Collect selected districts & theme from checkboxes
+  // Collect districts
   const selDist = [...document.querySelectorAll('#dist-checks input:checked')].map(c=>c.value).join(', ');
-  const selTheme = document.querySelector('#theme-checks input:checked');
+
+  // Theme: PAB radio OR custom "Other"
+  const selTheme    = document.querySelector('#theme-checks input:checked');
+  const otherChecked = document.getElementById('theme-other-chk')?.checked;
+  const otherText    = document.getElementById('theme-other-input')?.value.trim();
+  const finalTheme   = otherChecked && otherText ? otherText : (selTheme ? selTheme.value : '');
 
   showLoader('Saving profile…');
   try {
     await apiFetch({
-      action:   'saveProfile',
-      email:    currentUser.email,
-      password: currentUser.password || '',
-      name:     currentUser.name,
-      org:      currentUser.org,
-      person:   currentUser.person,
-      dist:     selDist,
-      theme:    selTheme ? selTheme.value : ''
+      action:      'saveProfile',
+      email:       currentUser.email,
+      password:    currentUser.password || '',
+      name:        currentUser.name,
+      org:         currentUser.org,
+      person:      currentUser.person,
+      dist:        selDist,
+      theme:       finalTheme,
+      phone:       document.getElementById('pf-phone')?.value  || '',
+      desig:       document.getElementById('pf-desig')?.value  || '',
+      org_type:    document.getElementById('pf-type')?.value   || '',
+      prog:        document.getElementById('pf-prog')?.value   || '',
+      desc:        document.getElementById('pf-desc')?.value   || '',
+      budget_target: document.getElementById('pf-budget')?.value || 0,
+      start_date:  document.getElementById('pf-start')?.value  || ''
     });
     await loadSheetData();
   } catch(e){ /* proceed even if offline */ }

@@ -63,15 +63,15 @@ function login(data) {
 }
 
 // ── GET NGO MASTER LIST (for signup dropdown) ────────────────
-// NGO_List sheet columns: name | theme (optional)
+// NGO_List sheet columns: sr_no | name
 function getNGOList() {
   const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName('NGO_List');
   if (!sheet) return { success: true, data: [] };
   const rows = sheet.getDataRange().getValues();
   if (rows.length < 2) return { success: true, data: [] };
   const data = rows.slice(1)
-    .filter(r => r[0])
-    .map(r => ({ name: r[0], theme: r[1] || '' }));
+    .filter(r => r[1])           // column B = name
+    .map(r => ({ sr: r[0], name: String(r[1]).trim() }));
   return { success: true, data };
 }
 
@@ -200,7 +200,10 @@ function saveProfile(data) {
   const newId = nRows.length;
   nSheet.appendRow([
     newId, data.org, data.theme || '', data.person || data.name,
-    data.dist || '', 300, 300, 0, 0, 0, 0, 0, '', ''
+    data.dist || '', 300, 300, 0, 0, 0, 0, 0, '', '',
+    data.phone || '', data.desig || '', data.org_type || '',
+    data.prog || '', data.desc || '', data.budget_target || 0,
+    data.start_date || '', new Date().toLocaleDateString('en-IN')
   ]);
   return { success: true, action: 'created' };
 }
