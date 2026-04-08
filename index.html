@@ -722,7 +722,7 @@ async function doLogin(){
       alert(res.error || 'Invalid email or password');
     }
   } catch(e){
-    alert('Could not reach the server after 3 attempts.\n\nPlease check:\n1. Internet connection\n2. Apps Script is deployed (Execute as: Me, Access: Anyone)\n\nTry again in a moment.');
+    alert('Login failed: ' + e.message + '\n\nIf this says "Script load error" - redeploy Apps Script.\nIf "Timeout" - check internet connection.');
   }
   hideLoader();
 }
