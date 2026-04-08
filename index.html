@@ -339,10 +339,10 @@ tr:hover td{background:#FAFBFF}
     <!-- ── PAGE: DASHBOARD ── -->
     <div class="page active" id="page-dashboard">
       <div class="stats-grid">
-        <div class="stat-card"><div class="stat-val" id="s-partners">15</div><div class="stat-label">Active partners</div><div class="stat-sub"><span class="badge badge-green">+3 this quarter</span></div></div>
-        <div class="stat-card"><div class="stat-val" id="s-districts">38</div><div class="stat-label">Districts covered</div><div class="stat-sub" style="color:var(--muted);font-size:10px">of 75 UP districts</div></div>
-        <div class="stat-card"><div class="stat-val" id="s-schools">4,820</div><div class="stat-label">Schools reached</div><div class="stat-sub"><span class="badge badge-amber">Mar 2026</span></div></div>
-        <div class="stat-card"><div class="stat-val" id="s-students">1.2L+</div><div class="stat-label">Students benefited</div><div class="stat-sub" style="color:var(--muted);font-size:10px">Girls: 68,400</div></div>
+        <div class="stat-card"><div class="stat-val" id="s-partners">—</div><div class="stat-label">Active partners</div><div class="stat-sub" id="s-partners-sub" style="color:var(--muted);font-size:10px"></div></div>
+        <div class="stat-card"><div class="stat-val" id="s-districts">—</div><div class="stat-label">Districts covered</div><div class="stat-sub" style="color:var(--muted);font-size:10px">of 75 UP districts</div></div>
+        <div class="stat-card"><div class="stat-val" id="s-schools">—</div><div class="stat-label">Schools reached</div><div class="stat-sub" id="s-schools-sub" style="color:var(--muted);font-size:10px"></div></div>
+        <div class="stat-card"><div class="stat-val" id="s-students">—</div><div class="stat-label">Students benefited</div><div class="stat-sub" id="s-girls-sub" style="color:var(--muted);font-size:10px"></div></div>
       </div>
 
       <div class="filter-bar">
@@ -856,34 +856,35 @@ function initApp(){
 }
 
 function updateDashboardStats(){
-  if(!SAMPLE_NGOS.length) return;
+  // Show zeros if no data yet
+  const total = SAMPLE_NGOS.length;
 
   // Active partners
-  document.getElementById('s-partners').textContent = SAMPLE_NGOS.length;
+  document.getElementById('s-partners').textContent = total || '0';
+  const subReported = REPORTS.length;
+  document.getElementById('s-partners-sub').textContent =
+    total ? `${subReported} report${subReported!==1?'s':''} submitted` : 'No NGO data yet';
 
-  // Unique districts (split by comma, deduplicate)
+  // Unique districts
   const distSet = new Set();
-  SAMPLE_NGOS.forEach(n => n.dist.split(',').forEach(d => { if(d.trim()) distSet.add(d.trim()); }));
-  document.getElementById('s-districts').textContent = distSet.size;
+  SAMPLE_NGOS.forEach(n => (n.dist||'').split(',').forEach(d => { if(d.trim()) distSet.add(d.trim()); }));
+  document.getElementById('s-districts').textContent = distSet.size || '0';
 
   // Total schools
   const totalSchools = SAMPLE_NGOS.reduce((a,n) => a + (+n.schools||0), 0);
-  document.getElementById('s-schools').textContent = totalSchools.toLocaleString('en-IN');
+  document.getElementById('s-schools').textContent = totalSchools ? totalSchools.toLocaleString('en-IN') : '0';
+  const latestMonth = SAMPLE_NGOS.map(n=>n.month).filter(Boolean).sort().reverse()[0] || '';
+  document.getElementById('s-schools-sub').textContent = latestMonth ? 'Last report: ' + latestMonth : '';
 
   // Total students & girls
   const totalStudents = SAMPLE_NGOS.reduce((a,n) => a + (+n.students||0), 0);
   const totalGirls    = SAMPLE_NGOS.reduce((a,n) => a + (+n.girls||0), 0);
-  document.getElementById('s-students').textContent =
-    totalStudents >= 100000 ? (totalStudents/100000).toFixed(1)+'L+' : totalStudents.toLocaleString('en-IN');
-
-  // Update girls sub-label
-  const girlsLabel = document.querySelector('#s-students')?.closest('.stat-card')?.querySelector('.stat-sub');
-  if(girlsLabel) girlsLabel.textContent = 'Girls: ' + (totalGirls >= 100000 ? (totalGirls/100000).toFixed(1)+'L' : totalGirls.toLocaleString('en-IN'));
-
-  // Update schools month badge
-  const latestMonth = SAMPLE_NGOS.map(n=>n.month).filter(Boolean).sort().reverse()[0] || '';
-  const schoolsBadge = document.querySelector('#s-schools')?.closest('.stat-card')?.querySelector('.badge');
-  if(schoolsBadge && latestMonth) schoolsBadge.textContent = latestMonth;
+  document.getElementById('s-students').textContent = totalStudents
+    ? (totalStudents >= 100000 ? (totalStudents/100000).toFixed(1)+'L+' : totalStudents.toLocaleString('en-IN'))
+    : '0';
+  document.getElementById('s-girls-sub').textContent = totalGirls
+    ? 'Girls: ' + (totalGirls >= 100000 ? (totalGirls/100000).toFixed(1)+'L' : totalGirls.toLocaleString('en-IN'))
+    : '';
 }
 
 function showPage(p){
