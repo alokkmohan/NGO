@@ -832,11 +832,20 @@ function initApp(){
   document.getElementById('tb-date').textContent = new Date().toLocaleDateString('en-IN',{day:'numeric',month:'long',year:'numeric'});
 
   if(currentUser.role==='admin'){
+    // Admin: show admin tools, hide NGO submission items
     document.getElementById('nav-admin-sep').style.display='block';
     document.getElementById('nav-ngos-item').style.display='flex';
     document.getElementById('nav-admin-report-item').style.display='flex';
+    document.getElementById('nav-ngo-sep').style.display='none';
+    document.getElementById('nav-profile-item').style.display='none';
+    document.getElementById('nav-report-item').style.display='none';
     document.getElementById('tb-role-badge').className='badge badge-red';
     fillAdminNGOSelect();
+  } else {
+    // NGO partner: hide admin tools
+    document.getElementById('nav-admin-sep').style.display='none';
+    document.getElementById('nav-ngos-item').style.display='none';
+    document.getElementById('nav-admin-report-item').style.display='none';
   }
 
   buildDistChecks('r-dist-checks');
@@ -1028,9 +1037,10 @@ function renderProfileView(){
       <div><div style="font-size:11px;color:var(--muted)">Email</div><div style="margin-top:2px">${u.email}</div></div>
       <div><div style="font-size:11px;color:var(--muted)">Role</div><div style="margin-top:2px">${u.role==='admin'?'PMU Administrator':'NGO Partner'}</div></div>
     </div>
-    <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border)">
+    ${u.role !== 'admin' ? `<div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border)">
       <button class="btn-blu" style="font-size:12px;padding:7px 16px" onclick="showPage('monthly-report')">Submit Monthly Report →</button>
-    </div>`;
+    </div>` : ''}
+  `;
 }
 
 // ════════════════════════════════════
