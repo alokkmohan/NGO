@@ -18,15 +18,18 @@ function doGet(e) {
   try {
     const p      = e.parameter;
     const action = p.action;
-    if (action === 'getNGOs')      return respond(getNGOs());
-    if (action === 'getReports')   return respond(getReports());
-    if (action === 'getNGOList')   return respond(getNGOList());
-    if (action === 'login')        return respond(login(p));
-    if (action === 'saveProfile')  return respond(saveProfile(p));
-    if (action === 'submitReport') return respond(submitReport({ report: JSON.parse(p.report) }));
-    return respond({ error: 'Unknown action', received_action: action, all_params: JSON.stringify(p) });
+    let result;
+    if (action === 'getNGOs')      result = getNGOs();
+    else if (action === 'getReports')   result = getReports();
+    else if (action === 'getNGOList')   result = getNGOList();
+    else if (action === 'login')          result = login(p);
+    else if (action === 'changePassword') result = changePassword(p);
+    else if (action === 'saveProfile')    result = saveProfile(p);
+    else if (action === 'submitReport') result = submitReport({ report: JSON.parse(p.report) });
+    else result = { error: 'Unknown action' };
+    return respond(result, p.callback);
   } catch (err) {
-    return respond({ error: err.message });
+    return respond({ error: err.message }, e.parameter.callback);
   }
 }
 
@@ -42,28 +45,50 @@ function doPost(e) {
   }
 }
 
-function respond(obj) {
+// Supports both plain JSON and JSONP (callback param)
+function respond(obj, callback) {
+  const json = JSON.stringify(obj);
+  if (callback) {
+    return ContentService
+      .createTextOutput(callback + '(' + json + ')')
+      .setMimeType(ContentService.MimeType.JAVASCRIPT);
+  }
   return ContentService
-    .createTextOutput(JSON.stringify(obj))
+    .createTextOutput(json)
     .setMimeType(ContentService.MimeType.JSON);
 }
 
 // ── LOGIN ────────────────────────────────────────────────────
-// Users sheet columns: email | password | role | name | org
+// Users sheet columns: email | password | role | name | org | pwd_changed
 function login(data) {
   const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName('Users');
   const rows  = sheet.getDataRange().getValues();
   for (let i = 1; i < rows.length; i++) {
-    const [email, password, role, name, org] = rows[i];
+    const [email, password, role, name, org, pwd_changed] = rows[i];
     if (email === data.email && String(password) === String(data.password)) {
-      // Admin always allowed; NGO partners checked against NGO_List status
       if (role !== 'admin' && !isNGOActive(org)) {
         return { success: false, error: 'Your organisation is currently inactive. Please contact PMU Admin.' };
       }
-      return { success: true, user: { email, role, name, org, profileDone: true } };
+      // firstLogin = true if pwd_changed column is empty (admin just created the account)
+      const firstLogin = role !== 'admin' && (!pwd_changed || String(pwd_changed).trim() === '');
+      return { success: true, user: { email, role, name, org, profileDone: true, firstLogin } };
     }
   }
   return { success: false, error: 'Invalid email or password' };
+}
+
+// ── CHANGE PASSWORD ──────────────────────────────────────────
+function changePassword(data) {
+  const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName('Users');
+  const rows  = sheet.getDataRange().getValues();
+  for (let i = 1; i < rows.length; i++) {
+    if (rows[i][0] === data.email) {
+      sheet.getRange(i + 1, 2).setValue(data.newPassword);  // col 2 = password
+      sheet.getRange(i + 1, 6).setValue('yes');              // col 6 = pwd_changed
+      return { success: true };
+    }
+  }
+  return { success: false, error: 'User not found' };
 }
 
 // ── GET NGO MASTER LIST (for signup dropdown) ────────────────

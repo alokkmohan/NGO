@@ -220,28 +220,34 @@ tr:hover td{background:#FAFBFF}
       <h1>Samagra UP Secondary<br>NGO Partner Portal</h1>
       <p>Madhyamik Shiksha Vibhag, Uttar Pradesh | PMU</p>
     </div>
-    <div class="auth-tabs">
-      <div class="auth-tab active" onclick="switchTab('login')">Sign In</div>
-      <div class="auth-tab" onclick="switchTab('signup')">Register NGO</div>
-    </div>
     <div id="login-form">
       <div class="form-group"><label>Email / Username</label><input type="email" id="login-email" placeholder="your@ngo.org"></div>
-      <div class="form-group"><label>Password</label><input type="password" id="login-pass" placeholder="Password"></div>
+      <div class="form-group"><label>Password</label><input type="password" id="login-pass" placeholder="Password" onkeydown="if(event.key==='Enter')doLogin()"></div>
       <button class="btn-primary" onclick="doLogin()">Sign In</button>
-      <p class="auth-note">Use your registered email and password to sign in.</p>
+      <p class="auth-note" style="margin-top:14px;text-align:center">Login credentials PMU Admin se prapt karein.<br>
+        <span style="font-size:11px;color:var(--muted)">For access: contact PMU, Madhyamik Shiksha Vibhag, UP</span>
+      </p>
     </div>
-    <div id="signup-form" style="display:none">
-      <div class="form-group"><label>Organisation Name</label>
-        <select id="reg-org">
-          <option value="">Loading NGO list…</option>
-        </select>
-      </div>
-      <div class="form-group"><label>Your Name</label><input type="text" id="reg-name" placeholder="Full name"></div>
-      <div class="form-group"><label>Email</label><input type="email" id="reg-email" placeholder="official@ngo.org"></div>
-      <div class="form-group"><label>Password</label><input type="password" id="reg-pass" placeholder="Create password"></div>
-      <button class="btn-primary" onclick="doSignup()">Register & Continue to Profile</button>
-      <p class="auth-note">After registration, fill your NGO profile once — then submit monthly reports.</p>
+  </div>
+</div>
+
+<!-- PASSWORD CHANGE SCREEN (first login) -->
+<div id="pwd-change-screen" style="display:none;min-height:100vh;background:var(--bg);display:none;align-items:center;justify-content:center;padding:20px">
+  <div class="auth-box">
+    <div class="auth-logo">
+      <h1 style="font-size:18px">🔒 Password Set Karein</h1>
+      <p>Pehli baar login karne par naya password set karna zaroori hai</p>
     </div>
+    <div style="background:#fff3cd;border:1px solid #ffc107;border-radius:8px;padding:10px 14px;font-size:12px;color:#856404;margin-bottom:16px">
+      Admin dwara diya gaya temporary password badalna zaroori hai. Apna naya password choose karein.
+    </div>
+    <div class="form-group"><label>Naya Password <span style="color:var(--red)">*</span></label>
+      <input type="password" id="pwd-new" placeholder="Kam se kam 6 characters">
+    </div>
+    <div class="form-group"><label>Confirm Password <span style="color:var(--red)">*</span></label>
+      <input type="password" id="pwd-confirm" placeholder="Dobara likhen">
+    </div>
+    <button class="btn-primary" onclick="doChangePassword()">Password Save Karein ✓</button>
   </div>
 </div>
 
@@ -708,66 +714,64 @@ let activeFilter = 'all';
 // ════════════════════════════════════
 // AUTH
 // ════════════════════════════════════
-function switchTab(tab){
-  document.querySelectorAll('.auth-tab').forEach(t=>t.classList.remove('active'));
-  event.target.classList.add('active');
-  document.getElementById('login-form').style.display  = tab==='login'  ? 'block' : 'none';
-  document.getElementById('signup-form').style.display = tab==='signup' ? 'block' : 'none';
-  if(tab === 'signup') loadNGOListDropdown();
-}
-
-async function loadNGOListDropdown(){
-  const sel = document.getElementById('reg-org');
-  sel.innerHTML = '<option value="">Loading…</option>';
-  try {
-    const res = await apiFetch({action:'getNGOList'});
-    if(res.success && res.data.length){
-      sel.innerHTML = '<option value="">-- Select your NGO --</option>' +
-        res.data.map(n => `<option value="${n.name}">${n.name}</option>`).join('');
-    } else {
-      sel.innerHTML = '<option value="">No NGOs found — contact PMU Admin</option>';
-    }
-  } catch(e){
-    sel.innerHTML = '<option value="">Error loading list — try again</option>';
-  }
-}
-
 async function doLogin(){
   const email = document.getElementById('login-email').value.trim();
   const pass  = document.getElementById('login-pass').value;
-  if(!email||!pass){alert('Please enter credentials');return;}
-  showLoader('Signing in…');
+  if(!email||!pass){alert('Email aur password dono bharen');return;}
+  showLoader('Sign in ho raha hai…');
   try {
-    const res  = await apiFetch({action:'login', email, password:pass});
+    const res = await apiFetch({action:'login', email, password:pass});
     if(res.success){
       currentUser = res.user;
+      currentUser.password = pass; // store for session (needed for changePassword)
       localStorage.setItem('ngo_session', JSON.stringify(currentUser));
-      await loadSheetData();
-      startApp();
+      hideLoader();
+      if(res.user.firstLogin){
+        // First login — show mandatory password change screen
+        document.getElementById('auth-screen').style.display = 'none';
+        document.getElementById('pwd-change-screen').style.display = 'flex';
+      } else {
+        await loadSheetData();
+        startApp();
+      }
     } else {
-      alert(res.error || 'Invalid email or password');
+      alert(res.error || 'Email ya password galat hai');
     }
   } catch(e){
-    alert('Login failed: ' + e.message + '\n\nIf this says "Script load error" - redeploy Apps Script.\nIf "Timeout" - check internet connection.');
+    alert('Connection error: ' + e.message);
   }
   hideLoader();
 }
 
-function doSignup(){
-  const org   = document.getElementById('reg-org').value.trim();
-  const name  = document.getElementById('reg-name').value.trim();
-  const email = document.getElementById('reg-email').value.trim();
-  const pass  = document.getElementById('reg-pass').value;
-  if(!org||!name||!email){alert('Please fill all fields');return;}
-  currentUser = {name, email, role:'ngo', org, password:pass, profileDone:false};
-  document.getElementById('auth-screen').style.display='none';
-  showProfileScreen();
+async function doChangePassword(){
+  const np = document.getElementById('pwd-new').value;
+  const cp = document.getElementById('pwd-confirm').value;
+  if(!np || np.length < 6){ alert('Password kam se kam 6 characters ka hona chahiye'); return; }
+  if(np !== cp){ alert('Dono passwords match nahi kar rahe'); return; }
+  showLoader('Password save ho raha hai…');
+  try {
+    const res = await apiFetch({action:'changePassword', email: currentUser.email, newPassword: np});
+    if(res.success){
+      currentUser.password = np;
+      currentUser.firstLogin = false;
+      localStorage.setItem('ngo_session', JSON.stringify(currentUser));
+      document.getElementById('pwd-change-screen').style.display = 'none';
+      await loadSheetData();
+      startApp();
+    } else {
+      alert('Password change nahi ho saka: ' + (res.error||''));
+    }
+  } catch(e){
+    alert('Connection error: ' + e.message);
+  }
+  hideLoader();
 }
 
 function doLogout(){
   currentUser = null;
   localStorage.removeItem('ngo_session');
   document.getElementById('main-screen').style.display='none';
+  document.getElementById('pwd-change-screen').style.display='none';
   document.getElementById('auth-screen').style.display='flex';
 }
 
