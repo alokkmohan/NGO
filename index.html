@@ -479,7 +479,10 @@ tr:hover td{background:#FAFBFF}
             </div>
             <div class="wform-group"><label>Reporting person <span>*</span></label><input id="r-person" placeholder="Your name"></div>
           </div>
-          <div class="wform-group"><label>Districts active this month <span>*</span></label>
+          <div class="wform-group"><label>Districts active this month <span>*</span>
+            <span style="font-weight:400;font-size:11px;color:var(--muted);margin-left:8px">Pre-filled from your profile —
+              <a href="#" onclick="showPage('profile-view');return false;" style="color:var(--blue2)">update profile</a> to change permanently</span>
+          </label>
             <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:5px;max-height:130px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:8px" id="r-dist-checks"></div>
           </div>
           <div class="wform-row3">
@@ -1131,7 +1134,7 @@ function showPage(p){
 
   if(p==='profile-view') renderProfileView();
   if(p==='ngo-list') renderAdminNGOList();
-  if(p==='monthly-report'){reportStep=0;updateReportSteps();}
+  if(p==='monthly-report'){reportStep=0;updateReportSteps();prefillReportForm();}
 }
 
 // ════════════════════════════════════
@@ -1263,18 +1266,77 @@ function renderPartnerTable(){
 // PROFILE VIEW
 // ════════════════════════════════════
 function renderProfileView(){
-  const u=currentUser;
+  const u = currentUser;
+  const myNGO = SAMPLE_NGOS.find(n => n.name === u.org) || {};
+  const dists = (myNGO.dist||'').split(',').map(d=>d.trim()).filter(Boolean);
   document.getElementById('profile-display').innerHTML=`
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
       <div><div style="font-size:11px;color:var(--muted)">Organisation</div><div style="font-weight:700;font-size:15px;color:var(--blue);margin-top:2px">${u.org||'—'}</div></div>
       <div><div style="font-size:11px;color:var(--muted)">Nodal person</div><div style="font-weight:600;margin-top:2px">${u.name}</div></div>
       <div><div style="font-size:11px;color:var(--muted)">Email</div><div style="margin-top:2px">${u.email}</div></div>
-      <div><div style="font-size:11px;color:var(--muted)">Role</div><div style="margin-top:2px">${u.role==='admin'?'PMU Administrator':'NGO Partner'}</div></div>
+      <div><div style="font-size:11px;color:var(--muted)">Theme</div><div style="margin-top:2px">${myNGO.theme||'—'}</div></div>
     </div>
-    ${u.role !== 'admin' ? `<div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border)">
+    ${u.role !== 'admin' ? `
+    <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border)">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <div style="font-size:13px;font-weight:600;color:var(--text)">Districts of operation
+          <span style="font-weight:400;font-size:11px;color:var(--muted);margin-left:6px">(${dists.length} district${dists.length!==1?'s':''})</span>
+        </div>
+        <button class="btn-sec" style="font-size:11px;padding:5px 12px" onclick="toggleDistrictEdit()">✏ Edit Districts</button>
+      </div>
+      <div id="dist-display" style="display:flex;flex-wrap:wrap;gap:6px;min-height:24px">
+        ${dists.length ? dists.map(d=>`<span style="background:var(--blue)15;color:var(--blue);border:1px solid var(--blue)40;border-radius:20px;padding:3px 10px;font-size:12px">${d}</span>`).join('') : '<span style="color:var(--muted);font-size:12px">No districts set — click Edit Districts</span>'}
+      </div>
+      <div id="dist-edit-panel" style="display:none;margin-top:12px">
+        <div style="font-size:12px;color:var(--muted);margin-bottom:6px">Select all districts where your NGO currently operates:</div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:5px;max-height:160px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:10px" id="profile-dist-edit"></div>
+        <div style="margin-top:10px;display:flex;gap:8px">
+          <button class="btn-grn" style="font-size:12px;padding:6px 16px" onclick="saveProfileDistricts()">Save Districts ✓</button>
+          <button class="btn-sec" style="font-size:12px;padding:6px 14px" onclick="toggleDistrictEdit()">Cancel</button>
+        </div>
+      </div>
+    </div>
+    <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border)">
       <button class="btn-blu" style="font-size:12px;padding:7px 16px" onclick="showPage('monthly-report')">Submit Monthly Report →</button>
     </div>` : ''}
   `;
+}
+
+function toggleDistrictEdit(){
+  const panel = document.getElementById('dist-edit-panel');
+  const isOpen = panel.style.display !== 'none';
+  if(!isOpen){
+    // Build district checkboxes pre-checked with current profile districts
+    const myNGO = SAMPLE_NGOS.find(n => n.name === currentUser.org) || {};
+    const profileDists = (myNGO.dist||'').split(',').map(d=>d.trim()).filter(Boolean);
+    const editDiv = document.getElementById('profile-dist-edit');
+    editDiv.innerHTML = UP_DISTRICTS.map(d =>
+      `<label style="display:flex;align-items:center;gap:5px;font-size:11px;cursor:pointer">
+        <input type="checkbox" value="${d}" ${profileDists.includes(d)?'checked':''} style="width:12px;height:12px"> ${d}
+      </label>`).join('');
+    panel.style.display = 'block';
+  } else {
+    panel.style.display = 'none';
+  }
+}
+
+async function saveProfileDistricts(){
+  const checked = [...document.querySelectorAll('#profile-dist-edit input:checked')].map(c=>c.value);
+  if(!checked.length){ alert('Please select at least one district.'); return; }
+  const distStr = checked.join(', ');
+  showLoader('Saving districts…');
+  try {
+    await apiFetch({action:'saveProfile', email:currentUser.email, password:currentUser.password||'', name:currentUser.name, org:currentUser.org, dist:distStr});
+    // Update local NGO data
+    const myNGO = SAMPLE_NGOS.find(n=>n.name===currentUser.org);
+    if(myNGO) myNGO.dist = distStr;
+    hideLoader();
+    renderProfileView();
+    alert('Districts updated successfully!');
+  } catch(e){
+    hideLoader();
+    alert('Could not save. Check your connection.');
+  }
 }
 
 // ════════════════════════════════════
@@ -1288,6 +1350,51 @@ function updateReportSteps(){
     if(rp) rp.className='wizard-page'+(i===reportStep?' active':'');
   }
   document.getElementById('rp-success').className='wizard-page';
+}
+
+function prefillReportForm(){
+  // 1. Auto-select current month
+  const now = new Date();
+  const mNames = ['January','February','March','April','May','June',
+                  'July','August','September','October','November','December'];
+  // Financial year: April 2026 – March 2027
+  const yr = now.getMonth() <= 2 ? 2027 : 2026;
+  const curMonthStr = mNames[now.getMonth()] + ' ' + yr;
+  const mSel = document.getElementById('r-month');
+  for(let i=0;i<mSel.options.length;i++){
+    if(mSel.options[i].text===curMonthStr){ mSel.selectedIndex=i; break; }
+  }
+
+  // 2. Auto-fill reporting person (read-only — tied to login)
+  const personFld = document.getElementById('r-person');
+  if(personFld){
+    personFld.value = currentUser.name || '';
+    personFld.readOnly = true;
+    personFld.style.cssText += ';background:#f0f4fa;cursor:not-allowed;color:var(--muted)';
+    personFld.title = 'Name from your login account';
+  }
+
+  // 3. Pre-check districts from NGO profile
+  const myNGO = SAMPLE_NGOS.find(n => n.name === currentUser.org);
+  const profileDists = myNGO ? (myNGO.dist||'').split(',').map(d=>d.trim()).filter(Boolean) : [];
+  const distBoxes = document.querySelectorAll('#r-dist-checks input[type=checkbox]');
+  distBoxes.forEach(cb => { cb.checked = profileDists.length ? profileDists.includes(cb.value) : false; });
+
+  // 4. Pre-fill numbers from last submitted report (carry-over reference)
+  const myReports = REPORTS.filter(r => r.ngo === currentUser.org);
+  if(myReports.length){
+    const last = myReports.sort((a,b) => (+b.id||0) - (+a.id||0))[0];
+    const setIfVal = (id, val) => { const el=document.getElementById(id); if(el && val) el.value=val; };
+    setIfVal('r-schools',  last.schools);
+    setIfVal('r-students', last.students);
+    setIfVal('r-girls',    last.girls);
+    setIfVal('r-teachers', last.teachers);
+    setIfVal('r-meetings', last.meetings);
+    setIfVal('r-events',   last.events);
+    setIfVal('r-scst',     last.scst);
+    setIfVal('r-divyang',  last.divyang);
+    setIfVal('r-dropout',  last.dropout);
+  }
 }
 
 function reportNext(step){
