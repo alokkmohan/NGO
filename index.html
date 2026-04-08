@@ -1548,18 +1548,6 @@ function prefillReportForm(){
   const distBoxes = document.querySelectorAll('#r-dist-checks input[type=checkbox]');
   distBoxes.forEach(cb => { cb.checked = profileDists.length ? profileDists.includes(cb.value) : false; });
 
-  // Warn if current month already submitted
-  const alreadySubmitted = REPORTS.find(r => r.ngo === currentUser.org && r.month === curMonthStr);
-  const csvStatus = document.getElementById('csv-status');
-  if(alreadySubmitted && csvStatus){
-    csvStatus.style.display = 'block';
-    csvStatus.style.background = '#fff3cd';
-    csvStatus.style.color = '#856404';
-    csvStatus.textContent = `⚠ ${curMonthStr} ka report pehle se submit ho chuka hai (${alreadySubmitted.submitted||''}). Dobara submit nahi ho sakta.`;
-  } else if(csvStatus){
-    csvStatus.style.display = 'none';
-  }
-
   // 4. Pre-fill numbers from last submitted report (carry-over reference)
   const myReports = REPORTS.filter(r => r.ngo === currentUser.org);
   if(myReports.length){
@@ -1604,14 +1592,6 @@ function removePhoto(i){
 
 async function submitReport(){
   const months = document.getElementById('r-month').value;
-
-  // Duplicate check — same NGO same month
-  const duplicate = REPORTS.find(r => r.ngo === currentUser.org && r.month === months);
-  if(duplicate){
-    const msg = `⚠ ${months} ka report pehle se submit ho chuka hai!\n\nSubmitted: ${duplicate.submitted||'earlier'}\n\nReport ek baar submit hone ke baad badla nahi ja sakta.\nKoi galti ho to PMU Admin se sampark karein.`;
-    alert(msg);
-    return;
-  }
 
   const report = {
     ngo:      currentUser.org,
