@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Samagra UP Secondary — NGO Partner Portal</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -344,6 +345,55 @@ tr:hover td{background:#FAFBFF}
         <div class="stat-card"><div class="stat-val" id="s-schools">—</div><div class="stat-label">Schools reached</div><div class="stat-sub" id="s-schools-sub" style="color:var(--muted);font-size:10px"></div></div>
         <div class="stat-card"><div class="stat-val" id="s-students">—</div><div class="stat-label">Students benefited</div><div class="stat-sub" id="s-girls-sub" style="color:var(--muted);font-size:10px"></div></div>
       </div>
+
+      <!-- ── ADMIN ANALYTICS (only shown for admin role) ── -->
+      <div id="admin-charts" style="display:none">
+
+        <!-- Extra KPI row -->
+        <div class="stats-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:14px">
+          <div class="stat-card">
+            <div class="stat-val" id="sc-submitted" style="color:var(--green)">0</div>
+            <div class="stat-label">Reports submitted</div>
+            <div class="stat-sub" id="sc-submitted-sub" style="color:var(--muted);font-size:10px"></div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-val" id="sc-pending" style="color:var(--red)">0</div>
+            <div class="stat-label">Pending submissions</div>
+            <div class="stat-sub" style="color:var(--muted);font-size:10px">NGOs yet to submit</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-val" id="sc-girls">0</div>
+            <div class="stat-label">Total girls reached</div>
+            <div class="stat-sub" style="color:var(--muted);font-size:10px">Across all NGOs</div>
+          </div>
+        </div>
+
+        <!-- Charts row -->
+        <div style="display:grid;grid-template-columns:1.6fr 1fr;gap:14px;margin-bottom:14px">
+          <div class="card" style="padding:16px">
+            <div class="card-title" style="margin-bottom:12px">📊 Students reached — top NGOs</div>
+            <canvas id="chart-students" height="200"></canvas>
+          </div>
+          <div class="card" style="padding:16px">
+            <div class="card-title" style="margin-bottom:12px">🎯 Theme distribution</div>
+            <canvas id="chart-themes" height="200"></canvas>
+          </div>
+        </div>
+
+        <!-- Report submission status -->
+        <div class="card" style="margin-bottom:14px;padding:16px">
+          <div class="card-title" style="margin-bottom:12px">📋 Report submission status — current month</div>
+          <div id="report-status-list"></div>
+        </div>
+
+        <!-- Schools bar chart -->
+        <div class="card" style="padding:16px;margin-bottom:14px">
+          <div class="card-title" style="margin-bottom:12px">🏫 Schools covered — NGO wise</div>
+          <canvas id="chart-schools" height="160"></canvas>
+        </div>
+
+      </div>
+      <!-- ── END ADMIN ANALYTICS ── -->
 
       <div class="filter-bar" id="theme-filter-bar">
         <span style="font-size:11px;color:var(--muted);line-height:26px">Filter:</span>
@@ -907,6 +957,112 @@ function updateDashboardStats(){
       return `<div class="leg"><div class="leg-dot" style="background:${col}"></div>${t}</div>`;
     }).join('');
   }
+
+  if(currentUser && currentUser.role === 'admin') renderAdminCharts();
+}
+
+// ══════════════════════════════════════════════════════
+// ADMIN ANALYTICS CHARTS
+// ══════════════════════════════════════════════════════
+let _charts = {};
+
+function renderAdminCharts(){
+  document.getElementById('admin-charts').style.display = 'block';
+
+  const ngos    = SAMPLE_NGOS;
+  const reports = REPORTS;
+
+  // ── Extra KPI cards ──
+  const submitted = ngos.filter(n => n.month).length;
+  const pending   = ngos.length - submitted;
+  const totalGirls = ngos.reduce((a,n) => a + (+n.girls||0), 0);
+
+  document.getElementById('sc-submitted').textContent = submitted;
+  document.getElementById('sc-submitted-sub').textContent = ngos.length ? `of ${ngos.length} NGOs` : '';
+  document.getElementById('sc-pending').textContent   = pending < 0 ? 0 : pending;
+  document.getElementById('sc-girls').textContent     = totalGirls >= 100000
+    ? (totalGirls/100000).toFixed(1)+'L+'
+    : totalGirls.toLocaleString('en-IN');
+
+  // ── Colour palette ──
+  const PALETTE = ['#1A3C6E','#2E6DB4','#1D9E75','#C8960C','#D4537E','#534AB7','#BA7517','#E24B4A','#6b7280','#0ea5e9','#10b981','#f59e0b'];
+
+  // Sort NGOs by students desc, take top 10
+  const top = [...ngos].sort((a,b)=>(+b.students||0)-(+a.students||0)).slice(0,10);
+
+  // ── Chart 1: Students bar ──
+  _buildChart('chart-students', 'bar', {
+    labels: top.map(n => n.name.length > 16 ? n.name.slice(0,14)+'…' : n.name),
+    datasets:[{
+      label:'Students',
+      data: top.map(n => +n.students||0),
+      backgroundColor: PALETTE,
+      borderRadius: 5
+    }]
+  },{
+    plugins:{ legend:{display:false} },
+    scales:{ y:{ beginAtZero:true, ticks:{callback:v=>v>=100000?(v/100000).toFixed(1)+'L':v.toLocaleString()} } }
+  });
+
+  // ── Chart 2: Theme donut ──
+  const themeCount = {};
+  ngos.forEach(n=>{ if(n.theme){ themeCount[n.theme]=(themeCount[n.theme]||0)+1; } });
+  const themeLabels = Object.keys(themeCount);
+  _buildChart('chart-themes', 'doughnut', {
+    labels: themeLabels,
+    datasets:[{
+      data: themeLabels.map(t=>themeCount[t]),
+      backgroundColor: PALETTE,
+      hoverOffset: 6
+    }]
+  },{
+    plugins:{ legend:{ position:'bottom', labels:{font:{size:10}, boxWidth:12} } },
+    cutout:'60%'
+  });
+
+  // ── Chart 3: Schools bar ──
+  const topS = [...ngos].sort((a,b)=>(+b.schools||0)-(+a.schools||0)).slice(0,10);
+  _buildChart('chart-schools', 'bar', {
+    labels: topS.map(n => n.name.length > 16 ? n.name.slice(0,14)+'…' : n.name),
+    datasets:[{
+      label:'Schools',
+      data: topS.map(n => +n.schools||0),
+      backgroundColor:'#2E6DB4',
+      borderRadius: 5
+    }]
+  },{
+    plugins:{ legend:{display:false} },
+    scales:{ y:{ beginAtZero:true } },
+    indexAxis:'y'
+  });
+
+  // ── Report submission status list ──
+  const submittedNames = new Set(reports.map(r=>r.ngo));
+  const listEl = document.getElementById('report-status-list');
+  if(!ngos.length){ listEl.innerHTML='<p style="color:var(--muted);font-size:13px">No NGO data yet.</p>'; return; }
+  listEl.innerHTML = `
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px">
+    ${ngos.map(n=>{
+      const done = submittedNames.has(n.name);
+      const pct  = +n.progress||0;
+      const col  = pct>=75?'var(--green)':pct>=50?'var(--amber)':'var(--red)';
+      return `<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--border);border-radius:8px;background:${done?'#f0faf6':'#fff8f8'}">
+        <span style="font-size:16px">${done?'✅':'⏳'}</span>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${n.name}</div>
+          <div style="font-size:10px;color:var(--muted)">${done ? (n.month||'Submitted') : 'Pending'}</div>
+        </div>
+        <div style="font-size:11px;font-weight:700;color:${col}">${pct}%</div>
+      </div>`;
+    }).join('')}
+    </div>`;
+}
+
+function _buildChart(id, type, data, options){
+  if(_charts[id]){ _charts[id].destroy(); }
+  const ctx = document.getElementById(id);
+  if(!ctx) return;
+  _charts[id] = new Chart(ctx, { type, data, options:{ responsive:true, ...options } });
 }
 
 function showPage(p){
