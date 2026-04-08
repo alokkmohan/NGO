@@ -1418,14 +1418,16 @@ function fillAdminNGOSelect(){
     o.textContent = n.name; sel.appendChild(o);
   });
 
-  // Fill theme dropdown from real data
+  // Fill theme dropdown from real data (if element exists)
   const themeSel = document.getElementById('rep-theme');
-  themeSel.innerHTML = '<option value="all">All themes</option>';
-  const themes = [...new Set(SAMPLE_NGOS.map(n=>n.theme).filter(Boolean))];
-  themes.forEach(t => {
-    const o = document.createElement('option');
-    o.textContent = t; themeSel.appendChild(o);
-  });
+  if(themeSel){
+    themeSel.innerHTML = '<option value="all">All themes</option>';
+    const themes = [...new Set(SAMPLE_NGOS.map(n=>n.theme).filter(Boolean))];
+    themes.forEach(t => {
+      const o = document.createElement('option');
+      o.textContent = t; themeSel.appendChild(o);
+    });
+  }
 }
 
 function renderAdminNGOList(){
