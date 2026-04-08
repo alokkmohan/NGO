@@ -23,7 +23,7 @@ function doGet(e) {
     if (action === 'login')        return respond(login(p));
     if (action === 'saveProfile')  return respond(saveProfile(p));
     if (action === 'submitReport') return respond(submitReport({ report: JSON.parse(p.report) }));
-    return respond({ error: 'Unknown action' });
+    return respond({ error: 'Unknown action', received_action: action, all_params: JSON.stringify(p) });
   } catch (err) {
     return respond({ error: err.message });
   }
