@@ -13,25 +13,28 @@ const SHEET_ID        = '1fESLu2sjfmKuszrSUZgCjt296gf2GRTSAMkb2uv7F_M';
 const DRIVE_FOLDER_ID = '151IYtuGpaXal0DiInwUGyaGl7ZX51HD7';
 
 // ── ROUTER ──────────────────────────────────────────────────
+// GET handles everything except photo upload (too large for URL)
 function doGet(e) {
   try {
-    const action = e.parameter.action;
-    if (action === 'getNGOs')    return respond(getNGOs());
-    if (action === 'getReports') return respond(getReports());
+    const p      = e.parameter;
+    const action = p.action;
+    if (action === 'getNGOs')      return respond(getNGOs());
+    if (action === 'getReports')   return respond(getReports());
+    if (action === 'login')        return respond(login(p));
+    if (action === 'saveProfile')  return respond(saveProfile(p));
+    if (action === 'submitReport') return respond(submitReport({ report: JSON.parse(p.report) }));
     return respond({ error: 'Unknown action' });
   } catch (err) {
     return respond({ error: err.message });
   }
 }
 
+// POST only used for photo upload (base64 payload too large for URL)
 function doPost(e) {
   try {
     const data   = JSON.parse(e.postData.contents);
     const action = data.action;
-    if (action === 'login')        return respond(login(data));
-    if (action === 'submitReport') return respond(submitReport(data));
-    if (action === 'uploadPhoto')  return respond(uploadPhoto(data));
-    if (action === 'saveProfile')  return respond(saveProfile(data));
+    if (action === 'uploadPhoto') return respond(uploadPhoto(data));
     return respond({ error: 'Unknown action' });
   } catch (err) {
     return respond({ error: err.message });

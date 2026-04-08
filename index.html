@@ -631,7 +631,7 @@ async function doLogin(){
   if(!email||!pass){alert('Please enter credentials');return;}
   showLoader('Signing in…');
   try {
-    const res  = await apiFetch('POST', {action:'login', email, password:pass});
+    const res  = await apiFetch({action:'login', email, password:pass});
     if(res.success){
       currentUser = res.user;
       await loadSheetData();
@@ -717,7 +717,7 @@ async function saveProfile(){
 
   showLoader('Saving profile…');
   try {
-    await apiFetch('POST', {
+    await apiFetch({
       action:   'saveProfile',
       email:    currentUser.email,
       password: currentUser.password || '',
@@ -737,22 +737,29 @@ async function saveProfile(){
 // ════════════════════════════════════
 // API HELPERS
 // ════════════════════════════════════
-async function apiFetch(method, body){
-  const opts = {
-    method,
-    headers: {'Content-Type':'text/plain'},  // avoids CORS preflight
-  };
-  if(method==='POST') opts.body = JSON.stringify(body);
-  const url  = method==='GET' ? SCRIPT_URL + '?' + new URLSearchParams(body) : SCRIPT_URL;
-  const res  = await fetch(url, opts);
+// Use GET for all calls — Apps Script redirects POST responses which breaks CORS.
+// Exception: photo upload (large base64 payload must be POST).
+async function apiFetch(params){
+  const url = SCRIPT_URL + '?' + new URLSearchParams(params);
+  const res = await fetch(url);
+  return res.json();
+}
+
+async function apiPost(body){
+  // Only used for photo upload (base64 too large for URL)
+  const res = await fetch(SCRIPT_URL, {
+    method: 'POST',
+    body: JSON.stringify(body)
+    // No Content-Type header = browser picks text/plain → simple request, no preflight
+  });
   return res.json();
 }
 
 async function loadSheetData(){
   try {
     const [ngoRes, repRes] = await Promise.all([
-      apiFetch('GET', {action:'getNGOs'}),
-      apiFetch('GET', {action:'getReports'})
+      apiFetch({action:'getNGOs'}),
+      apiFetch({action:'getReports'})
     ]);
     if(ngoRes.success && ngoRes.data.length){
       SAMPLE_NGOS.length = 0;
@@ -1010,7 +1017,7 @@ async function submitReport(){
     try {
       showLoader(`Uploading photo ${i+1} of ${uploadedPhotos.length}…`);
       const b64 = await fileToBase64(uploadedPhotos[i]);
-      const res = await apiFetch('POST', {
+      const res = await apiPost({
         action:'uploadPhoto',
         ngo: currentUser.org, month: months,
         base64: b64, mimeType: uploadedPhotos[i].type,
@@ -1022,7 +1029,7 @@ async function submitReport(){
 
   showLoader('Saving report to Google Sheets…');
   try {
-    await apiFetch('POST', {action:'submitReport', report});
+    await apiFetch({action:'submitReport', report: JSON.stringify(report)});
   } catch(e){ alert('Report saved locally but could not sync to Sheets. Check your connection.'); }
 
   // Update local state
