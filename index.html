@@ -194,10 +194,10 @@ tr:hover td{background:#FAFBFF}
       <div class="auth-tab" onclick="switchTab('signup')">Register NGO</div>
     </div>
     <div id="login-form">
-      <div class="form-group"><label>Email / Username</label><input type="email" id="login-email" placeholder="your@ngo.org" value="admin@pmu.up.gov.in"></div>
-      <div class="form-group"><label>Password</label><input type="password" id="login-pass" placeholder="Password" value="admin123"></div>
+      <div class="form-group"><label>Email / Username</label><input type="email" id="login-email" placeholder="your@ngo.org"></div>
+      <div class="form-group"><label>Password</label><input type="password" id="login-pass" placeholder="Password"></div>
       <button class="btn-primary" onclick="doLogin()">Sign In</button>
-      <p class="auth-note">Demo: admin@pmu.up.gov.in / admin123 (Admin view)<br>or ngo@educategirls.org / ngo123 (NGO view)</p>
+      <p class="auth-note">Use your registered email and password to sign in.</p>
     </div>
     <div id="signup-form" style="display:none">
       <div class="form-group"><label>Organisation Name</label>
@@ -567,6 +567,13 @@ tr:hover td{background:#FAFBFF}
   </div>
 </div>
 
+<!-- LOADER OVERLAY -->
+<div id="loader-overlay" style="display:none;position:fixed;inset:0;background:rgba(26,60,110,0.55);z-index:9999;align-items:center;justify-content:center;flex-direction:column;gap:14px">
+  <div style="width:44px;height:44px;border:4px solid rgba(255,255,255,0.3);border-top-color:#fff;border-radius:50%;animation:spin 0.8s linear infinite"></div>
+  <div id="loader-msg" style="color:#fff;font-size:14px;font-weight:600;text-shadow:0 1px 4px rgba(0,0,0,0.4)">Loading…</div>
+</div>
+<style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+
 <script>
 // ════════════════════════════════════
 // DATA
@@ -594,28 +601,12 @@ const THEME_COLORS = {
   'Inclusion':'#D4537E','Teacher Training':'#C8960C','Infrastructure':'#6b7280'
 };
 
-const SAMPLE_NGOS = [
-  {id:1,name:'Educate Girls',theme:'Girls Education',person:'Priya Sharma',dist:'Agra, Mathura, Firozabad',x:462,y:112,schools:320,students:18400,girls:14200,teachers:180,progress:78,month:'March 2026',kmi:'14,200 girls reached with targeted retention support.'},
-  {id:2,name:'Pratham Foundation',theme:'Literacy',person:'Rahul Verma',dist:'Lucknow, Unnao, Barabanki',x:240,y:252,schools:280,students:22000,girls:11000,teachers:210,progress:65,month:'March 2026',kmi:'ASER assessment completed in 6 blocks; learning outcomes improved by 12%.'},
-  {id:3,name:'Room to Read',theme:'Girls Education',person:'Anjali Singh',dist:'Varanasi, Mirzapur, Allahabad',x:372,y:352,schools:190,students:14200,girls:10800,teachers:95,progress:82,month:'April 2026',kmi:'Library program active in 190 schools; 10,800 girls accessing books daily.'},
-  {id:4,name:'Magic Bus',theme:'Community Engagement',person:'Vikram Yadav',dist:'Bareilly, Shahjahanpur',x:242,y:172,schools:145,students:9800,girls:5100,teachers:88,progress:55,month:'March 2026',kmi:'Life skills sessions reached 9,800 students across 145 schools.'},
-  {id:5,name:'Digital Shakti',theme:'ICT/Digital',person:'Amit Kumar',dist:'Ghaziabad, Meerut',x:284,y:62,schools:210,students:31000,girls:14800,teachers:320,progress:90,month:'April 2026',kmi:'Smart Class activated in 210 schools; 31,000 students accessing digital content.'},
-  {id:6,name:'Bal Raksha Bharat',theme:'Inclusion',person:'Sunita Devi',dist:'Bahraich, Lakhimpur, Sitapur',x:160,y:265,schools:175,students:12300,girls:6200,teachers:140,progress:60,month:'March 2026',kmi:'CWSN tracking system set up in 175 schools; 1,800 Divyang students supported.'},
-  {id:7,name:'Action Aid India',theme:'Community Engagement',person:'Manoj Tiwari',dist:'Banda, Jhansi',x:446,y:272,schools:130,students:8700,girls:4400,teachers:75,progress:48,month:'Feb 2026',kmi:'SMC meetings held in 92 schools; 2,400 parents engaged.'},
-  {id:8,name:'CARE India',theme:'Girls Education',person:'Neha Gupta',dist:'Gonda, Faizabad, Sultanpur',x:226,y:390,schools:240,students:19500,girls:15600,teachers:165,progress:72,month:'April 2026',kmi:'Sanitation drive completed in 240 schools; menstrual hygiene kits distributed.'},
-  {id:9,name:'Breakthrough',theme:'Inclusion',person:'Pooja Rastogi',dist:'Kanpur, Rae Bareli',x:372,y:185,schools:165,students:11200,girls:5800,teachers:120,progress:67,month:'March 2026',kmi:'Gender equity workshops in 90 schools; attitude change visible in community surveys.'},
-  {id:10,name:'Jan Shikshan',theme:'Literacy',person:'Rajesh Patel',dist:'Saharanpur, Muzaffarnagar',x:115,y:107,schools:98,students:6400,girls:3100,teachers:60,progress:44,month:'Feb 2026',kmi:'Vocational literacy: 3 batches completed; 640 adults certified.'},
-  {id:11,name:'iDiscoveri Education',theme:'ICT/Digital',person:'Kavita Mishra',dist:'Lucknow, Barabanki',x:258,y:237,schools:120,students:14000,girls:7000,teachers:280,progress:85,month:'April 2026',kmi:'xSeed methodology active in 120 schools; teacher adoption rate 94%.'},
-  {id:12,name:'Smile Foundation',theme:'Community Engagement',person:'Ravi Shankar',dist:'Moradabad, Rampur',x:155,y:178,schools:88,students:5900,girls:2950,teachers:55,progress:51,month:'March 2026',kmi:'14 health & education camps completed; 5,900 students screened.'},
-  {id:13,name:'World Vision India',theme:'Inclusion',person:'Geeta Kumari',dist:'Pratapgarh, Sultanpur',x:384,y:355,schools:112,students:8100,girls:4100,teachers:90,progress:63,month:'April 2026',kmi:'SC/ST student tracking in 112 schools; scholarship facilitation for 840 students.'},
-  {id:14,name:'CRY India',theme:'Girls Education',person:'Shweta Agarwal',dist:'Aligarh, Mathura, Hathras',x:356,y:67,schools:142,students:10800,girls:8600,teachers:105,progress:70,month:'March 2026',kmi:'Girl child tracking system in 142 schools; zero dropout achieved in 28 schools.'},
-  {id:15,name:'Navjyoti Foundation',theme:'Community Engagement',person:'Deepak Chauhan',dist:'Lakhimpur, Bahraich',x:142,y:342,schools:76,students:5200,girls:2600,teachers:48,progress:39,month:'Feb 2026',kmi:'Community library set up in 12 villages; 5,200 students with reading access.'},
-];
+// ── APPS SCRIPT WEB APP URL ── replace after deploying Code.gs ──
+const SCRIPT_URL = 'YOUR_APPS_SCRIPT_URL_HERE';
 
-// Submitted monthly reports store
-let REPORTS = [
-  {ngo:'Educate Girls',month:'April 2026',schools:335,students:19200,girls:14800,teachers:185,meetings:18,events:6,scst:4200,divyang:180,budget:380000,dropout:42,tasks:'Teacher training Agra\nEnrolment drive Mathura\nKGBV visits Firozabad',status:'85',kmi:'14,800 girls actively enrolled with zero dropout in 28 schools.',achieve:'Record enrolment in Firozabad block.',challenges:'Absenteeism during harvest season.',support:'Need district-level coordination for block officers.',plans:'Sanitation infrastructure audit in April.',photos:[]},
-];
+// Live data — populated from Google Sheets on login
+let SAMPLE_NGOS = [];
+let REPORTS     = [];
 
 let currentUser = null;
 let currentPage = 'dashboard';
@@ -634,26 +625,31 @@ function switchTab(tab){
   document.getElementById('signup-form').style.display = tab==='signup'?'block':'none';
 }
 
-function doLogin(){
-  const email = document.getElementById('login-email').value;
-  const pass = document.getElementById('login-pass').value;
+async function doLogin(){
+  const email = document.getElementById('login-email').value.trim();
+  const pass  = document.getElementById('login-pass').value;
   if(!email||!pass){alert('Please enter credentials');return;}
-  const isAdmin = email.includes('pmu') || email.includes('admin') || email.includes('ias');
-  currentUser = {
-    name: isAdmin ? 'PMU Administrator' : 'NGO Nodal Person',
-    email, role: isAdmin ? 'admin' : 'ngo',
-    org: isAdmin ? 'PMU — UP Madhyamik Shiksha Vibhag' : 'Educate Girls',
-    profileDone: true
-  };
-  startApp();
+  showLoader('Signing in…');
+  try {
+    const res  = await apiFetch('POST', {action:'login', email, password:pass});
+    if(res.success){
+      currentUser = res.user;
+      await loadSheetData();
+      startApp();
+    } else {
+      alert(res.error || 'Invalid email or password');
+    }
+  } catch(e){ alert('Connection error. Check your internet and try again.'); }
+  hideLoader();
 }
 
 function doSignup(){
-  const org = document.getElementById('reg-org').value;
-  const name = document.getElementById('reg-name').value;
-  const email = document.getElementById('reg-email').value;
+  const org   = document.getElementById('reg-org').value.trim();
+  const name  = document.getElementById('reg-name').value.trim();
+  const email = document.getElementById('reg-email').value.trim();
+  const pass  = document.getElementById('reg-pass').value;
   if(!org||!name||!email){alert('Please fill all fields');return;}
-  currentUser = {name,email,role:'ngo',org,profileDone:false};
+  currentUser = {name, email, role:'ngo', org, password:pass, profileDone:false};
   document.getElementById('auth-screen').style.display='none';
   showProfileScreen();
 }
@@ -710,12 +706,80 @@ function profileBack(step){
   document.getElementById(`psi${step-1}`).classList.add('active');
 }
 
-function saveProfile(){
-  currentUser.profileDone=true;
-  currentUser.org = document.getElementById('pf-org').value || currentUser.org;
-  currentUser.person = document.getElementById('pf-person').value;
+async function saveProfile(){
+  currentUser.profileDone = true;
+  currentUser.org    = document.getElementById('pf-org').value    || currentUser.org;
+  currentUser.person = document.getElementById('pf-person').value || currentUser.name;
+
+  // Collect selected districts & theme from checkboxes
+  const selDist = [...document.querySelectorAll('#dist-checks input:checked')].map(c=>c.value).join(', ');
+  const selTheme = document.querySelector('#theme-checks input:checked');
+
+  showLoader('Saving profile…');
+  try {
+    await apiFetch('POST', {
+      action:   'saveProfile',
+      email:    currentUser.email,
+      password: currentUser.password || '',
+      name:     currentUser.name,
+      org:      currentUser.org,
+      person:   currentUser.person,
+      dist:     selDist,
+      theme:    selTheme ? selTheme.value : ''
+    });
+    await loadSheetData();
+  } catch(e){ /* proceed even if offline */ }
+  hideLoader();
   document.getElementById('profile-screen').style.display='none';
   initApp();
+}
+
+// ════════════════════════════════════
+// API HELPERS
+// ════════════════════════════════════
+async function apiFetch(method, body){
+  const opts = {
+    method,
+    headers: {'Content-Type':'text/plain'},  // avoids CORS preflight
+  };
+  if(method==='POST') opts.body = JSON.stringify(body);
+  const url  = method==='GET' ? SCRIPT_URL + '?' + new URLSearchParams(body) : SCRIPT_URL;
+  const res  = await fetch(url, opts);
+  return res.json();
+}
+
+async function loadSheetData(){
+  try {
+    const [ngoRes, repRes] = await Promise.all([
+      apiFetch('GET', {action:'getNGOs'}),
+      apiFetch('GET', {action:'getReports'})
+    ]);
+    if(ngoRes.success && ngoRes.data.length){
+      SAMPLE_NGOS.length = 0;
+      ngoRes.data.forEach(n => SAMPLE_NGOS.push({
+        id:+n.id||0, name:n.name, theme:n.theme||'', person:n.person||'',
+        dist:n.dist||'', x:+n.x||300, y:+n.y||300,
+        schools:+n.schools||0, students:+n.students||0,
+        girls:+n.girls||0, teachers:+n.teachers||0,
+        progress:+n.progress||0, month:n.month||'', kmi:n.kmi||''
+      }));
+    }
+    if(repRes.success && repRes.data.length){
+      REPORTS.length = 0;
+      repRes.data.forEach(r => REPORTS.push(r));
+    }
+  } catch(e){ console.warn('Could not load Sheet data:', e.message); }
+}
+
+// ════════════════════════════════════
+// LOADER OVERLAY
+// ════════════════════════════════════
+function showLoader(msg){
+  document.getElementById('loader-msg').textContent = msg || 'Loading…';
+  document.getElementById('loader-overlay').style.display = 'flex';
+}
+function hideLoader(){
+  document.getElementById('loader-overlay').style.display = 'none';
 }
 
 // ════════════════════════════════════
@@ -914,44 +978,96 @@ function removePhoto(i){
   handlePhotos({files:uploadedPhotos});
 }
 
-function submitReport(){
-  const months=document.getElementById('r-month').value;
-  const report={
-    ngo:currentUser.org, month:months,
-    schools:+document.getElementById('r-schools').value||0,
-    students:+document.getElementById('r-students').value||0,
-    girls:+document.getElementById('r-girls').value||0,
-    teachers:+document.getElementById('r-teachers').value||0,
-    meetings:+document.getElementById('r-meetings').value||0,
-    events:+document.getElementById('r-events').value||0,
-    scst:+document.getElementById('r-scst').value||0,
-    divyang:+document.getElementById('r-divyang').value||0,
-    budget:+document.getElementById('r-budget').value||0,
-    dropout:+document.getElementById('r-dropout').value||0,
-    tasks:document.getElementById('r-tasks').value,
-    status:document.getElementById('r-status').value,
-    kmi:document.getElementById('r-kmi').value,
-    achieve:document.getElementById('r-achieve').value,
-    challenges:document.getElementById('r-challenges').value,
-    support:document.getElementById('r-support').value,
-    plans:document.getElementById('r-plans').value,
-    photos:uploadedPhotos.length,
-    submitted:new Date().toLocaleDateString('en-IN')
+async function submitReport(){
+  const months = document.getElementById('r-month').value;
+  const report = {
+    ngo:      currentUser.org,
+    month:    months,
+    schools:  +document.getElementById('r-schools').value  || 0,
+    students: +document.getElementById('r-students').value || 0,
+    girls:    +document.getElementById('r-girls').value    || 0,
+    teachers: +document.getElementById('r-teachers').value || 0,
+    meetings: +document.getElementById('r-meetings').value || 0,
+    events:   +document.getElementById('r-events').value   || 0,
+    scst:     +document.getElementById('r-scst').value     || 0,
+    divyang:  +document.getElementById('r-divyang').value  || 0,
+    budget:   +document.getElementById('r-budget').value   || 0,
+    dropout:  +document.getElementById('r-dropout').value  || 0,
+    tasks:      document.getElementById('r-tasks').value,
+    status:     document.getElementById('r-status').value,
+    kmi:        document.getElementById('r-kmi').value,
+    achieve:    document.getElementById('r-achieve').value,
+    challenges: document.getElementById('r-challenges').value,
+    support:    document.getElementById('r-support').value,
+    plans:      document.getElementById('r-plans').value,
+    photos_count: uploadedPhotos.length,
+    photos_folder: ''
   };
+
+  showLoader('Uploading photos…');
+  // Upload each photo to Drive
+  for(let i = 0; i < uploadedPhotos.length; i++){
+    try {
+      showLoader(`Uploading photo ${i+1} of ${uploadedPhotos.length}…`);
+      const b64 = await fileToBase64(uploadedPhotos[i]);
+      const res = await apiFetch('POST', {
+        action:'uploadPhoto',
+        ngo: currentUser.org, month: months,
+        base64: b64, mimeType: uploadedPhotos[i].type,
+        filename: uploadedPhotos[i].name
+      });
+      if(res.success && res.folderId) report.photos_folder = res.folderId;
+    } catch(e){ console.warn('Photo upload failed:', e.message); }
+  }
+
+  showLoader('Saving report to Google Sheets…');
+  try {
+    await apiFetch('POST', {action:'submitReport', report});
+  } catch(e){ alert('Report saved locally but could not sync to Sheets. Check your connection.'); }
+
+  // Update local state
   REPORTS.push(report);
-  // Update sample NGO data
-  const ngo=SAMPLE_NGOS.find(n=>n.name===currentUser.org);
-  if(ngo){ngo.schools=report.schools||ngo.schools;ngo.students=report.students||ngo.students;ngo.month=months;ngo.progress=+report.status||ngo.progress;}
+  const ngo = SAMPLE_NGOS.find(n => n.name === currentUser.org);
+  if(ngo){
+    ngo.schools  = report.schools  || ngo.schools;
+    ngo.students = report.students || ngo.students;
+    ngo.month    = months;
+    ngo.progress = +report.status  || ngo.progress;
+  }
   renderPartnerTable();
   renderMap(activeFilter);
+  const totalStudents = SAMPLE_NGOS.reduce((a,n) => a + n.students, 0);
+  document.getElementById('s-students').textContent = (totalStudents/100000).toFixed(1)+'L+';
 
-  // Update stats
-  const totalStudents=SAMPLE_NGOS.reduce((a,n)=>a+n.students,0);
-  document.getElementById('s-students').textContent=(totalStudents/100000).toFixed(1)+'L+';
+  hideLoader();
+  for(let i = 0; i < 5; i++){ document.getElementById(`rp${i}`).className = 'wizard-page'; }
+  document.getElementById('rp-success').className = 'wizard-page active';
+  uploadedPhotos = [];
+}
 
-  for(let i=0;i<5;i++){document.getElementById(`rp${i}`).className='wizard-page';}
-  document.getElementById('rp-success').className='wizard-page active';
-  uploadedPhotos=[];
+// Convert File object to base64 string (data stripped)
+function fileToBase64(file){
+  return new Promise((resolve, reject) => {
+    // Compress image via canvas before encoding
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      const MAX = 1024;
+      let w = img.width, h = img.height;
+      if(w > MAX || h > MAX){
+        if(w > h){ h = Math.round(h * MAX / w); w = MAX; }
+        else      { w = Math.round(w * MAX / h); h = MAX; }
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      URL.revokeObjectURL(url);
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.82);
+      resolve(dataUrl.split(',')[1]); // base64 only
+    };
+    img.onerror = reject;
+    img.src = url;
+  });
 }
 
 // ════════════════════════════════════
