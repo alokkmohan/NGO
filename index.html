@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Samagra UP Secondary — NGO Partner Portal</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -350,44 +352,9 @@ tr:hover td{background:#FAFBFF}
         <span style="font-size:11px;color:var(--muted);line-height:26px">Filter:</span>
         <button class="fbtn all-btn active" onclick="filterMap('all',this)">All NGOs</button>
       </div>
-      <div class="map-container" style="margin-bottom:12px">
-        <svg id="map-svg" viewBox="0 0 620 520" xmlns="http://www.w3.org/2000/svg">
-          <rect width="620" height="520" fill="#F0F4FA"/>
-          <path d="M85,65 L118,42 L168,36 L228,30 L292,27 L355,31 L415,40 L462,55 L498,78 L515,112 L522,150 L516,192 L504,232 L490,272 L472,312 L448,348 L412,378 L368,400 L310,414 L250,418 L192,410 L148,390 L112,362 L88,328 L70,288 L60,248 L56,206 L58,164 L65,124 Z"
-            fill="#D6E4F0" stroke="#A8C4E0" stroke-width="1.5"/>
-          <g stroke="#B8D0E8" stroke-width="0.6" opacity="0.7">
-            <line x1="85" y1="164" x2="522" y2="164"/><line x1="85" y1="248" x2="504" y2="248"/>
-            <line x1="85" y1="328" x2="448" y2="328"/><line x1="168" y1="36" x2="148" y2="410"/>
-            <line x1="260" y1="27" x2="240" y2="418"/><line x1="350" y1="30" x2="335" y2="414"/>
-            <line x1="440" y1="42" x2="420" y2="385"/>
-          </g>
-          <g style="font-size:8px;fill:#7a9ab5">
-            <text x="96" y="108">Saharanpur</text><text x="150" y="85">Muzaffarnagar</text>
-            <text x="210" y="68">Meerut</text><text x="270" y="55">Ghaziabad</text>
-            <text x="340" y="58">Aligarh</text><text x="405" y="72">Agra</text>
-            <text x="464" y="102">Mathura</text><text x="90" y="185">Bijnor</text>
-            <text x="150" y="178">Moradabad</text><text x="215" y="168">Bareilly</text>
-            <text x="286" y="162">Shahjahanpur</text><text x="364" y="170">Kanpur</text>
-            <text x="434" y="178">Jhansi</text><text x="90" y="265">Rampur</text>
-            <text x="155" y="258">Bahraich</text><text x="228" y="250">Lucknow</text>
-            <text x="302" y="258">Unnao</text><text x="370" y="262">Allahabad</text>
-            <text x="436" y="270">Banda</text><text x="100" y="348">Lakhimpur</text>
-            <text x="168" y="340">Sitapur</text><text x="240" y="348">Barabanki</text>
-            <text x="310" y="352">Rae Bareli</text><text x="378" y="355">Pratapgarh</text>
-            <text x="148" y="390">Gonda</text><text x="222" y="388">Faizabad</text>
-            <text x="295" y="385">Sultanpur</text><text x="365" y="382">Varanasi</text>
-          </g>
-          <g id="map-markers"></g>
-        </svg>
-        <div class="map-tooltip" id="map-tooltip">
-          <h4 id="mt-name"></h4>
-          <p>Theme: <span id="mt-theme"></span></p>
-          <p>Districts: <span id="mt-dist"></span></p>
-          <p>Schools: <span id="mt-schools"></span></p>
-          <p>Students: <span id="mt-students"></span></p>
-          <p style="margin-top:6px;font-size:10px;color:#999">Click for details</p>
-        </div>
-        <div id="map-legend" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px"></div>
+      <div class="map-container" style="margin-bottom:12px;padding:0;overflow:hidden">
+        <div id="leaflet-map" style="height:500px;width:100%;border-radius:12px"></div>
+        <div id="map-legend" style="display:flex;flex-wrap:wrap;gap:8px;padding:10px 14px"></div>
       </div>
 
       <!-- KPI STATS ROW -->
@@ -1116,60 +1083,96 @@ function showPage(p){
 }
 
 // ════════════════════════════════════
-// MAP
+// MAP — Leaflet.js (real UP map)
 // ════════════════════════════════════
+let _lmap = null, _lmarkers = [];
+
+// District centre coordinates (lat, lng) for all 75 UP districts
+const UP_DIST_COORDS = {
+  'Agra':[27.18,78.01],'Aligarh':[27.88,78.08],'Allahabad (Prayagraj)':[25.45,81.84],
+  'Prayagraj':[25.45,81.84],'Ambedkar Nagar':[26.44,82.53],'Amethi':[26.15,81.92],
+  'Amroha':[28.90,78.47],'Auraiya':[26.47,79.52],'Ayodhya':[26.79,82.20],
+  'Azamgarh':[26.07,83.19],'Baghpat':[28.95,77.22],'Bahraich':[27.57,81.60],
+  'Ballia':[25.75,84.15],'Balrampur':[27.43,82.17],'Banda':[25.48,80.34],
+  'Barabanki':[26.93,81.19],'Bareilly':[28.36,79.42],'Basti':[26.80,82.73],
+  'Bhadohi':[25.40,82.57],'Bijnor':[29.37,78.14],'Budaun':[28.03,79.12],
+  'Bulandshahr':[28.40,77.85],'Chandauli':[25.26,83.27],'Chitrakoot':[25.18,80.88],
+  'Deoria':[26.50,83.78],'Etah':[27.56,78.67],'Etawah':[26.78,79.02],
+  'Farrukhabad':[27.39,79.58],'Fatehpur':[25.93,80.81],'Firozabad':[27.15,78.40],
+  'Gautam Buddha Nagar':[28.52,77.39],'Ghaziabad':[28.67,77.44],'Ghazipur':[25.58,83.57],
+  'Gonda':[27.13,81.97],'Gorakhpur':[26.76,83.37],'Hamirpur':[25.95,80.15],
+  'Hapur':[28.73,77.78],'Hardoi':[27.40,80.13],'Hathras':[27.60,78.05],
+  'Jalaun':[26.15,79.34],'Jaunpur':[25.75,82.69],'Jhansi':[25.45,78.57],
+  'Kannauj':[27.05,79.92],'Kanpur Dehat':[26.41,79.77],'Kanpur Nagar':[26.46,80.33],
+  'Kasganj':[27.80,78.65],'Kaushambi':[25.54,81.38],'Kushinagar':[26.74,83.88],
+  'Lakhimpur Kheri':[27.95,80.77],'Lalitpur':[24.69,78.42],'Lucknow':[26.85,80.95],
+  'Maharajganj':[27.13,83.56],'Mahoba':[25.29,79.87],'Mainpuri':[27.23,79.02],
+  'Mathura':[27.49,77.67],'Mau':[25.94,83.56],'Meerut':[28.98,77.71],
+  'Mirzapur':[25.15,82.57],'Moradabad':[28.84,78.78],'Muzaffarnagar':[29.47,77.70],
+  'Pilibhit':[28.63,79.80],'Pratapgarh':[25.88,81.99],'Raebareli':[26.23,81.24],
+  'Rae Bareli':[26.23,81.24],'Rampur':[28.81,79.02],'Saharanpur':[29.97,77.55],
+  'Sambhal':[28.58,78.57],'Sant Kabir Nagar':[26.78,83.07],'Shahjahanpur':[27.88,79.91],
+  'Shamli':[29.45,77.31],'Shravasti':[27.53,81.93],'Siddharthnagar':[27.29,83.06],
+  'Sitapur':[27.57,80.68],'Sonbhadra':[24.69,83.06],'Sultanpur':[26.26,82.07],
+  'Unnao':[26.55,80.49],'Varanasi':[25.32,83.00]
+};
+
+function initLeafletMap(){
+  if(_lmap) return;
+  _lmap = L.map('leaflet-map',{center:[26.85,80.94],zoom:7});
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+    attribution:'© <a href="https://openstreetmap.org">OpenStreetMap</a>',
+    maxZoom:13
+  }).addTo(_lmap);
+}
+
 function renderMap(filter){
-  activeFilter=filter;
-  const g = document.getElementById('map-markers');
-  g.innerHTML='';
-  const ngos = filter==='all' ? SAMPLE_NGOS : SAMPLE_NGOS.filter(n=>n.theme===filter||n.theme.includes(filter));
+  activeFilter = filter;
+  if(!_lmap) initLeafletMap();
+
+  // Remove old markers
+  _lmarkers.forEach(m => _lmap.removeLayer(m));
+  _lmarkers = [];
+
+  const ngos = filter==='all' ? SAMPLE_NGOS
+    : SAMPLE_NGOS.filter(n=>(n.theme||'').includes(filter));
+
   ngos.forEach(n=>{
-    const col = THEME_COLORS[n.theme]||'#2E6DB4';
-    const initials = n.name.split(' ').slice(0,2).map(w=>w[0]).join('');
-    const ci = createSVGEl('circle');
-    Object.assign(ci,{});
-    ci.setAttribute('cx',n.x);ci.setAttribute('cy',n.y);ci.setAttribute('r','10');
-    ci.setAttribute('fill',col);ci.setAttribute('stroke','white');ci.setAttribute('stroke-width','2');
-    ci.style.cursor='pointer';
+    // Use first district for placement
+    const firstDist = (n.dist||'').split(',')[0].trim();
+    const coords = UP_DIST_COORDS[firstDist];
+    if(!coords) return;
 
-    const txt = createSVGEl('text');
-    txt.setAttribute('x',n.x);txt.setAttribute('y',n.y+4);
-    txt.setAttribute('text-anchor','middle');txt.setAttribute('font-size','7.5');
-    txt.setAttribute('fill','white');txt.setAttribute('font-weight','700');
-    txt.setAttribute('pointer-events','none');
-    txt.textContent=initials.slice(0,2);
+    const col      = THEME_COLORS[n.theme]||'#2E6DB4';
+    const initials = n.name.split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();
+    const pct      = +n.progress||0;
+    const pctCol   = pct>=75?'#1D9E75':pct>=50?'#BA7517':'#E24B4A';
 
-    [ci,txt].forEach(el=>{
-      el.addEventListener('mouseenter',ev=>showMapTooltip(ev,n));
-      el.addEventListener('mouseleave',hideMapTooltip);
-      el.addEventListener('click',()=>showNGODetail(n));
+    const icon = L.divIcon({
+      html:`<div style="background:${col};color:#fff;border-radius:50%;width:34px;height:34px;
+        display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;
+        border:2px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.25);cursor:pointer">${initials}</div>`,
+      iconSize:[34,34],iconAnchor:[17,17],className:''
     });
-    g.appendChild(ci);g.appendChild(txt);
+
+    const popup = `
+      <div style="min-width:180px;font-family:Segoe UI,sans-serif">
+        <div style="font-weight:700;font-size:13px;color:#1A3C6E;margin-bottom:6px">${n.name}</div>
+        <div style="font-size:11px;color:#6b7280;margin-bottom:8px">${n.theme||'—'}</div>
+        <table style="width:100%;font-size:11px;border-collapse:collapse">
+          <tr><td style="color:#6b7280;padding:2px 0">Districts</td><td style="font-weight:600">${n.dist||'—'}</td></tr>
+          <tr><td style="color:#6b7280;padding:2px 0">Schools</td><td style="font-weight:600">${(+n.schools||0).toLocaleString('en-IN')}</td></tr>
+          <tr><td style="color:#6b7280;padding:2px 0">Students</td><td style="font-weight:600">${(+n.students||0).toLocaleString('en-IN')}</td></tr>
+          <tr><td style="color:#6b7280;padding:2px 0">Girls</td><td style="font-weight:600">${(+n.girls||0).toLocaleString('en-IN')}</td></tr>
+          <tr><td style="color:#6b7280;padding:2px 0">Progress</td><td style="font-weight:700;color:${pctCol}">${pct}%</td></tr>
+          <tr><td style="color:#6b7280;padding:2px 0">Last report</td><td>${n.month||'—'}</td></tr>
+        </table>
+        ${n.kmi?`<div style="margin-top:8px;font-size:10px;background:#f4f6fa;border-radius:6px;padding:6px;color:#374151">${n.kmi}</div>`:''}
+      </div>`;
+
+    const marker = L.marker(coords,{icon}).addTo(_lmap).bindPopup(popup,{maxWidth:240});
+    _lmarkers.push(marker);
   });
-}
-
-function createSVGEl(tag){return document.createElementNS('http://www.w3.org/2000/svg',tag);}
-
-function showMapTooltip(ev,n){
-  const tt=document.getElementById('map-tooltip');
-  const wrap=document.getElementById('map-svg').parentElement;
-  const svgR=document.getElementById('map-svg').getBoundingClientRect();
-  const wrapR=wrap.getBoundingClientRect();
-  const sx=svgR.width/620,sy=svgR.height/520;
-  let left=(n.x*sx)+(svgR.left-wrapR.left)+14;
-  let top=(n.y*sy)+(svgR.top-wrapR.top)-20;
-  if(left+200>wrapR.width)left-=215;
-  tt.style.left=left+'px';tt.style.top=top+'px';tt.style.display='block';
-  document.getElementById('mt-name').textContent=n.name;
-  document.getElementById('mt-theme').textContent=n.theme;
-  document.getElementById('mt-dist').textContent=n.dist;
-  document.getElementById('mt-schools').textContent=n.schools.toLocaleString();
-  document.getElementById('mt-students').textContent=n.students.toLocaleString();
-}
-function hideMapTooltip(){document.getElementById('map-tooltip').style.display='none';}
-
-function showNGODetail(n){
-  alert(`${n.name}\n\nTheme: ${n.theme}\nDistricts: ${n.dist}\nSchools: ${n.schools.toLocaleString()}\nStudents: ${n.students.toLocaleString()}\nGirls: ${n.girls.toLocaleString()}\nProgress: ${n.progress}%\n\nKMI: ${n.kmi}`);
 }
 
 function filterMap(theme,btn){
