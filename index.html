@@ -293,10 +293,32 @@ tr:hover td{background:#FAFBFF}
     <!-- Step 2: Geographic Coverage -->
     <div class="card" id="profile-p2" style="display:none">
       <div class="card-title">📍 Geographic coverage</div>
-      <div class="wform-group"><label>Jinle mein kaam kar rahe hain <span>*</span>
-        <span style="font-weight:400;font-size:11px;color:var(--muted);margin-left:6px">— baad mein bhi badal sakte hain</span>
-      </label>
-        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;max-height:180px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:10px" id="dist-checks"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div class="wform-group">
+          <label>Jile chunein <span>*</span></label>
+          <input type="text" id="dist-search" placeholder="🔍 Jila dhundhein..." oninput="filterDistList()" style="width:100%;padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;margin-bottom:6px">
+          <div style="max-height:200px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:8px" id="dist-checks"></div>
+        </div>
+        <div class="wform-group" id="block-section">
+          <label>Block chunein <span>*</span>
+            <span style="font-weight:400;font-size:11px;color:var(--muted)" id="block-label"> — pehle jila chunein</span>
+          </label>
+          <input type="text" id="block-search" placeholder="🔍 Block dhundhein..." oninput="filterBlockList()" style="width:100%;padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;margin-bottom:6px">
+          <div style="max-height:200px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:8px" id="block-checks"><div style="color:var(--muted);font-size:12px;padding:4px">Pehle jila chunein</div></div>
+        </div>
+      </div>
+      <div class="wform-group" id="school-section" style="margin-top:12px;display:none">
+        <label>Schools (optional)
+          <span style="font-weight:400;font-size:11px;color:var(--muted);margin-left:6px">Jo schools aap cover karte hain — block chunein to list aayegi</span>
+        </label>
+        <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px">
+          <select id="school-block-sel" onchange="loadSchoolsForBlock()" style="flex:1;padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px">
+            <option value="">-- Block chunein --</option>
+          </select>
+          <span id="school-loading" style="font-size:12px;color:var(--muted);display:none">Loading…</span>
+        </div>
+        <div id="school-list" style="max-height:150px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:8px;font-size:12px;color:var(--muted)">Block select karne ke baad schools dikhenge</div>
+        <div id="selected-schools-display" style="margin-top:8px;display:flex;flex-wrap:wrap;gap:4px"></div>
       </div>
       <div class="wizard-nav">
         <button class="btn-sec" onclick="profileBack(2)">← Back</button>
@@ -692,20 +714,8 @@ tr:hover td{background:#FAFBFF}
 // ════════════════════════════════════
 // DATA
 // ════════════════════════════════════
-const UP_DISTRICTS = [
-  'Agra','Aligarh','Allahabad (Prayagraj)','Ambedkar Nagar','Amethi','Amroha',
-  'Auraiya','Ayodhya','Azamgarh','Baghpat','Bahraich','Ballia','Balrampur',
-  'Banda','Barabanki','Bareilly','Basti','Bhadohi','Bijnor','Budaun',
-  'Bulandshahr','Chandauli','Chitrakoot','Deoria','Etah','Etawah','Farrukhabad',
-  'Fatehpur','Firozabad','Gautam Buddha Nagar','Ghaziabad','Ghazipur','Gonda',
-  'Gorakhpur','Hamirpur','Hapur','Hardoi','Hathras','Jalaun','Jaunpur',
-  'Jhansi','Kannauj','Kanpur Dehat','Kanpur Nagar','Kasganj','Kaushambi',
-  'Kushinagar','Lakhimpur Kheri','Lalitpur','Lucknow','Maharajganj','Mahoba',
-  'Mainpuri','Mathura','Mau','Meerut','Mirzapur','Moradabad','Muzaffarnagar',
-  'Pilibhit','Pratapgarh','Raebareli','Rampur','Saharanpur','Sambhal',
-  'Sant Kabir Nagar','Shahjahanpur','Shamli','Shravasti','Siddharthnagar',
-  'Sitapur','Sonbhadra','Sultanpur','Unnao','Varanasi'
-];
+const DIST_BLOCKS = {"AGRA":["ACCHNERA","AKOLA","BAH","BAROLI AHEER","BICHPURI","ETMADPUR","FATEHABAD","FATEHPUR  SIKRI","JAGNER","JAITPUR  KALAN","KHANDOLI","KHERAGARH","M.C.AGRA CITY","PINAHAT","SAIYAN","SHAMSHABAD"],"ALIGARH":["AKRABAD","ATRAULI","BIJAULI","CHANDAUS","DHANIPUR","GANGIRI","GONDA","IGLAS","JAWAN","KHAIR","LODHA","NAGAR ALIGARH","NAGAR ATRAULI","TAPPAL"],"AMBEDKAR NAGAR":["AKBARPUR","BASKHARI","BHEETI","BHIYAON","JAHANGIRGANJ","JALALPUR","KATEHARI","RAMNAGAR","TANDA","TANDA TOWN AREA"],"AMETHI":["AMETHI","BAHADURPUR","BHADAR","BHETUA","GAURIGANJ","JAGDISHPUR","JAMO","MUSAFIRKHANA","SANGRAMPUR","SHAHGARH","SHUKULBAZAR","SINGHPUR","TILOI"],"AMROHA":["AMROHA","AMROHA CITY","DHANORA","GAJRAULA","GANGESHWARI","HASANPUR","JOYA"],"AURAIYA":["ACHHALDA","AIRWAKATRA","AJITMAL","AURAIYA","BHAGYANAGAR","BIDHUNA","NAGAR CHETRA AURAIYA","SAHAR"],"AYODHYA":["AMANIGANJ","AYODHYA TOWN AREA","BIKAPUR","HARINTANGANJ","MASAUDHA","MAWAI","MAYA","MILKIPUR","PURA","RUDAULI","SOHAWAL","TARUN"],"AZAMGARH":["AHIRAULA","ATRAULIYA","AZAMGRAH","AZMATGARH","BILARIYAGANJ","FOOLPOOR","HARRAIYA","JAHANAGANJ","KOILSA","LALGANJ","MAHARAJ GANJ","MARTIN GANJ","MEHNAGER","MIRZAPUR","MOHAMMADPUR","PALAHNI","PALHNA","PAWAE","RANI KI  SARAI","SATHIYAN","TAHBERPUR","TARWA","THEKMA"],"BAGHPAT":["BAGPAT","BAROUT","BAROUT URBAN","BINOLY","CHHAPROLI","KHEKRA","PILANA"],"BAHRAICH":["BALHA","CHITTAURA","FAKHAR PUR","HUJUR PUR","JARWAL","KAISER GANJ","MAHSI","MIHIN PURVA","NAGAR AREA","NAWAB GANJ","PAYAGPUR","RISIA","SHIV PUR","TAJWA PUR","VISHESHWAR  GANJ"],"BALLIA":["BAIRIA","BANSDEEH","BELAHARI","BERUARBARI","CHILKAHAR","DUBAHAR","GARWAR","HANUMANGANJ","MANIAR","MURLI CHHAPRA","NAGARA","NAVANAGAR","PANDAH","RASARA","REVATI","SEAR","SOHAWN"],"BALRAMPUR":["BALRAMPUR","BALRAMPUR(MUN. CORP.)","GAINDAS BUZURG","GAINSARI","HARAIYA SATGHARWA","PACHPERWA","REHRA BAZAR","SHRIDUTTGANJ","TULSIPUR","UTRAULA"],"BANDA":["BABERU","BADOKHAR KHURD","BISANDA","JASPURA","KAMASIN","MAHUWA","NAGAR KSHETRA","NARAINI","TINDWARI"],"BARA BANKI":["BANI KODAR","BANKI","BARABANKI CITY","DARIYA BAD","DEWA","FATEH PUR","HAIDAR GARH","HARAKH","MASAULI","NINDURA","PURE DALAI","RAM NAGAR","SIDDHAOR","SIRAULI GAUSPUR","SURAT GANJ","TRIVEDI GANJ"],"BAREILLY":["ALAMPUR","AONLA","BAHERI","BAHERI TOWN","BAREILLY TOWN","BHADPURA","BHOJIPURA","BHUTA","FARIDPUR","FARIDPUR TOWN","FATEHGANJ","KYARA","MAJHGAWAN","MIRGANJ","NAWABGANJ","RAMNAGAR","RICHHA(DAMKHODA)","SHERGARH","VITHARI CHAINPUR"],"BASTI":["BAHADURPUR","BANKATI","BASTI SADAR","DUBAULIA","GAUR","HARRIYA","KAPTANGANJ","KUDRAHA","PARSHURAMPUR","RAMNAGAR","RUDHOLI","SALTOVA GOPALPUR","SAUNGHAT","TOWN AREA","VIKRAMJOT"],"BHADOHI":["ABHOLI","AURAI","BHADOHI","DEEGH","GYANPUR","SURIYAVAN","TOWN AREA BHADOHI"],"BIJNOR":["AAKU(NEHTOR)","AFZALGRAH","ALLHEPUR(DHAMPUR)","BIJNOR(NAGAR)","BURHANPUR(SEOHARA)","CHANDPUR(NAGAR)","DHAMPUR(NAGAR)","HALDAUR","JALILPUR","KIRATPUR","KOTWALI","MOHD.PUR DEVMAL","NAGINA(NAGAR)","NAJIBABAD","NAJIBABAD(NAGAR)","NOORPUR"],"BUDAUN":["AASAFPUR","AMBIYAPUR","BILSI CITY","BISAULI","BUDAUN CITY","DATAGANJ","DEHGANWAN","ISLAMNAGAR","JAGAT","KAKRALA CITY","MIAUN","QADARCHOWK","SAHASWAN","SAHASWAN CITY","SALARPUR","SAMRER","UJHANI","USAWAN","WAZEERGANJ"],"BULANDSHAHR":["AGAUTA","ANOOPSHAHAR","ANOOPSHAHRNAGARKSHETR","ARNIA","B.B.NAGAR","BULANDSHAHR","BULANDSHAR NAGAR","DANPUR","DEBAI","DEBAINNAGARKSHETR","GULAOTI","JAHAGIRABAD","JAHAGIRABAD NAGAR","KHURJA","KHURJA NAGAR","LAKHAWATI","PAHASU","SHIKARPUR","SIKANDARABAD NAGAR","SIKANDRABAD","SYNA","UCHAGAON"],"CHANDAULI":["BARAHANI","CHAHANIYA","CHAKIYA","CHANDAULI","DHANAPUR","MUGALSARAI (NAGAR CHHETRA)","NAUGARH","NIYAMATABAD","SAKALDIHA","SHAHABGANJ"],"CHITRAKOOT":["CHITRAKOOT","CHITRAKOOT (URBAN)","MANIKPUR","MAU","PAHADI","RAM NAGAR"],"DEORIA":["BAITALPUR","BANAKATA","BARAHAJ","BARAHAJ NAGAR KSHETRA","BHAGALPUR","BHATNI","BHATPAR RANI","BHLUANI","DEORIA NAGAR KSHETRA","DEORIA SADAR","DESAHI DEORIA","GAURI BAZAR","LAR","PATTHRDEVA","RAMPUR KARKHANA","RUDRAPUR","SALIMPUR","TARAKULAWA"],"ETAH":["ALIGANJ","AWAGARH","ETAH (URBAN)","JAITHARA","JALESAR","MARHARA","MARHARA (URBAN)","NIDHAULI KALAN","SAKEET","SHEETAL PUR"],"ETAWAH":["BARHPURA","BASREHAR","BHARTHANA","CHAKARNAGAR","ETAWAH NAGAR CHETRA","JASWANT NAGAR","MAHEWA","SAIFAI","TAKHA"],"FARRUKHABAD":["BARH PUR","KAIM GANJ","KAMALGANJ","MOHAMDABAD","NAG. KSH.FAR.BAD","NAG.KSHETRA  K.GANJ","NAWABGANJ","RAJE PUR","SHAMSABAD"],"FATEHPUR":["AIRAYAN","AMAULI","ASHOTHAR","BAHUA","BHITAURA","DEOMAI","DHATA","HASAWA","HATHGAOM","KHAJUHA","MALAWAN","NAGAR BINDKI","NAGAR FATEHPUR","TELIYANI","VIJAIPUR"],"FIROZABAD":["ARAWN","EKA","FIROZABAD","JASRANA","KHAIRGARH","MADANPUR","NARKHI","SHIKOHABAD","T.A. FIROZABAD","T.A. SHIKOHABAD","TUNDLA"],"GAUTAM BUDDHA NAGAR":["DADRI","DANKAUR","JEWAR","VISRAKH"],"GHAZIABAD":["BHOJPUR","GHAZIABAD (MUN.AREA)","LONI","MURAD NAGAR","RAZAPUR"],"GHAZIPUR":["BARACHAWAR","BHADAURA","BHAWARCOL","BIRNO","DEOKALI","GHAZIPUR SADAR","KARANDA","KASIMABAD","MANIHARI","MARDAH","MOHAMMADABAD","NAGAR CHHETRA","REOTIPUR","SADAT","SAIDPUR","ZAKHANIA","ZAMANIA"],"GONDA":["BABHANJOT","BELSAR","CHHAPIA","COLONELGANJ","CORNELGANJ(M.C.)","GONDA(MUN. CORP.)","HALDHARMAU","ITIYATHOK","JHANJHRI","KATRA BAZAR","MANKAPUR","MUJEHNA","NAWAB GANJ","NAWABGANJ(MUN.CORP.)","PANDRI KRIPAL","PARASPUR","RUPAIDEEH","TARABGANJ","WAZIRGANJ"],"GORAKHPUR":["BAANSGAON","BADHALGANJ","BELGHAT","BHAROHIYA","BHATHAT","BRAHMAPUR","CAMPIARGANJ","CHARGANWA","GAGAHA","GOLA","JANGAL KAUDIA","KAUDIRAM","KHAJNI","KHORABAR","NAGAR KSHETRA","PALI","PIPRAICH","PIPRAULI","SAHJANWA","SARDARNAGAR","URUWA"],"HAMIRPUR":["GOHAND","KURARA","MAUDHA","MUSKARA","NP RATH","RATH","SARILA","SUMERPUR"],"HAPUR":["DHAULANA","GARH MUKTESWAR","HAPUR","HAPUR (MUN.AREA)","PILKHUWA (MUN.AREA)","SIMBHAWALI"],"HARDOI":["AHIRORI","BAWAN","BEHANDAR","BHARAWAN","BHARKHANI","BILGRAM","HARIYAWAN","HARPALPUR","KACHAUNA","KOTHAWAN","MADHOGANJ","MALLAWA","PIHANI","SANDI","SANDILA","SHAHABAD","SURSA","TANDIYAWA","TN.AR.  PIHANI","TN.AR.  SANDI","TN.AR. HARDOI","TN.AR. SANDILA","TONDARPUR"],"HATHRAS":["HASAYAN","HATHRAS","MURSAN","N.P. HATHRAS","N.P. SIKANDRARAO","SADABAD","SAHPAU","SASNI","SIKANDRA RAO"],"JALAUN":["DAKOR","JALAUN","KADAURA","KONCH","KUTHAUND","MADHAUGADH","MAHEVA","NADIGAWN","RAMPURA","T. A. KALPI","T. A. KONCH","T. A. ORAI"],"JAUNPUR":["BADLA PUR","BARSATHI","BUKSHA","DHARMAPUR","DOBHI","JALALPUR","JAUNPUR  [NAGAR]","KARANJA KALA","KERAKAT","KHUTHAN","MACHHALI SHAHAR","MADIYAHUN","MAHARAJ GANJ","MUFTI GANJ","MUGRA BADSHAH PUR","RAM NAGAR","RAM PUR","SHAH GANJ","SIKRARA","SIRKONI","SUITHA KALA","SUJAN GANJ"],"JHANSI":["BABINA","BAMORE","BANGRA","BARAGAON","CHIRGAON","GURSARAI","JHANSI NAGARCHETRA","MAURANIPUR","MAURANIPUR  N.CHETRA","MOTH"],"KANNAUJ":["CHHIBRAMAU","GUGRAPUR","HASERAN","JALALABAD","KANNAUJ","KANNAUJ CITY","SAURIKH","TAL GRAM","UMARDA"],"KANPUR DEHAT":["AKBARPUR","AMARAUDHA","DERAPUR","JHINJHAK","MAITHA","MALASA","RAJPUR","RASULABAD","SANDALPUR","SARVANKHERA"],"KANPUR NAGAR":["BHITERGAON","BIDHNU","BILHAUR","CHAUBEPUR","GHATAMPUR","KAKWAN","KALYANPUR","KIDWAI NAGAR","PATARA","PREMNAGAR","SADAR BAZAR","SARSAUL","SHASTRI NAGAR","SHIVRAJPUR"],"KASGANJ":["AMAPUR","GANJ DUNDWARA","GANJDUNDWARA(URBAN)","KASGANJ","KASGANJ (URBAN)","PATIYALI","SAHAVAR","SIDHPURA","SORON","SORON (URBAN)"],"KAUSHAMBI":["CHAYAL","KADA","KAUSHAMBI","MANJHANPUR","MURATGANJ","NEWADA","SARSAWAN","SIRATHU"],"KHERI":["BANKEGANJ","BEHJAM","BIJUA","DHAURAHARA","GOLA","ISANAGAR","KUMBHI-GOLA","LAKHIMPUR","LMP","MITAULI","MOHAMMADI","MOM","NAKAHA","NIGHASAN","PALIYA","PASGAWAN","PHOOL BEHAR","RAMIYA BEHAR"],"KUSHINAGAR":["DUDAHI","FAZIL NAGAR","HATA","KAPTANGANJ","KASIA","KHADDA","MOTICHAK","NAURANGIYA","PADARAUNA","PADRAUNA (URBAN)","RAMKOLA","SEORAHI","SUKRAULI","TAMKUHI","VISHUNPURA"],"LALITPUR":["BAR","BIRDHA","JAKHORA","LALITPUR","MADAWRA","MAHRONI","TALBEHAT"],"LUCKNOW":["\"NAGAR SHAITRA","BAKSHI KA TALAB","CHINHAT","GOSHAI GANJ","KAKORI","MAAL","MALIHABAD","MOHAN LAL GANJ","SAROJNI NAGAR"],"MAHOBA":["CHARKHARI","CHARKHARI URBAN","JAITPUR","KABRAI","NAGAR PALIKA MAHOBA","PANWARI"],"MAHRAJGANJ":["BRIJMAN GANJ","DHANI","GHUGHLI","LAKSHMIPUR","MAHRAJGANJ","MITHOURA","NICHLOUL","NOUTANWA","PANIYARA","PARTAWAL","PHARENDA","SISWA"],"MAINPURI":["BARNAHAL","BEWAR","GHIROR","JAGIR","KARHAL","KISHANI","KURAWALI","MAINPURI","MAINPURI-CITY","SULTANGANJ"],"MATHURA":["BALDEO","CHAUMUHAN","CHHATA","FARAH","GOVERDHAN","MANT","MATHURA","NANDGAON","NOHJHEEL","RAYA","T.A. MATHURA","T.A. VRINDAVAN"],"MAU":["BADRAW","DOHRIGHAT","FATEHPUR MANDAON","GHOSI","KOPAGANG","MOHAMMADABAD","NAGAR KSHETRA MAU","PARDAHA","RANIPUR","RATANPURA"],"MEERUT":["DAURALA","HASTINAPUR","JANI","KHARKHODA","MACHRA","MAWANA","MAWANA NAGAR","MEERUT","MEERUT NAGAR","PARIKSHIT GARH","RAJPURA","ROHTA","SARDHANA","SARURPUR"],"MIRZAPUR":["CHHANBEY","HALIA","JAMALPUR","KONE","LALGANJ","MAJHAWA","MARIHAN","NAGAR","NAGAR PALIKA","NARAYANPUR","PAHARI","RAJGARH","SEEKHAR"],"MORADABAD":["BHAGATPUR TANDA","BILARI","CHAJLET","DILARI","KUNDERKI","MORADABAD","MORADABAD CITY BOYS","MORADABAD CITY GIRLS","MUNDAPANDAY","THAKURDWARA"],"MUZAFFARNAGAR":["BAGHRA","BUDHANA","CHARTHAWAL","JANSATH","KHATAULI","MORNA","PURKAJI","SADAR","SADAR [TOWN AREA]","SHAHPUR"],"PILIBHIT":["AMARIA","BARKHERA","BILSANDA","BISALPUR","LALORIKHERA","MARORI","N. P. BISALPUR","N. P. PILIBHIT","PURANPUR"],"PRATAPGARH":["AASPUR-DEOSARA","BABA BHELKHARNATH","BABAGANJ","BIHAR","CITY(PRATAPGARH BELHA)","GAURA","KALAKANKER","KUNDA","LALGANJ","LAXMANPUR","MANDHATA","MANGRAURA","PATTI","RAMPUR-SANGRAMGARH","SADAR","SADWA-CHANDRIKA","SANGIPUR","SHIVGARH"],"PRAYAGRAJ":["BAHADURPUR","BAHARIYA","BHAGWATPUR","CHAKA","DHANUPUR","HANDIA","HOLAGARH","JASARA","KARCHHANA","KAUDIHAR II","KAUNDHIYARA","KAURIHAR- I","KORAON","MANDA","MAUAIMA","MEJA","NAGAR CHHETRA","PHOOLPUR","PRATAP PUR","SAHSON","SAIDABAD","SHANKAR GARH","SORAON","SRINGVERPUR","URUWA"],"RAE BARELI":["AMAWAN","BACHHRAWAN","CHHATOH","DALMAU","DEEH","GAURA","HARCHANDPUR","JAGATPUR","KHIRON","LALGANJ","MAHRAJGANJ","NAGAR SHETRA (RBL)","RAHI","ROHANIYA","SALON","SARENI","SATAON","SHIVGARH","UNCHAHAR"],"RAMPUR":["BILASPUR","CHAMRAUVA","MILAK","SAID NAGAR","SHAHBAD","SUAR","TOWN AREA RAMPUR"],"SAHARANPUR":["BALIA KHEDI","DEOBAND","GANGOH","MUZAFFARABAD","NAGAL","NAKUR","NANAUTA","PUNWARKA","RAMPUR MANIHARAN","SADHOLI KADIM","SARSAVA","T.A. DEOBAND","T.A. GANGOH","T.A. SAHAHRANPUR"],"SAMBHAL":["ASMOLI","BANIYAKHERA","BEHJOI","CHANDAUSI CITY","GUNNOR","JUNAVAI","PAWANSA","RAJPURA","SAMBHAL","SAMBHAL CITY"],"SANT KABIR NAGAR":["BAGHAULI","BELHAR KALA","HAINSAR BAZAR","KHALILABAD","MEHNDAVAL","NATHNAGAR","PAULI","SANTHA","SEMARINYAVA"],"SHAHJAHANPUR":["BANDA","BHAWALKHERA","DADRAUL","JAITIPUR","JALALABAD","KALAN","KANTH","KATRA KHUDAGANJ","KHUTAR","MADNAPUR","MIRJAPUR","NIGOHI","PUWAYA","SINDHAULI","T.A.SHAHJAHANPUR","T.A.TILHAR","TILHAR"],"SHAMLI":["KAIRANA","KAIRANA [TOWN AREA]","KANDHLA","KANDHLA [TOWN AREA]","OON","SHAMLI","SHAMLI [TOWN AREA]","THANABHAWAN"],"SHRAWASTI":["GILAULA","HARIHARPUR RANI","IKAUNA","JAMUNHA","SIRSIYA"],"SIDDHARTHNAGAR":["BANSI","BARHANI","BHANVAPUR","BIRDPUR","DUMARIYAGANJ","ITAVA","JOGIYA","KHESARAHA","KHUNIYANV","LOTAN","MITHAVAL","NAUGARH","SHOHARATGARH","USKA BAZAR"],"SITAPUR":["ALIYA","BEHTA","BISWAN","GONDLAMAU","HARGAON","KASMANDA","KHAIRABAD","LAHARPUR","MACHHAREHTA","MAHMOODABAD","MAHOLI","MISRIKH","N.K.BISWAN","N.K.KHAIRABAD","N.K.MISRIKH","N.K.SITAPUR","PAHALA","PARSENDI","PISAWAN","RAMPURMATHURA","REUSA","SAKARAN","SIDHAULI"],"SONBHADRA":["BABHANI","CHATRA","CHOPAN","DUDHI","GHORAWAL","KARMA","KONE","MYORPUR","NAGWA","ROBERTSGANJ"],"SULTANPUR":["AKHANDNAGAR","BALDIRAI","BHADAIYAN","DHANPATGANJ","DOSTPUR","DUBEYPUR","JAISINGHPUR","KADIPUR","KARAUNDI KALA","KUREBHAR","KURWAR","LAMBHUA","MOTIGARPUR","PP KAMAICHA","SULTANPUR CITY"],"UNNAO":["ASOHA","AURAS","BAGARMAU","BICHHIYA","BIGHAPUR","CITI AREA","FATEHPUR 84","GANGMURADABAD","HASANGANJ","HILOULI","MIYAGANJ","NAVABGANJ","PURWA","SAFIPUR","SIKANDERPUR KARN","SIKANDERPUR SAROSI","SUMERPUR"],"VARANASI":["ARAJILINES","BARAGAON","CHIRAIGAON","CHOLAPUR","HARHUA","KASHIVIDYAPEETH","NAGAR NIGAM","NAGAR PALIKA RAMNAGAR","PINDRA","SEWAPURI"]};
+const UP_DISTRICTS = Object.keys(DIST_BLOCKS).sort();
 
 // PAB (Programme Advisory Board) approved thematic areas
 const THEMES = [
@@ -858,10 +868,113 @@ function showProfileScreen(){
 }
 
 function buildDistChecks(containerId){
-  document.getElementById(containerId).innerHTML = UP_DISTRICTS.map(d=>
+  const el = document.getElementById(containerId); if(!el) return;
+  el.innerHTML = UP_DISTRICTS.map(d=>
     `<label style="display:flex;align-items:center;gap:5px;font-size:11px;cursor:pointer">
-      <input type="checkbox" value="${d}" style="width:12px;height:12px"> ${d}
+      <input type="checkbox" value="${d}" onchange="onDistrictChange()" style="width:12px;height:12px"> ${d}
     </label>`).join('');
+}
+
+function filterDistList(){
+  const q = (document.getElementById('dist-search')?.value||'').toLowerCase();
+  document.querySelectorAll('#dist-checks label').forEach(lbl => {
+    lbl.style.display = lbl.textContent.toLowerCase().includes(q) ? '' : 'none';
+  });
+}
+
+function onDistrictChange(){
+  const checked = [...document.querySelectorAll('#dist-checks input:checked')].map(c=>c.value);
+  const blockEl = document.getElementById('block-checks');
+  const blockLabel = document.getElementById('block-label');
+  const schoolSec = document.getElementById('school-section');
+  if(!blockEl) return;
+
+  if(!checked.length){
+    blockEl.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:4px">Pehle jila chunein</div>';
+    if(blockLabel) blockLabel.textContent = ' — pehle jila chunein';
+    if(schoolSec) schoolSec.style.display = 'none';
+    return;
+  }
+
+  // Gather all blocks for selected districts
+  const allBlocks = [];
+  checked.forEach(d => { (DIST_BLOCKS[d]||[]).forEach(b => allBlocks.push({dist:d, block:b})); });
+  allBlocks.sort((a,b) => a.block.localeCompare(b.block));
+
+  if(blockLabel) blockLabel.textContent = ` — ${checked.length} jila${checked.length>1?'n':''} chuna`;
+  blockEl.innerHTML = allBlocks.map(({dist,block}) =>
+    `<label style="display:flex;align-items:center;gap:5px;font-size:11px;cursor:pointer">
+      <input type="checkbox" value="${dist}|${block}" onchange="onBlockChange()" style="width:12px;height:12px">
+      <span style="color:var(--muted);font-size:10px">[${dist}]</span> ${block}
+    </label>`).join('');
+}
+
+function filterBlockList(){
+  const q = (document.getElementById('block-search')?.value||'').toLowerCase();
+  document.querySelectorAll('#block-checks label').forEach(lbl => {
+    lbl.style.display = lbl.textContent.toLowerCase().includes(q) ? '' : 'none';
+  });
+}
+
+function onBlockChange(){
+  const checkedBlocks = [...document.querySelectorAll('#block-checks input:checked')].map(c=>c.value);
+  const schoolSec = document.getElementById('school-section');
+  const schoolBlockSel = document.getElementById('school-block-sel');
+  if(!schoolSec || !schoolBlockSel) return;
+
+  if(!checkedBlocks.length){ schoolSec.style.display='none'; return; }
+  schoolSec.style.display = 'block';
+  schoolBlockSel.innerHTML = '<option value="">-- Block chunein --</option>' +
+    checkedBlocks.map(cb => {
+      const [d,b] = cb.split('|');
+      return `<option value="${cb}">${b} (${d})</option>`;
+    }).join('');
+}
+
+let _schoolCache = null;
+async function loadSchoolsForBlock(){
+  const val = document.getElementById('school-block-sel')?.value;
+  if(!val) return;
+  const [dist, block] = val.split('|');
+  const schoolList = document.getElementById('school-list');
+  const loadingEl = document.getElementById('school-loading');
+
+  schoolList.innerHTML = '<span style="color:var(--muted)">Loading schools…</span>';
+  if(loadingEl) loadingEl.style.display = 'inline';
+
+  if(!_schoolCache){
+    try {
+      const res = await fetch('https://raw.githubusercontent.com/alokkmohan/NGO/main/school_data.json');
+      _schoolCache = await res.json();
+    } catch(e){
+      schoolList.innerHTML = '<span style="color:var(--red)">School data load nahi ho saki. Internet check karein.</span>';
+      if(loadingEl) loadingEl.style.display = 'none';
+      return;
+    }
+  }
+  if(loadingEl) loadingEl.style.display = 'none';
+
+  const key = dist + '|' + block;
+  const schools = _schoolCache[key] || [];
+  if(!schools.length){
+    schoolList.innerHTML = '<span style="color:var(--muted)">Is block mein koi school nahi mila</span>';
+    return;
+  }
+  schoolList.innerHTML = schools.map(s =>
+    `<label style="display:flex;align-items:center;gap:5px;font-size:11px;cursor:pointer;padding:2px 0">
+      <input type="checkbox" value="${s.n}" data-udise="${s.u}" onchange="updateSelectedSchools()" style="width:12px;height:12px">
+      <span>${s.n}</span>
+      <span style="font-size:10px;color:var(--muted)">(${s.u})</span>
+    </label>`).join('');
+}
+
+function updateSelectedSchools(){
+  const checked = [...document.querySelectorAll('#school-list input:checked')];
+  const display = document.getElementById('selected-schools-display');
+  if(!display) return;
+  display.innerHTML = checked.map(c =>
+    `<span style="background:var(--blue)15;color:var(--blue);border:1px solid var(--blue)30;border-radius:20px;padding:2px 8px;font-size:11px">${c.value}</span>`
+  ).join('');
 }
 
 function buildThemeChecks(containerId){
@@ -903,7 +1016,9 @@ function profileBack(step){
 }
 
 async function saveProfile(){
-  const selDist = [...document.querySelectorAll('#dist-checks input:checked')].map(c=>c.value).join(', ');
+  const selDist   = [...document.querySelectorAll('#dist-checks input:checked')].map(c=>c.value).join(', ');
+  const selBlocks = [...document.querySelectorAll('#block-checks input:checked')].map(c=>c.value.split('|')[1]).join(', ');
+  const selSchools= [...document.querySelectorAll('#school-list input:checked')].map(c=>c.value).join(' | ');
   const component = document.getElementById('pf-component')?.value || '';
   const taskName  = document.getElementById('pf-task-name')?.value.trim() || '';
 
@@ -918,7 +1033,9 @@ async function saveProfile(){
       org:        currentUser.org,
       person:     document.getElementById('pf-person')?.value || currentUser.name,
       dist:       selDist,
-      theme:      component,  // use selected component as theme
+      blocks:     selBlocks,
+      schools:    selSchools,
+      theme:      component,
       phone:      document.getElementById('pf-phone')?.value  || '',
       desig:      document.getElementById('pf-desig')?.value  || '',
       org_type:   document.getElementById('pf-type')?.value   || '',
