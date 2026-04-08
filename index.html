@@ -72,9 +72,13 @@ a{text-decoration:none;color:inherit}
 .card-title{font-size:13px;font-weight:700;color:var(--blue);margin-bottom:12px;display:flex;align-items:center;gap:6px}
 .stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
 .stat-card{background:#fff;border:1px solid var(--border);border-radius:10px;padding:14px 16px}
+.stat-card.mini{padding:10px 12px}
 .stat-val{font-size:26px;font-weight:700;color:var(--blue);line-height:1}
+.mini .stat-val{font-size:20px}
 .stat-label{font-size:11px;color:var(--muted);margin-top:4px}
-.stat-sub{font-size:10px;margin-top:2px}
+.mini .stat-label{font-size:10px;margin-top:2px}
+.stat-sub{font-size:10px;margin-top:2px;color:var(--muted)}
+.mini .stat-sub{font-size:9px}
 
 /* ── MAP ── */
 .map-container{background:#fff;border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:14px;position:relative}
@@ -339,11 +343,58 @@ tr:hover td{background:#FAFBFF}
 
     <!-- ── PAGE: DASHBOARD ── -->
     <div class="page active" id="page-dashboard">
-      <div class="stats-grid">
-        <div class="stat-card"><div class="stat-val" id="s-partners">—</div><div class="stat-label">Active partners</div><div class="stat-sub" id="s-partners-sub" style="color:var(--muted);font-size:10px"></div></div>
-        <div class="stat-card"><div class="stat-val" id="s-districts">—</div><div class="stat-label">Districts covered</div><div class="stat-sub" style="color:var(--muted);font-size:10px">of 75 UP districts</div></div>
-        <div class="stat-card"><div class="stat-val" id="s-schools">—</div><div class="stat-label">Schools reached</div><div class="stat-sub" id="s-schools-sub" style="color:var(--muted);font-size:10px"></div></div>
-        <div class="stat-card"><div class="stat-val" id="s-students">—</div><div class="stat-label">Students benefited</div><div class="stat-sub" id="s-girls-sub" style="color:var(--muted);font-size:10px"></div></div>
+
+      <!-- MAP FIRST -->
+      <div class="filter-bar" id="theme-filter-bar" style="margin-bottom:8px">
+        <span style="font-size:11px;color:var(--muted);line-height:26px">Filter:</span>
+        <button class="fbtn all-btn active" onclick="filterMap('all',this)">All NGOs</button>
+      </div>
+      <div class="map-container" style="margin-bottom:12px">
+        <svg id="map-svg" viewBox="0 0 620 520" xmlns="http://www.w3.org/2000/svg">
+          <rect width="620" height="520" fill="#F0F4FA"/>
+          <path d="M85,65 L118,42 L168,36 L228,30 L292,27 L355,31 L415,40 L462,55 L498,78 L515,112 L522,150 L516,192 L504,232 L490,272 L472,312 L448,348 L412,378 L368,400 L310,414 L250,418 L192,410 L148,390 L112,362 L88,328 L70,288 L60,248 L56,206 L58,164 L65,124 Z"
+            fill="#D6E4F0" stroke="#A8C4E0" stroke-width="1.5"/>
+          <g stroke="#B8D0E8" stroke-width="0.6" opacity="0.7">
+            <line x1="85" y1="164" x2="522" y2="164"/><line x1="85" y1="248" x2="504" y2="248"/>
+            <line x1="85" y1="328" x2="448" y2="328"/><line x1="168" y1="36" x2="148" y2="410"/>
+            <line x1="260" y1="27" x2="240" y2="418"/><line x1="350" y1="30" x2="335" y2="414"/>
+            <line x1="440" y1="42" x2="420" y2="385"/>
+          </g>
+          <g style="font-size:8px;fill:#7a9ab5">
+            <text x="96" y="108">Saharanpur</text><text x="150" y="85">Muzaffarnagar</text>
+            <text x="210" y="68">Meerut</text><text x="270" y="55">Ghaziabad</text>
+            <text x="340" y="58">Aligarh</text><text x="405" y="72">Agra</text>
+            <text x="464" y="102">Mathura</text><text x="90" y="185">Bijnor</text>
+            <text x="150" y="178">Moradabad</text><text x="215" y="168">Bareilly</text>
+            <text x="286" y="162">Shahjahanpur</text><text x="364" y="170">Kanpur</text>
+            <text x="434" y="178">Jhansi</text><text x="90" y="265">Rampur</text>
+            <text x="155" y="258">Bahraich</text><text x="228" y="250">Lucknow</text>
+            <text x="302" y="258">Unnao</text><text x="370" y="262">Allahabad</text>
+            <text x="436" y="270">Banda</text><text x="100" y="348">Lakhimpur</text>
+            <text x="168" y="340">Sitapur</text><text x="240" y="348">Barabanki</text>
+            <text x="310" y="352">Rae Bareli</text><text x="378" y="355">Pratapgarh</text>
+            <text x="148" y="390">Gonda</text><text x="222" y="388">Faizabad</text>
+            <text x="295" y="385">Sultanpur</text><text x="365" y="382">Varanasi</text>
+          </g>
+          <g id="map-markers"></g>
+        </svg>
+        <div class="map-tooltip" id="map-tooltip">
+          <h4 id="mt-name"></h4>
+          <p>Theme: <span id="mt-theme"></span></p>
+          <p>Districts: <span id="mt-dist"></span></p>
+          <p>Schools: <span id="mt-schools"></span></p>
+          <p>Students: <span id="mt-students"></span></p>
+          <p style="margin-top:6px;font-size:10px;color:#999">Click for details</p>
+        </div>
+        <div id="map-legend" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px"></div>
+      </div>
+
+      <!-- KPI STATS ROW -->
+      <div class="stats-grid" style="margin-bottom:12px">
+        <div class="stat-card mini"><div class="stat-val" id="s-partners">—</div><div class="stat-label">Active partners</div><div class="stat-sub" id="s-partners-sub"></div></div>
+        <div class="stat-card mini"><div class="stat-val" id="s-districts">—</div><div class="stat-label">Districts covered</div><div class="stat-sub" style="color:var(--muted);font-size:10px">of 75 UP districts</div></div>
+        <div class="stat-card mini"><div class="stat-val" id="s-schools">—</div><div class="stat-label">Schools reached</div><div class="stat-sub" id="s-schools-sub"></div></div>
+        <div class="stat-card mini"><div class="stat-val" id="s-students">—</div><div class="stat-label">Students benefited</div><div class="stat-sub" id="s-girls-sub"></div></div>
       </div>
 
       <!-- ── ADMIN ANALYTICS (only shown for admin role) ── -->
@@ -394,53 +445,6 @@ tr:hover td{background:#FAFBFF}
 
       </div>
       <!-- ── END ADMIN ANALYTICS ── -->
-
-      <div class="filter-bar" id="theme-filter-bar">
-        <span style="font-size:11px;color:var(--muted);line-height:26px">Filter:</span>
-        <button class="fbtn all-btn active" onclick="filterMap('all',this)">All NGOs</button>
-      </div>
-
-      <div class="map-container">
-        <svg id="map-svg" viewBox="0 0 620 520" xmlns="http://www.w3.org/2000/svg">
-          <rect width="620" height="520" fill="#F0F4FA"/>
-          <path d="M85,65 L118,42 L168,36 L228,30 L292,27 L355,31 L415,40 L462,55 L498,78 L515,112 L522,150 L516,192 L504,232 L490,272 L472,312 L448,348 L412,378 L368,400 L310,414 L250,418 L192,410 L148,390 L112,362 L88,328 L70,288 L60,248 L56,206 L58,164 L65,124 Z"
-            fill="#D6E4F0" stroke="#A8C4E0" stroke-width="1.5"/>
-          <g stroke="#B8D0E8" stroke-width="0.6" opacity="0.7">
-            <line x1="85" y1="164" x2="522" y2="164"/><line x1="85" y1="248" x2="504" y2="248"/>
-            <line x1="85" y1="328" x2="448" y2="328"/><line x1="168" y1="36" x2="148" y2="410"/>
-            <line x1="260" y1="27" x2="240" y2="418"/><line x1="350" y1="30" x2="335" y2="414"/>
-            <line x1="440" y1="42" x2="420" y2="385"/>
-          </g>
-          <g style="font-size:8px;fill:#7a9ab5">
-            <text x="96" y="108">Saharanpur</text><text x="150" y="85">Muzaffarnagar</text>
-            <text x="210" y="68">Meerut</text><text x="270" y="55">Ghaziabad</text>
-            <text x="340" y="58">Aligarh</text><text x="405" y="72">Agra</text>
-            <text x="464" y="102">Mathura</text><text x="90" y="185">Bijnor</text>
-            <text x="150" y="178">Moradabad</text><text x="215" y="168">Bareilly</text>
-            <text x="286" y="162">Shahjahanpur</text><text x="364" y="170">Kanpur</text>
-            <text x="434" y="178">Jhansi</text><text x="90" y="265">Rampur</text>
-            <text x="155" y="258">Bahraich</text><text x="228" y="250">Lucknow</text>
-            <text x="302" y="258">Unnao</text><text x="370" y="262">Allahabad</text>
-            <text x="436" y="270">Banda</text><text x="100" y="348">Lakhimpur</text>
-            <text x="168" y="340">Sitapur</text><text x="240" y="348">Barabanki</text>
-            <text x="310" y="352">Rae Bareli</text><text x="378" y="355">Pratapgarh</text>
-            <text x="148" y="390">Gonda</text><text x="222" y="388">Faizabad</text>
-            <text x="295" y="385">Sultanpur</text><text x="365" y="382">Varanasi</text>
-          </g>
-          <g id="map-markers"></g>
-        </svg>
-        <div class="map-tooltip" id="map-tooltip">
-          <h4 id="mt-name"></h4>
-          <p>Theme: <span id="mt-theme"></span></p>
-          <p>Districts: <span id="mt-dist"></span></p>
-          <p>Schools: <span id="mt-schools"></span></p>
-          <p>Students: <span id="mt-students"></span></p>
-          <p style="margin-top:6px;font-size:10px;color:#999">Click for details</p>
-        </div>
-        <div class="map-legend">
-        </div>
-        <div id="map-legend" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px">
-      </div>
 
       <div class="card">
         <div class="card-title">📋 Partner summary — all NGOs</div>
@@ -660,6 +664,20 @@ const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwuy2eL0GXp0Q8EutKhs
 let SAMPLE_NGOS = [];
 let REPORTS     = [];
 
+// ── SAMPLE / DEMO DATA (delete these arrays when real data is ready) ──
+// To remove: clear DEMO_NGOS and DEMO_REPORTS to empty arrays []
+const DEMO_NGOS = [
+  {id:1,name:'Udhyam Learning',theme:'Literacy & Learning Outcomes',person:'Priya Sharma',dist:'Agra, Mathura',x:462,y:112,schools:120,students:8400,girls:4200,teachers:80,progress:72,month:'April 2026',kmi:'8,400 students reached with foundational literacy support.'},
+  {id:2,name:'Medha',theme:'Vocational & Life Skills',person:'Rahul Verma',dist:'Lucknow, Unnao',x:240,y:252,schools:95,students:6200,girls:3100,teachers:60,progress:65,month:'April 2026',kmi:'Life skills sessions in 95 schools.'},
+  {id:3,name:'Educate Girls',theme:'Girls Retention & Enrolment',person:'Anjali Singh',dist:'Varanasi, Mirzapur',x:372,y:352,schools:180,students:12000,girls:9800,teachers:90,progress:85,month:'April 2026',kmi:'9,800 girls enrolled with zero dropout in 28 schools.'},
+  {id:4,name:'SEED Impact',theme:'Teacher Capacity Building',person:'Vikram Yadav',dist:'Bareilly, Shahjahanpur',x:242,y:172,schools:110,students:9800,girls:4100,teachers:180,progress:55,month:'March 2026',kmi:'Teacher training completed in 110 schools.'},
+  {id:5,name:'1M1B',theme:'ICT / Digital Education',person:'Amit Kumar',dist:'Ghaziabad, Meerut',x:284,y:62,schools:75,students:14000,girls:6800,teachers:120,progress:90,month:'April 2026',kmi:'Digital labs active in 75 schools.'},
+];
+const DEMO_REPORTS = [
+  {ngo:'Educate Girls',month:'April 2026',schools:180,students:12000,girls:9800,teachers:90,status:'85',kmi:'9,800 girls enrolled.',submitted:'01/04/2026'},
+  {ngo:'1M1B',month:'April 2026',schools:75,students:14000,girls:6800,teachers:120,status:'90',kmi:'Digital labs active.',submitted:'02/04/2026'},
+];
+
 let currentUser = null;
 let currentPage = 'dashboard';
 let reportStep = 0;
@@ -857,6 +875,10 @@ async function loadSheetData(){
       repRes.data.forEach(r => REPORTS.push(r));
     }
   } catch(e){ console.warn('Could not load Sheet data:', e.message); }
+
+  // Fall back to demo data if Sheets returned nothing
+  if(!SAMPLE_NGOS.length && DEMO_NGOS.length) DEMO_NGOS.forEach(n => SAMPLE_NGOS.push(n));
+  if(!REPORTS.length && DEMO_REPORTS.length)   DEMO_REPORTS.forEach(r => REPORTS.push(r));
 }
 
 // ════════════════════════════════════
