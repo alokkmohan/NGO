@@ -1589,7 +1589,7 @@ function buildOfficialReport(n, selMonth){
       showLoader('Restoring session…');
       await loadSheetData();
       hideLoader();
-      initApp();
+      startApp();
     } catch(e){
       localStorage.removeItem('ngo_session');
       hideLoader();
