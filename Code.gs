@@ -25,6 +25,8 @@ function doGet(e) {
     else if (action === 'login')          result = login(p);
     else if (action === 'changePassword') result = changePassword(p);
     else if (action === 'saveProfile')    result = saveProfile(p);
+    else if (action === 'saveProject')    result = saveProject(p);
+    else if (action === 'getProjects')    result = getProjects(p);
     else if (action === 'submitReport') result = submitReport({ report: JSON.parse(p.report) });
     else result = { error: 'Unknown action' };
     return respond(result, p.callback);
@@ -211,7 +213,46 @@ function uploadPhoto(data) {
   };
 }
 
-// ── SAVE NEW NGO PROFILE (on first signup) ───────────────────
+// ── PROJECTS ────────────────────────────────────────────────
+// Projects sheet: project_id|ngo|component|task_name|description|target_schools|target_students|target_girls|target_teachers|target_meetings|target_events|start_date|end_date|status|created_on
+function saveProject(data) {
+  const ss = SpreadsheetApp.openById(SHEET_ID);
+  let sheet = ss.getSheetByName('Projects');
+  if (!sheet) {
+    sheet = ss.insertSheet('Projects');
+    sheet.appendRow(['project_id','ngo','component','task_name','description',
+      'target_schools','target_students','target_girls','target_teachers',
+      'target_meetings','target_events','start_date','end_date','status','created_on']);
+  }
+  const id = new Date().getTime();
+  sheet.appendRow([
+    id, data.ngo, data.component, data.task_name, data.description||'',
+    +data.target_schools||0, +data.target_students||0, +data.target_girls||0,
+    +data.target_teachers||0, +data.target_meetings||0, +data.target_events||0,
+    data.start_date||'', data.end_date||'', 'active',
+    new Date().toLocaleDateString('en-IN')
+  ]);
+  return { success: true, project_id: id };
+}
+
+function getProjects(data) {
+  const ss = SpreadsheetApp.openById(SHEET_ID);
+  const sheet = ss.getSheetByName('Projects');
+  if (!sheet) return { success: true, data: [] };
+  const rows = sheet.getDataRange().getValues();
+  if (rows.length < 2) return { success: true, data: [] };
+  const headers = rows[0];
+  let projects = rows.slice(1).map(row => {
+    const obj = {};
+    headers.forEach((h, i) => obj[h] = row[i]);
+    return obj;
+  });
+  // Filter by NGO if requested (non-admin)
+  if (data.ngo) projects = projects.filter(p => p.ngo === data.ngo);
+  return { success: true, data: projects };
+}
+
+// ── SAVE NEW NGO PROFILE ─────────────────────────────────────
 function saveProfile(data) {
   const ss = SpreadsheetApp.openById(SHEET_ID);
 
