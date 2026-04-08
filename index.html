@@ -811,7 +811,39 @@ function initApp(){
   buildDistChecks('r-dist-checks');
   renderMap('all');
   renderPartnerTable();
+  updateDashboardStats();
   showPage('dashboard');
+}
+
+function updateDashboardStats(){
+  if(!SAMPLE_NGOS.length) return;
+
+  // Active partners
+  document.getElementById('s-partners').textContent = SAMPLE_NGOS.length;
+
+  // Unique districts (split by comma, deduplicate)
+  const distSet = new Set();
+  SAMPLE_NGOS.forEach(n => n.dist.split(',').forEach(d => { if(d.trim()) distSet.add(d.trim()); }));
+  document.getElementById('s-districts').textContent = distSet.size;
+
+  // Total schools
+  const totalSchools = SAMPLE_NGOS.reduce((a,n) => a + (+n.schools||0), 0);
+  document.getElementById('s-schools').textContent = totalSchools.toLocaleString('en-IN');
+
+  // Total students & girls
+  const totalStudents = SAMPLE_NGOS.reduce((a,n) => a + (+n.students||0), 0);
+  const totalGirls    = SAMPLE_NGOS.reduce((a,n) => a + (+n.girls||0), 0);
+  document.getElementById('s-students').textContent =
+    totalStudents >= 100000 ? (totalStudents/100000).toFixed(1)+'L+' : totalStudents.toLocaleString('en-IN');
+
+  // Update girls sub-label
+  const girlsLabel = document.querySelector('#s-students')?.closest('.stat-card')?.querySelector('.stat-sub');
+  if(girlsLabel) girlsLabel.textContent = 'Girls: ' + (totalGirls >= 100000 ? (totalGirls/100000).toFixed(1)+'L' : totalGirls.toLocaleString('en-IN'));
+
+  // Update schools month badge
+  const latestMonth = SAMPLE_NGOS.map(n=>n.month).filter(Boolean).sort().reverse()[0] || '';
+  const schoolsBadge = document.querySelector('#s-schools')?.closest('.stat-card')?.querySelector('.badge');
+  if(schoolsBadge && latestMonth) schoolsBadge.textContent = latestMonth;
 }
 
 function showPage(p){
