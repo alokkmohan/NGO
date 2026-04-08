@@ -345,14 +345,9 @@ tr:hover td{background:#FAFBFF}
         <div class="stat-card"><div class="stat-val" id="s-students">—</div><div class="stat-label">Students benefited</div><div class="stat-sub" id="s-girls-sub" style="color:var(--muted);font-size:10px"></div></div>
       </div>
 
-      <div class="filter-bar">
+      <div class="filter-bar" id="theme-filter-bar">
         <span style="font-size:11px;color:var(--muted);line-height:26px">Filter:</span>
-        <button class="fbtn active" onclick="filterMap('all',this)">All themes</button>
-        <button class="fbtn" onclick="filterMap('Girls Education',this)">Girls Education</button>
-        <button class="fbtn" onclick="filterMap('ICT/Digital',this)">ICT / Digital</button>
-        <button class="fbtn" onclick="filterMap('Community',this)">Community</button>
-        <button class="fbtn" onclick="filterMap('Literacy',this)">Literacy</button>
-        <button class="fbtn" onclick="filterMap('Inclusion',this)">Inclusion</button>
+        <button class="fbtn all-btn active" onclick="filterMap('all',this)">All NGOs</button>
       </div>
 
       <div class="map-container">
@@ -393,12 +388,8 @@ tr:hover td{background:#FAFBFF}
           <p style="margin-top:6px;font-size:10px;color:#999">Click for details</p>
         </div>
         <div class="map-legend">
-          <div class="leg"><div class="leg-dot" style="background:#2E6DB4"></div>Girls Education</div>
-          <div class="leg"><div class="leg-dot" style="background:#1D9E75"></div>ICT / Digital</div>
-          <div class="leg"><div class="leg-dot" style="background:#BA7517"></div>Community</div>
-          <div class="leg"><div class="leg-dot" style="background:#D4537E"></div>Inclusion</div>
-          <div class="leg"><div class="leg-dot" style="background:#534AB7"></div>Literacy</div>
         </div>
+        <div id="map-legend" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px">
       </div>
 
       <div class="card">
@@ -555,7 +546,7 @@ tr:hover td{background:#FAFBFF}
         <div class="report-controls">
           <select id="rep-month"><option value="all">All months</option><option>April 2026</option><option>May 2026</option><option>March 2026</option><option>February 2026</option></select>
           <select id="rep-ngo"><option value="all">All NGOs</option></select>
-          <select id="rep-theme"><option value="all">All themes</option><option>Girls Education</option><option>ICT/Digital</option><option>Community</option><option>Literacy</option><option>Inclusion</option></select>
+          <select id="rep-theme"><option value="all">All themes</option></select>
           <button class="btn-report" onclick="generateReport()">⬇ Generate Report</button>
           <button class="btn-report" style="background:var(--green)" onclick="window.print()">🖨 Print / PDF</button>
         </div>
@@ -885,6 +876,28 @@ function updateDashboardStats(){
   document.getElementById('s-girls-sub').textContent = totalGirls
     ? 'Girls: ' + (totalGirls >= 100000 ? (totalGirls/100000).toFixed(1)+'L' : totalGirls.toLocaleString('en-IN'))
     : '';
+
+  // Build theme filter buttons from real data
+  const themes = [...new Set(SAMPLE_NGOS.map(n=>n.theme).filter(Boolean))];
+  const bar = document.getElementById('theme-filter-bar');
+  // Remove old theme buttons (keep only "All NGOs")
+  [...bar.querySelectorAll('.fbtn:not(.all-btn)')].forEach(b=>b.remove());
+  themes.forEach(t => {
+    const btn = document.createElement('button');
+    btn.className = 'fbtn';
+    btn.textContent = t;
+    btn.onclick = function(){ filterMap(t, this); };
+    bar.appendChild(btn);
+  });
+
+  // Build map legend from real themes
+  const legend = document.getElementById('map-legend');
+  if(legend){
+    legend.innerHTML = themes.map(t => {
+      const col = THEME_COLORS[t] || '#2E6DB4';
+      return `<div class="leg"><div class="leg-dot" style="background:${col}"></div>${t}</div>`;
+    }).join('');
+  }
 }
 
 function showPage(p){
@@ -1154,10 +1167,20 @@ function fileToBase64(file){
 // ADMIN
 // ════════════════════════════════════
 function fillAdminNGOSelect(){
-  const sel=document.getElementById('rep-ngo');
-  SAMPLE_NGOS.forEach(n=>{
-    const o=document.createElement('option');
-    o.textContent=n.name;sel.appendChild(o);
+  const sel = document.getElementById('rep-ngo');
+  sel.innerHTML = '<option value="all">All NGOs</option>';
+  SAMPLE_NGOS.forEach(n => {
+    const o = document.createElement('option');
+    o.textContent = n.name; sel.appendChild(o);
+  });
+
+  // Fill theme dropdown from real data
+  const themeSel = document.getElementById('rep-theme');
+  themeSel.innerHTML = '<option value="all">All themes</option>';
+  const themes = [...new Set(SAMPLE_NGOS.map(n=>n.theme).filter(Boolean))];
+  themes.forEach(t => {
+    const o = document.createElement('option');
+    o.textContent = t; themeSel.appendChild(o);
   });
 }
 
