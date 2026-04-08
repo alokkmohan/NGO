@@ -9,8 +9,8 @@
 // 4. Copy the Web App URL into index.html (SCRIPT_URL variable)
 // ══════════════════════════════════════════════════════════════
 
-const SHEET_ID        = 'YOUR_SPREADSHEET_ID_HERE';
-const DRIVE_FOLDER_ID = 'YOUR_DRIVE_FOLDER_ID_HERE';
+const SHEET_ID        = '1fESLu2sjfmKuszrSUZgCjt296gf2GRTSAMkb2uv7F_M';
+const DRIVE_FOLDER_ID = '151IYtuGpaXal0DiInwUGyaGl7ZX51HD7';
 
 // ── ROUTER ──────────────────────────────────────────────────
 function doGet(e) {
