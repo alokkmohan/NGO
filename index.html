@@ -721,7 +721,9 @@ async function doLogin(){
     } else {
       alert(res.error || 'Invalid email or password');
     }
-  } catch(e){ alert('Connection error. Check your internet and try again.'); }
+  } catch(e){
+    alert('Could not reach the server after 3 attempts.\n\nPlease check:\n1. Internet connection\n2. Apps Script is deployed (Execute as: Me, Access: Anyone)\n\nTry again in a moment.');
+  }
   hideLoader();
 }
 
@@ -834,19 +836,32 @@ async function saveProfile(){
 // ════════════════════════════════════
 // Use GET for all calls — Apps Script redirects POST responses which breaks CORS.
 // Exception: photo upload (large base64 payload must be POST).
+// Fetch with 15s timeout + 2 retries
 async function apiFetch(params){
   const url = SCRIPT_URL + '?' + new URLSearchParams(params);
-  const res = await fetch(url);
-  return res.json();
+  let lastErr;
+  for(let attempt = 0; attempt < 3; attempt++){
+    try {
+      const ctrl = new AbortController();
+      const timer = setTimeout(()=>ctrl.abort(), 15000);
+      const res = await fetch(url, {signal: ctrl.signal});
+      clearTimeout(timer);
+      return await res.json();
+    } catch(e){
+      lastErr = e;
+      if(attempt < 2) await new Promise(r=>setTimeout(r, 1200));
+    }
+  }
+  throw lastErr;
 }
 
 async function apiPost(body){
-  // Only used for photo upload (base64 too large for URL)
-  const res = await fetch(SCRIPT_URL, {
-    method: 'POST',
-    body: JSON.stringify(body)
-    // No Content-Type header = browser picks text/plain → simple request, no preflight
+  const ctrl  = new AbortController();
+  const timer = setTimeout(()=>ctrl.abort(), 30000);
+  const res   = await fetch(SCRIPT_URL, {
+    method:'POST', body:JSON.stringify(body), signal:ctrl.signal
   });
+  clearTimeout(timer);
   return res.json();
 }
 
