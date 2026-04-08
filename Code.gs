@@ -20,6 +20,7 @@ function doGet(e) {
     const action = p.action;
     if (action === 'getNGOs')      return respond(getNGOs());
     if (action === 'getReports')   return respond(getReports());
+    if (action === 'getNGOList')   return respond(getNGOList());
     if (action === 'login')        return respond(login(p));
     if (action === 'saveProfile')  return respond(saveProfile(p));
     if (action === 'submitReport') return respond(submitReport({ report: JSON.parse(p.report) }));
@@ -59,6 +60,19 @@ function login(data) {
     }
   }
   return { success: false, error: 'Invalid email or password' };
+}
+
+// ── GET NGO MASTER LIST (for signup dropdown) ────────────────
+// NGO_List sheet columns: name | theme (optional)
+function getNGOList() {
+  const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName('NGO_List');
+  if (!sheet) return { success: true, data: [] };
+  const rows = sheet.getDataRange().getValues();
+  if (rows.length < 2) return { success: true, data: [] };
+  const data = rows.slice(1)
+    .filter(r => r[0])
+    .map(r => ({ name: r[0], theme: r[1] || '' }));
+  return { success: true, data };
 }
 
 // ── GET NGOs ─────────────────────────────────────────────────

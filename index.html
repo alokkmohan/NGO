@@ -202,14 +202,7 @@ tr:hover td{background:#FAFBFF}
     <div id="signup-form" style="display:none">
       <div class="form-group"><label>Organisation Name</label>
         <select id="reg-org">
-          <option value="">Select your NGO</option>
-          <option>Educate Girls</option><option>Pratham Foundation</option><option>Room to Read</option>
-          <option>CARE India</option><option>Save the Children</option><option>Magic Bus</option>
-          <option>Smile Foundation</option><option>Action Aid India</option><option>Bal Raksha Bharat</option>
-          <option>Breakthrough</option><option>World Vision India</option><option>CRY India</option>
-          <option>Jan Shikshan Sansthan</option><option>iDiscoveri Education</option><option>Navjyoti Foundation</option>
-          <option>Digital Shakti</option><option>PRADAN</option><option>Samarthan</option>
-          <option>Other (specify in profile)</option>
+          <option value="">Loading NGO list…</option>
         </select>
       </div>
       <div class="form-group"><label>Your Name</label><input type="text" id="reg-name" placeholder="Full name"></div>
@@ -621,8 +614,25 @@ let activeFilter = 'all';
 function switchTab(tab){
   document.querySelectorAll('.auth-tab').forEach(t=>t.classList.remove('active'));
   event.target.classList.add('active');
-  document.getElementById('login-form').style.display = tab==='login'?'block':'none';
-  document.getElementById('signup-form').style.display = tab==='signup'?'block':'none';
+  document.getElementById('login-form').style.display  = tab==='login'  ? 'block' : 'none';
+  document.getElementById('signup-form').style.display = tab==='signup' ? 'block' : 'none';
+  if(tab === 'signup') loadNGOListDropdown();
+}
+
+async function loadNGOListDropdown(){
+  const sel = document.getElementById('reg-org');
+  sel.innerHTML = '<option value="">Loading…</option>';
+  try {
+    const res = await apiFetch({action:'getNGOList'});
+    if(res.success && res.data.length){
+      sel.innerHTML = '<option value="">-- Select your NGO --</option>' +
+        res.data.map(n => `<option value="${n.name}">${n.name}</option>`).join('');
+    } else {
+      sel.innerHTML = '<option value="">No NGOs found — contact PMU Admin</option>';
+    }
+  } catch(e){
+    sel.innerHTML = '<option value="">Error loading list — try again</option>';
+  }
 }
 
 async function doLogin(){
