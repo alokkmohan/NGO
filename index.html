@@ -309,7 +309,6 @@ tr:hover td{background:#FAFBFF}
         <div class="wform-group"><label>Target students</label><input id="pf-tstudents" type="number" placeholder="0"></div>
         <div class="wform-group"><label>Target girls</label><input id="pf-tgirls" type="number" placeholder="0"></div>
         <div class="wform-group"><label>Target teachers trained</label><input id="pf-tteachers" type="number" placeholder="0"></div>
-        <div class="wform-group"><label>Annual budget (₹)</label><input id="pf-budget" type="number" placeholder="0"></div>
         <div class="wform-group"><label>Programme start date</label><input id="pf-start" type="date"></div>
       </div>
       <div class="wform-group"><label>Brief description of your work</label>
@@ -452,6 +451,12 @@ tr:hover td{background:#FAFBFF}
         <div class="card-title">🏢 My organisation profile</div>
         <div id="profile-display"></div>
       </div>
+      <div class="card" id="my-reports-card" style="margin-top:14px;display:none">
+        <div class="card-title">📋 My submitted reports
+          <span id="my-reports-count" style="font-size:12px;font-weight:400;color:var(--muted);margin-left:8px"></span>
+        </div>
+        <div id="my-reports-list"></div>
+      </div>
     </div>
 
     <!-- ── PAGE: MONTHLY REPORT ── -->
@@ -522,7 +527,6 @@ tr:hover td{background:#FAFBFF}
             <div class="wform-group"><label>Events / workshops</label><input id="r-events" type="number" min="0" placeholder="0"></div>
             <div class="wform-group"><label>SC/ST/OBC students</label><input id="r-scst" type="number" min="0" placeholder="0"></div>
             <div class="wform-group"><label>Divyang students</label><input id="r-divyang" type="number" min="0" placeholder="0"></div>
-            <div class="wform-group"><label>Budget spent (₹)</label><input id="r-budget" type="number" min="0" placeholder="0"></div>
             <div class="wform-group"><label>Dropouts prevented</label><input id="r-dropout" type="number" min="0" placeholder="0"></div>
           </div>
           <div class="wizard-nav"><button class="btn-sec" onclick="reportBack(1)">← Back</button><button class="btn-blu" onclick="reportNext(1)">Next →</button></div>
@@ -843,7 +847,6 @@ async function saveProfile(){
       org_type:    document.getElementById('pf-type')?.value   || '',
       prog:        document.getElementById('pf-prog')?.value   || '',
       desc:        document.getElementById('pf-desc')?.value   || '',
-      budget_target: document.getElementById('pf-budget')?.value || 0,
       start_date:  document.getElementById('pf-start')?.value  || ''
     });
     await loadSheetData();
@@ -1151,7 +1154,7 @@ function showPage(p){
   const navItems = document.querySelectorAll('.nav-item');
   if(navMap[p]!==undefined && navItems[navMap[p]]) navItems[navMap[p]].classList.add('active');
 
-  if(p==='profile-view') renderProfileView();
+  if(p==='profile-view'){ renderProfileView(); renderMyReports(); }
   if(p==='ngo-list') renderAdminNGOList();
   if(p==='monthly-report'){reportStep=0;updateReportSteps();prefillReportForm();}
 }
@@ -1321,6 +1324,38 @@ function renderProfileView(){
   `;
 }
 
+function renderMyReports(){
+  if(currentUser.role === 'admin') return;
+  const myReports = REPORTS.filter(r => r.ngo === currentUser.org)
+    .sort((a,b) => (+b.id||0) - (+a.id||0));
+  const card = document.getElementById('my-reports-card');
+  const list = document.getElementById('my-reports-list');
+  const count = document.getElementById('my-reports-count');
+  if(!myReports.length){ card.style.display='none'; return; }
+  card.style.display='block';
+  count.textContent = myReports.length + ' report' + (myReports.length!==1?'s':'') + ' submitted';
+  list.innerHTML = myReports.map(r => {
+    const pct = +r.status||0;
+    const col = pct>=75?'var(--green)':pct>=50?'var(--amber)':'var(--red)';
+    const label = pct>=75?'On track':pct>=50?'Partial':'Behind';
+    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:6px">
+      <div>
+        <div style="font-weight:600;font-size:13px">${r.month||'—'}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px">
+          ${r.schools?r.schools+' schools · ':''}${r.students?r.students+' students · ':''}${r.girls?r.girls+' girls':''}
+        </div>
+        ${r.kmi?`<div style="font-size:11px;color:var(--blue);margin-top:3px;font-style:italic">"${r.kmi}"</div>`:''}
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="background:${col}20;color:${col};border:1px solid ${col}50;border-radius:20px;padding:3px 10px;font-size:11px;font-weight:600">${label}</span>
+        <span style="font-size:10px;color:var(--muted)">${r.submitted||''}</span>
+      </div>
+    </div>`;
+  }).join('') + `<div style="padding-top:10px;font-size:11px;color:var(--muted)">
+    Reports are read-only once submitted. Contact PMU Admin for corrections.
+  </div>`;
+}
+
 function toggleDistrictEdit(){
   const panel = document.getElementById('dist-edit-panel');
   const isOpen = panel.style.display !== 'none';
@@ -1393,7 +1428,6 @@ function downloadReportTemplate(){
     ['Events / Workshops','','Karyakramon ki sankhya'],
     ['SC-ST-OBC Students','','SC/ST/OBC chhatro ki sankhya'],
     ['Divyang Students','','Divyang chhatro ki sankhya'],
-    ['Budget Spent (Rs)','','Vyay ki rashi rupayo mein'],
     ['Dropouts Prevented','','Kitne bachon ka dropout roka'],
     ['Tasks Completed','','Kaam ki soochi — alag alag kaam alag line mein'],
     ['Status','100','100=Poora 85=Sahi disha 60=Aadha 35=Pichhe 0=Shuru nahi'],
@@ -1468,7 +1502,6 @@ function fillFormFromData(data){
   set('r-events','events / workshops');
   set('r-scst','sc-st-obc students');
   set('r-divyang','divyang students');
-  set('r-budget','budget spent (rs)');
   set('r-dropout','dropouts prevented');
   set('r-tasks','tasks completed');
   set('r-status','status');
@@ -1515,6 +1548,18 @@ function prefillReportForm(){
   const distBoxes = document.querySelectorAll('#r-dist-checks input[type=checkbox]');
   distBoxes.forEach(cb => { cb.checked = profileDists.length ? profileDists.includes(cb.value) : false; });
 
+  // Warn if current month already submitted
+  const alreadySubmitted = REPORTS.find(r => r.ngo === currentUser.org && r.month === curMonthStr);
+  const csvStatus = document.getElementById('csv-status');
+  if(alreadySubmitted && csvStatus){
+    csvStatus.style.display = 'block';
+    csvStatus.style.background = '#fff3cd';
+    csvStatus.style.color = '#856404';
+    csvStatus.textContent = `⚠ ${curMonthStr} ka report pehle se submit ho chuka hai (${alreadySubmitted.submitted||''}). Dobara submit nahi ho sakta.`;
+  } else if(csvStatus){
+    csvStatus.style.display = 'none';
+  }
+
   // 4. Pre-fill numbers from last submitted report (carry-over reference)
   const myReports = REPORTS.filter(r => r.ngo === currentUser.org);
   if(myReports.length){
@@ -1559,6 +1604,15 @@ function removePhoto(i){
 
 async function submitReport(){
   const months = document.getElementById('r-month').value;
+
+  // Duplicate check — same NGO same month
+  const duplicate = REPORTS.find(r => r.ngo === currentUser.org && r.month === months);
+  if(duplicate){
+    const msg = `⚠ ${months} ka report pehle se submit ho chuka hai!\n\nSubmitted: ${duplicate.submitted||'earlier'}\n\nReport ek baar submit hone ke baad badla nahi ja sakta.\nKoi galti ho to PMU Admin se sampark karein.`;
+    alert(msg);
+    return;
+  }
+
   const report = {
     ngo:      currentUser.org,
     month:    months,
@@ -1570,7 +1624,6 @@ async function submitReport(){
     events:   +document.getElementById('r-events').value   || 0,
     scst:     +document.getElementById('r-scst').value     || 0,
     divyang:  +document.getElementById('r-divyang').value  || 0,
-    budget:   +document.getElementById('r-budget').value   || 0,
     dropout:  +document.getElementById('r-dropout').value  || 0,
     tasks:      document.getElementById('r-tasks').value,
     status:     document.getElementById('r-status').value,
@@ -1748,7 +1801,6 @@ function buildOfficialReport(n, selMonth){
     { indicator:'Events / camps organised',          update: r.events   ? r.events+' events'      : '', status: r.events   ? 'Completed':'Not started' },
     { indicator:'SC / ST / OBC students covered',    update: r.scst     ? r.scst+' students'      : '', status: r.scst     ? 'Completed':'Not started' },
     { indicator:'Divyang students supported',        update: r.divyang  ? r.divyang+' students'   : '', status: r.divyang  ? 'Completed':'Not started' },
-    { indicator:'Budget utilised (₹)',               update: r.budget   ? '₹'+(+r.budget||0).toLocaleString('en-IN') : '', status: r.budget ? 'Completed':'Not started' },
     { indicator:'Dropout prevention cases',          update: r.dropout  ? r.dropout+' cases'      : '', status: r.dropout  ? 'Completed':'Not started' },
     { indicator:'Key Milestone Indicator (KMI)',     update: r.kmi      || '',                         status: r.kmi      ? 'Completed':'Not started' },
     { indicator:'Additional activities / tasks',     update: (r.tasks||'').split('\n')[0]||'',          status: r.tasks    ? 'In progress':'Not started' },
