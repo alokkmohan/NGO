@@ -1,0 +1,1041 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Samagra UP Secondary — NGO Partner Portal</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --blue:#1A3C6E;--blue2:#2E6DB4;--gold:#C8960C;--green:#1D9E75;
+  --amber:#BA7517;--pink:#D4537E;--purple:#534AB7;--red:#E24B4A;
+  --bg:#F4F6FA;--card:#fff;--border:#DDE3EE;--text:#1a1a2e;--muted:#6b7280;
+  --sidebar:240px;
+}
+body{font-family:'Segoe UI',Arial,sans-serif;background:var(--bg);color:var(--text);font-size:14px}
+a{text-decoration:none;color:inherit}
+
+/* ── AUTH SCREEN ── */
+#auth-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#1A3C6E 0%,#2E6DB4 100%)}
+.auth-box{background:#fff;border-radius:16px;padding:36px 32px;width:380px;box-shadow:0 8px 32px rgba(0,0,0,0.15)}
+.auth-logo{text-align:center;margin-bottom:24px}
+.auth-logo h1{font-size:18px;color:var(--blue);font-weight:700;line-height:1.3}
+.auth-logo p{font-size:11px;color:var(--muted);margin-top:4px}
+.auth-tabs{display:flex;border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:20px}
+.auth-tab{flex:1;padding:8px;text-align:center;font-size:13px;cursor:pointer;background:#f9f9f9;color:var(--muted);font-weight:500}
+.auth-tab.active{background:var(--blue);color:#fff}
+.form-group{margin-bottom:14px}
+.form-group label{display:block;font-size:12px;font-weight:600;color:var(--blue);margin-bottom:5px}
+.form-group input,.form-group select{width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;outline:none;transition:border .2s}
+.form-group input:focus,.form-group select:focus{border-color:var(--blue2)}
+.btn-primary{width:100%;padding:10px;background:var(--blue);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;margin-top:4px}
+.btn-primary:hover{background:var(--blue2)}
+.auth-note{font-size:11px;color:var(--muted);text-align:center;margin-top:12px}
+
+/* ── MAIN LAYOUT ── */
+#main-screen{display:none;min-height:100vh}
+.sidebar{position:fixed;top:0;left:0;width:var(--sidebar);height:100vh;background:var(--blue);display:flex;flex-direction:column;z-index:100}
+.sidebar-logo{padding:18px 16px 14px;border-bottom:1px solid rgba(255,255,255,0.1)}
+.sidebar-logo h2{font-size:13px;color:#fff;font-weight:700;line-height:1.4}
+.sidebar-logo p{font-size:10px;color:rgba(255,255,255,0.6);margin-top:2px}
+.nav-items{flex:1;padding:12px 0;overflow-y:auto}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 16px;color:rgba(255,255,255,0.75);cursor:pointer;font-size:13px;border-left:3px solid transparent;transition:all .15s}
+.nav-item:hover{background:rgba(255,255,255,0.08);color:#fff}
+.nav-item.active{background:rgba(255,255,255,0.12);color:#fff;border-left-color:var(--gold)}
+.nav-item .ni{font-size:16px;width:20px;text-align:center}
+.nav-sep{font-size:10px;color:rgba(255,255,255,0.35);padding:10px 16px 4px;text-transform:uppercase;letter-spacing:1px}
+.sidebar-user{padding:12px 16px;border-top:1px solid rgba(255,255,255,0.1)}
+.sidebar-user .su-name{font-size:12px;color:#fff;font-weight:600}
+.sidebar-user .su-role{font-size:10px;color:rgba(255,255,255,0.5)}
+.su-avatar{width:32px;height:32px;border-radius:50%;background:var(--gold);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;flex-shrink:0}
+.sidebar-user-inner{display:flex;align-items:center;gap:8px}
+.logout-btn{font-size:10px;color:rgba(255,255,255,0.45);cursor:pointer;margin-top:4px}
+.logout-btn:hover{color:#fff}
+
+.content{margin-left:var(--sidebar);min-height:100vh;padding:0}
+.topbar{background:#fff;border-bottom:1px solid var(--border);padding:12px 24px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50}
+.topbar-title{font-size:16px;font-weight:700;color:var(--blue)}
+.topbar-sub{font-size:11px;color:var(--muted)}
+.topbar-right{display:flex;align-items:center;gap:10px}
+.badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:600}
+.badge-blue{background:#E6F1FB;color:#185FA5}
+.badge-green{background:#E1F5EE;color:#0F6E56}
+.badge-amber{background:#FAEEDA;color:#854F0B}
+.badge-red{background:#FCEBEB;color:#A32D2D}
+.badge-gray{background:#f1f1f1;color:#555}
+.page{display:none;padding:20px 24px}
+.page.active{display:block}
+
+/* ── CARDS ── */
+.card{background:#fff;border:1px solid var(--border);border-radius:12px;padding:16px 20px;margin-bottom:14px}
+.card-title{font-size:13px;font-weight:700;color:var(--blue);margin-bottom:12px;display:flex;align-items:center;gap:6px}
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
+.stat-card{background:#fff;border:1px solid var(--border);border-radius:10px;padding:14px 16px}
+.stat-val{font-size:26px;font-weight:700;color:var(--blue);line-height:1}
+.stat-label{font-size:11px;color:var(--muted);margin-top:4px}
+.stat-sub{font-size:10px;margin-top:2px}
+
+/* ── MAP ── */
+.map-container{background:#fff;border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:14px;position:relative}
+#map-svg{width:100%;max-height:440px}
+.map-tooltip{position:absolute;background:#fff;border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:11px;display:none;z-index:20;min-width:190px;pointer-events:none;box-shadow:0 4px 12px rgba(0,0,0,0.1)}
+.map-tooltip h4{font-size:12px;font-weight:700;color:var(--blue);margin-bottom:4px}
+.map-tooltip p{color:var(--muted);margin:1px 0}
+.map-tooltip span{color:var(--text);font-weight:600}
+.map-legend{display:flex;flex-wrap:wrap;gap:10px;margin-top:8px}
+.leg{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted)}
+.leg-dot{width:10px;height:10px;border-radius:50%}
+.filter-bar{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.fbtn{padding:4px 12px;border-radius:20px;border:1px solid var(--border);background:#fff;font-size:11px;cursor:pointer;color:var(--muted);font-weight:500}
+.fbtn.active{background:var(--blue);color:#fff;border-color:var(--blue)}
+
+/* ── TABLE ── */
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{background:#F4F6FA;color:var(--blue);font-weight:700;padding:8px 10px;text-align:left;border-bottom:2px solid var(--border)}
+td{padding:8px 10px;border-bottom:1px solid var(--border);color:var(--text)}
+tr:hover td{background:#FAFBFF}
+.prog-bar{background:#eee;border-radius:4px;height:5px;width:80px}
+.prog-fill{height:5px;border-radius:4px}
+
+/* ── FORM WIZARD ── */
+.wizard-steps{display:flex;gap:0;margin-bottom:20px;border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.ws{flex:1;padding:10px 6px;text-align:center;font-size:11px;color:var(--muted);background:#f9f9f9;border-right:1px solid var(--border);cursor:pointer}
+.ws:last-child{border-right:none}
+.ws.active{background:var(--blue);color:#fff;font-weight:600}
+.ws.done{background:#E1F5EE;color:#0F6E56}
+.wizard-page{display:none}
+.wizard-page.active{display:block}
+.wform-group{margin-bottom:14px}
+.wform-group label{display:block;font-size:12px;font-weight:600;color:var(--blue);margin-bottom:5px}
+.wform-group label span{color:var(--red);margin-left:2px}
+.wform-group input,.wform-group select,.wform-group textarea{width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;outline:none;background:#fff}
+.wform-group input:focus,.wform-group select:focus,.wform-group textarea:focus{border-color:var(--blue2)}
+.wform-group textarea{height:72px;resize:vertical}
+.wform-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.wform-row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.wizard-nav{display:flex;justify-content:space-between;margin-top:16px;padding-top:14px;border-top:1px solid var(--border)}
+.btn-sec{padding:8px 18px;border:1px solid var(--border);border-radius:8px;background:#fff;font-size:13px;cursor:pointer;color:var(--muted)}
+.btn-blu{padding:8px 20px;background:var(--blue);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer}
+.btn-blu:hover{background:var(--blue2)}
+.btn-grn{padding:8px 20px;background:var(--green);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer}
+
+/* ── PHOTO UPLOAD ── */
+.photo-upload-area{border:2px dashed var(--border);border-radius:10px;padding:24px;text-align:center;cursor:pointer;transition:border .2s;margin-bottom:10px}
+.photo-upload-area:hover{border-color:var(--blue2)}
+.photo-preview-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px}
+.photo-thumb{width:100%;aspect-ratio:1;border-radius:8px;overflow:hidden;background:#f0f0f0;position:relative}
+.photo-thumb img{width:100%;height:100%;object-fit:cover}
+.photo-remove{position:absolute;top:4px;right:4px;background:rgba(0,0,0,0.5);color:#fff;border:none;border-radius:50%;width:18px;height:18px;font-size:10px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+
+/* ── REPORT / ADMIN ── */
+.report-controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:16px}
+.report-controls select{padding:7px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:#fff}
+.btn-report{padding:8px 18px;background:var(--blue);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px}
+.btn-report:hover{background:var(--blue2)}
+.report-card{background:#fff;border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:12px}
+.report-card-header{background:var(--blue);color:#fff;padding:10px 16px;display:flex;align-items:center;justify-content:space-between}
+.report-card-header h3{font-size:13px;font-weight:700}
+.report-body{padding:14px 16px}
+.report-kpi-row{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:10px}
+.rkpi{background:#F4F6FA;border-radius:8px;padding:8px 10px;text-align:center}
+.rkpi-val{font-size:18px;font-weight:700;color:var(--blue)}
+.rkpi-label{font-size:10px;color:var(--muted);margin-top:2px}
+
+/* ── PROFILE SETUP ── */
+#profile-screen{display:none;min-height:100vh;background:var(--bg);padding:30px 20px}
+.profile-wrap{max-width:640px;margin:0 auto}
+.profile-header{text-align:center;margin-bottom:24px}
+.profile-header h2{font-size:20px;font-weight:700;color:var(--blue)}
+.profile-header p{color:var(--muted);font-size:13px;margin-top:4px}
+.step-indicator{display:flex;align-items:center;justify-content:center;gap:0;margin-bottom:24px}
+.si{display:flex;align-items:center}
+.si-dot{width:28px;height:28px;border-radius:50%;border:2px solid var(--border);background:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--muted)}
+.si-dot.active{border-color:var(--blue);background:var(--blue);color:#fff}
+.si-dot.done{border-color:var(--green);background:var(--green);color:#fff}
+.si-line{width:40px;height:2px;background:var(--border)}
+.si-line.done{background:var(--green)}
+
+/* ── SUCCESS ── */
+.success-box{text-align:center;padding:30px 20px}
+.success-icon{width:56px;height:56px;border-radius:50%;background:#E1F5EE;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;font-size:24px}
+.success-box h3{font-size:17px;font-weight:700;color:var(--blue);margin-bottom:6px}
+.success-box p{color:var(--muted);font-size:13px;line-height:1.6}
+
+/* ── RESPONSIVE ── */
+@media(max-width:768px){
+  .sidebar{width:200px}
+  .content{margin-left:200px}
+  .stats-grid{grid-template-columns:repeat(2,1fr)}
+  .wform-row{grid-template-columns:1fr}
+  .wform-row3{grid-template-columns:1fr 1fr}
+}
+
+@media print{
+  .sidebar,.topbar,.report-controls,.no-print{display:none!important}
+  .content{margin-left:0}
+  .page.active{padding:0}
+  .report-card{break-inside:avoid;box-shadow:none}
+}
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════
+     AUTH SCREEN
+════════════════════════════════════════════════ -->
+<div id="auth-screen">
+  <div class="auth-box">
+    <div class="auth-logo">
+      <h1>Samagra UP Secondary<br>NGO Partner Portal</h1>
+      <p>Madhyamik Shiksha Vibhag, Uttar Pradesh | PMU</p>
+    </div>
+    <div class="auth-tabs">
+      <div class="auth-tab active" onclick="switchTab('login')">Sign In</div>
+      <div class="auth-tab" onclick="switchTab('signup')">Register NGO</div>
+    </div>
+    <div id="login-form">
+      <div class="form-group"><label>Email / Username</label><input type="email" id="login-email" placeholder="your@ngo.org" value="admin@pmu.up.gov.in"></div>
+      <div class="form-group"><label>Password</label><input type="password" id="login-pass" placeholder="Password" value="admin123"></div>
+      <button class="btn-primary" onclick="doLogin()">Sign In</button>
+      <p class="auth-note">Demo: admin@pmu.up.gov.in / admin123 (Admin view)<br>or ngo@educategirls.org / ngo123 (NGO view)</p>
+    </div>
+    <div id="signup-form" style="display:none">
+      <div class="form-group"><label>Organisation Name</label>
+        <select id="reg-org">
+          <option value="">Select your NGO</option>
+          <option>Educate Girls</option><option>Pratham Foundation</option><option>Room to Read</option>
+          <option>CARE India</option><option>Save the Children</option><option>Magic Bus</option>
+          <option>Smile Foundation</option><option>Action Aid India</option><option>Bal Raksha Bharat</option>
+          <option>Breakthrough</option><option>World Vision India</option><option>CRY India</option>
+          <option>Jan Shikshan Sansthan</option><option>iDiscoveri Education</option><option>Navjyoti Foundation</option>
+          <option>Digital Shakti</option><option>PRADAN</option><option>Samarthan</option>
+          <option>Other (specify in profile)</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Your Name</label><input type="text" id="reg-name" placeholder="Full name"></div>
+      <div class="form-group"><label>Email</label><input type="email" id="reg-email" placeholder="official@ngo.org"></div>
+      <div class="form-group"><label>Password</label><input type="password" id="reg-pass" placeholder="Create password"></div>
+      <button class="btn-primary" onclick="doSignup()">Register & Continue to Profile</button>
+      <p class="auth-note">After registration, fill your NGO profile once — then submit monthly reports.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     PROFILE SETUP SCREEN (first time)
+════════════════════════════════════════════════ -->
+<div id="profile-screen">
+  <div class="profile-wrap">
+    <div class="profile-header">
+      <h2>Set up your NGO profile</h2>
+      <p>Fill this once. You won't need to fill it again. This appears on the PMU dashboard.</p>
+    </div>
+    <div class="step-indicator">
+      <div class="si"><div class="si-dot active" id="psi1">1</div></div>
+      <div class="si"><div class="si-line" id="psl1"></div></div>
+      <div class="si"><div class="si-dot" id="psi2">2</div></div>
+      <div class="si"><div class="si-line" id="psl2"></div></div>
+      <div class="si"><div class="si-dot" id="psi3">3</div></div>
+    </div>
+
+    <div class="card" id="profile-p1">
+      <div class="card-title">📋 Basic information</div>
+      <div class="wform-row">
+        <div class="wform-group"><label>Organisation name <span>*</span></label><input id="pf-org" placeholder="Full legal name"></div>
+        <div class="wform-group"><label>Type of organisation</label>
+          <select id="pf-type"><option>NGO / Non-profit</option><option>International Organisation</option><option>Government Partner</option><option>Academic Institution</option><option>CSR / Corporate Foundation</option></select>
+        </div>
+      </div>
+      <div class="wform-row">
+        <div class="wform-group"><label>Nodal person name <span>*</span></label><input id="pf-person" placeholder="Name"></div>
+        <div class="wform-group"><label>Designation</label><input id="pf-desig" placeholder="Programme Manager / Coordinator"></div>
+      </div>
+      <div class="wform-row">
+        <div class="wform-group"><label>Contact number <span>*</span></label><input id="pf-phone" placeholder="10-digit mobile" maxlength="10"></div>
+        <div class="wform-group"><label>Email <span>*</span></label><input id="pf-email" placeholder="official@ngo.org"></div>
+      </div>
+      <div class="wizard-nav"><span></span><button class="btn-blu" onclick="profileNext(1)">Next →</button></div>
+    </div>
+
+    <div class="card" id="profile-p2" style="display:none">
+      <div class="card-title">📍 Geographic & thematic focus</div>
+      <div class="wform-group"><label>Districts of operation <span>*</span></label>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;max-height:160px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:10px" id="dist-checks"></div>
+      </div>
+      <div class="wform-group" style="margin-top:12px"><label>Thematic focus areas <span>*</span></label>
+        <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px" id="theme-checks"></div>
+      </div>
+      <div class="wform-group"><label>Programme / project name</label><input id="pf-prog" placeholder="e.g. Girls Education Initiative Phase II"></div>
+      <div class="wizard-nav">
+        <button class="btn-sec" onclick="profileBack(2)">← Back</button>
+        <button class="btn-blu" onclick="profileNext(2)">Next →</button>
+      </div>
+    </div>
+
+    <div class="card" id="profile-p3" style="display:none">
+      <div class="card-title">🎯 Programme targets (annual)</div>
+      <div class="wform-row3">
+        <div class="wform-group"><label>Target schools</label><input id="pf-tschools" type="number" placeholder="0"></div>
+        <div class="wform-group"><label>Target students</label><input id="pf-tstudents" type="number" placeholder="0"></div>
+        <div class="wform-group"><label>Target girls</label><input id="pf-tgirls" type="number" placeholder="0"></div>
+        <div class="wform-group"><label>Target teachers trained</label><input id="pf-tteachers" type="number" placeholder="0"></div>
+        <div class="wform-group"><label>Annual budget (₹)</label><input id="pf-budget" type="number" placeholder="0"></div>
+        <div class="wform-group"><label>Programme start date</label><input id="pf-start" type="date"></div>
+      </div>
+      <div class="wform-group"><label>Brief description of your work</label>
+        <textarea id="pf-desc" placeholder="Describe your programme objectives and approach in 2-3 lines..."></textarea>
+      </div>
+      <div class="wform-group"><label>Google Drive / docs link (optional)</label><input id="pf-drive" placeholder="https://drive.google.com/..."></div>
+      <div class="wizard-nav">
+        <button class="btn-sec" onclick="profileBack(3)">← Back</button>
+        <button class="btn-grn" onclick="saveProfile()">Save Profile & Go to Dashboard ✓</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     MAIN APP
+════════════════════════════════════════════════ -->
+<div id="main-screen">
+  <div class="sidebar">
+    <div class="sidebar-logo">
+      <h2>Samagra UP Secondary</h2>
+      <p>NGO Partner Portal</p>
+    </div>
+    <div class="nav-items">
+      <div class="nav-sep">Overview</div>
+      <div class="nav-item active" onclick="showPage('dashboard')"><span class="ni">🗺️</span>Dashboard & Map</div>
+      <div class="nav-sep" id="nav-ngo-sep">NGO Actions</div>
+      <div class="nav-item" id="nav-profile-item" onclick="showPage('profile-view')"><span class="ni">🏢</span>My Profile</div>
+      <div class="nav-item" id="nav-report-item" onclick="showPage('monthly-report')"><span class="ni">📝</span>Monthly Report</div>
+      <div class="nav-sep" id="nav-admin-sep" style="display:none">Admin</div>
+      <div class="nav-item" id="nav-ngos-item" style="display:none" onclick="showPage('ngo-list')"><span class="ni">👥</span>All Partners</div>
+      <div class="nav-item" id="nav-admin-report-item" style="display:none" onclick="showPage('admin-reports')"><span class="ni">📊</span>Generate Reports</div>
+    </div>
+    <div class="sidebar-user">
+      <div class="sidebar-user-inner">
+        <div class="su-avatar" id="sb-avatar">A</div>
+        <div>
+          <div class="su-name" id="sb-name">Loading...</div>
+          <div class="su-role" id="sb-role">NGO Partner</div>
+        </div>
+      </div>
+      <div class="logout-btn" onclick="doLogout()">Sign out</div>
+    </div>
+  </div>
+
+  <div class="content">
+    <div class="topbar">
+      <div>
+        <div class="topbar-title" id="page-title">Dashboard & Map</div>
+        <div class="topbar-sub">Samagra UP Secondary Education Programme | PMU</div>
+      </div>
+      <div class="topbar-right">
+        <span class="badge badge-blue" id="tb-role-badge">NGO Partner</span>
+        <span id="tb-date" style="font-size:11px;color:var(--muted)"></span>
+      </div>
+    </div>
+
+    <!-- ── PAGE: DASHBOARD ── -->
+    <div class="page active" id="page-dashboard">
+      <div class="stats-grid">
+        <div class="stat-card"><div class="stat-val" id="s-partners">15</div><div class="stat-label">Active partners</div><div class="stat-sub"><span class="badge badge-green">+3 this quarter</span></div></div>
+        <div class="stat-card"><div class="stat-val" id="s-districts">38</div><div class="stat-label">Districts covered</div><div class="stat-sub" style="color:var(--muted);font-size:10px">of 75 UP districts</div></div>
+        <div class="stat-card"><div class="stat-val" id="s-schools">4,820</div><div class="stat-label">Schools reached</div><div class="stat-sub"><span class="badge badge-amber">Mar 2026</span></div></div>
+        <div class="stat-card"><div class="stat-val" id="s-students">1.2L+</div><div class="stat-label">Students benefited</div><div class="stat-sub" style="color:var(--muted);font-size:10px">Girls: 68,400</div></div>
+      </div>
+
+      <div class="filter-bar">
+        <span style="font-size:11px;color:var(--muted);line-height:26px">Filter:</span>
+        <button class="fbtn active" onclick="filterMap('all',this)">All themes</button>
+        <button class="fbtn" onclick="filterMap('Girls Education',this)">Girls Education</button>
+        <button class="fbtn" onclick="filterMap('ICT/Digital',this)">ICT / Digital</button>
+        <button class="fbtn" onclick="filterMap('Community',this)">Community</button>
+        <button class="fbtn" onclick="filterMap('Literacy',this)">Literacy</button>
+        <button class="fbtn" onclick="filterMap('Inclusion',this)">Inclusion</button>
+      </div>
+
+      <div class="map-container">
+        <svg id="map-svg" viewBox="0 0 620 520" xmlns="http://www.w3.org/2000/svg">
+          <rect width="620" height="520" fill="#F0F4FA"/>
+          <path d="M85,65 L118,42 L168,36 L228,30 L292,27 L355,31 L415,40 L462,55 L498,78 L515,112 L522,150 L516,192 L504,232 L490,272 L472,312 L448,348 L412,378 L368,400 L310,414 L250,418 L192,410 L148,390 L112,362 L88,328 L70,288 L60,248 L56,206 L58,164 L65,124 Z"
+            fill="#D6E4F0" stroke="#A8C4E0" stroke-width="1.5"/>
+          <g stroke="#B8D0E8" stroke-width="0.6" opacity="0.7">
+            <line x1="85" y1="164" x2="522" y2="164"/><line x1="85" y1="248" x2="504" y2="248"/>
+            <line x1="85" y1="328" x2="448" y2="328"/><line x1="168" y1="36" x2="148" y2="410"/>
+            <line x1="260" y1="27" x2="240" y2="418"/><line x1="350" y1="30" x2="335" y2="414"/>
+            <line x1="440" y1="42" x2="420" y2="385"/>
+          </g>
+          <g style="font-size:8px;fill:#7a9ab5">
+            <text x="96" y="108">Saharanpur</text><text x="150" y="85">Muzaffarnagar</text>
+            <text x="210" y="68">Meerut</text><text x="270" y="55">Ghaziabad</text>
+            <text x="340" y="58">Aligarh</text><text x="405" y="72">Agra</text>
+            <text x="464" y="102">Mathura</text><text x="90" y="185">Bijnor</text>
+            <text x="150" y="178">Moradabad</text><text x="215" y="168">Bareilly</text>
+            <text x="286" y="162">Shahjahanpur</text><text x="364" y="170">Kanpur</text>
+            <text x="434" y="178">Jhansi</text><text x="90" y="265">Rampur</text>
+            <text x="155" y="258">Bahraich</text><text x="228" y="250">Lucknow</text>
+            <text x="302" y="258">Unnao</text><text x="370" y="262">Allahabad</text>
+            <text x="436" y="270">Banda</text><text x="100" y="348">Lakhimpur</text>
+            <text x="168" y="340">Sitapur</text><text x="240" y="348">Barabanki</text>
+            <text x="310" y="352">Rae Bareli</text><text x="378" y="355">Pratapgarh</text>
+            <text x="148" y="390">Gonda</text><text x="222" y="388">Faizabad</text>
+            <text x="295" y="385">Sultanpur</text><text x="365" y="382">Varanasi</text>
+          </g>
+          <g id="map-markers"></g>
+        </svg>
+        <div class="map-tooltip" id="map-tooltip">
+          <h4 id="mt-name"></h4>
+          <p>Theme: <span id="mt-theme"></span></p>
+          <p>Districts: <span id="mt-dist"></span></p>
+          <p>Schools: <span id="mt-schools"></span></p>
+          <p>Students: <span id="mt-students"></span></p>
+          <p style="margin-top:6px;font-size:10px;color:#999">Click for details</p>
+        </div>
+        <div class="map-legend">
+          <div class="leg"><div class="leg-dot" style="background:#2E6DB4"></div>Girls Education</div>
+          <div class="leg"><div class="leg-dot" style="background:#1D9E75"></div>ICT / Digital</div>
+          <div class="leg"><div class="leg-dot" style="background:#BA7517"></div>Community</div>
+          <div class="leg"><div class="leg-dot" style="background:#D4537E"></div>Inclusion</div>
+          <div class="leg"><div class="leg-dot" style="background:#534AB7"></div>Literacy</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">📋 Partner summary — all NGOs</div>
+        <table id="partner-table">
+          <thead><tr><th>Organisation</th><th>Theme</th><th>Districts</th><th>Schools</th><th>Students</th><th>Progress</th><th>Last Report</th><th>Status</th></tr></thead>
+          <tbody id="partner-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── PAGE: MY PROFILE VIEW ── -->
+    <div class="page" id="page-profile-view">
+      <div class="card" id="profile-view-content">
+        <div class="card-title">🏢 My organisation profile</div>
+        <div id="profile-display"></div>
+      </div>
+    </div>
+
+    <!-- ── PAGE: MONTHLY REPORT ── -->
+    <div class="page" id="page-monthly-report">
+      <div class="card">
+        <div class="card-title">📝 Monthly progress report</div>
+        <div class="wizard-steps" id="report-steps">
+          <div class="ws active" id="rs0">1. Coverage</div>
+          <div class="ws" id="rs1">2. KPI Numbers</div>
+          <div class="ws" id="rs2">3. Tasks</div>
+          <div class="ws" id="rs3">4. Photos</div>
+          <div class="ws" id="rs4">5. Narrative</div>
+        </div>
+
+        <!-- Step 0: Coverage -->
+        <div class="wizard-page active" id="rp0">
+          <div class="wform-row">
+            <div class="wform-group"><label>Reporting month <span>*</span></label>
+              <select id="r-month">
+                <option>April 2026</option><option>May 2026</option><option>June 2026</option>
+                <option>July 2026</option><option>August 2026</option><option>September 2026</option>
+                <option>October 2026</option><option>November 2026</option><option>December 2026</option>
+                <option>January 2027</option><option>February 2027</option><option>March 2027</option>
+              </select>
+            </div>
+            <div class="wform-group"><label>Reporting person <span>*</span></label><input id="r-person" placeholder="Your name"></div>
+          </div>
+          <div class="wform-group"><label>Districts active this month <span>*</span></label>
+            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:5px;max-height:130px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:8px" id="r-dist-checks"></div>
+          </div>
+          <div class="wform-row3">
+            <div class="wform-group"><label>Schools covered <span>*</span></label><input id="r-schools" type="number" min="0" placeholder="0"></div>
+            <div class="wform-group"><label>Blocks covered</label><input id="r-blocks" type="number" min="0" placeholder="0"></div>
+            <div class="wform-group"><label>Villages / habitations</label><input id="r-villages" type="number" min="0" placeholder="0"></div>
+          </div>
+          <div class="wizard-nav"><span></span><button class="btn-blu" onclick="reportNext(0)">Next →</button></div>
+        </div>
+
+        <!-- Step 1: KPI Numbers -->
+        <div class="wizard-page" id="rp1">
+          <div class="wform-row3">
+            <div class="wform-group"><label>Students benefited <span>*</span></label><input id="r-students" type="number" min="0" placeholder="0"></div>
+            <div class="wform-group"><label>Girls benefited <span>*</span></label><input id="r-girls" type="number" min="0" placeholder="0"></div>
+            <div class="wform-group"><label>Teachers trained</label><input id="r-teachers" type="number" min="0" placeholder="0"></div>
+            <div class="wform-group"><label>Community meetings</label><input id="r-meetings" type="number" min="0" placeholder="0"></div>
+            <div class="wform-group"><label>Events / workshops</label><input id="r-events" type="number" min="0" placeholder="0"></div>
+            <div class="wform-group"><label>SC/ST/OBC students</label><input id="r-scst" type="number" min="0" placeholder="0"></div>
+            <div class="wform-group"><label>Divyang students</label><input id="r-divyang" type="number" min="0" placeholder="0"></div>
+            <div class="wform-group"><label>Budget spent (₹)</label><input id="r-budget" type="number" min="0" placeholder="0"></div>
+            <div class="wform-group"><label>Dropouts prevented</label><input id="r-dropout" type="number" min="0" placeholder="0"></div>
+          </div>
+          <div class="wizard-nav"><button class="btn-sec" onclick="reportBack(1)">← Back</button><button class="btn-blu" onclick="reportNext(1)">Next →</button></div>
+        </div>
+
+        <!-- Step 2: Tasks -->
+        <div class="wizard-page" id="rp2">
+          <div class="wform-group"><label>Tasks completed this month <span>*</span></label>
+            <textarea id="r-tasks" placeholder="List each task on a new line. Example:&#10;Conducted teacher training in Agra (3 days, 45 teachers)&#10;SMC meetings in 12 schools in Mathura&#10;Girls enrolment drive — 3 blocks in Firozabad"></textarea>
+          </div>
+          <div class="wform-group"><label>Overall completion status <span>*</span></label>
+            <select id="r-status">
+              <option value="100">Completed (100%)</option>
+              <option value="85">On track (75–99%)</option>
+              <option value="60">Partially complete (50–74%)</option>
+              <option value="35">Behind schedule (below 50%)</option>
+              <option value="0">Not started</option>
+            </select>
+          </div>
+          <div class="wform-group"><label>KMI (Key Management Indicator) — headline result for IAS <span>*</span></label>
+            <textarea id="r-kmi" placeholder="Single most important result this month. E.g: 420 dropout girls re-enrolled across 3 districts through targeted community outreach." style="height:56px"></textarea>
+          </div>
+          <div class="wform-group"><label>Google Drive / document link</label><input id="r-drive" placeholder="https://drive.google.com/..."></div>
+          <div class="wizard-nav"><button class="btn-sec" onclick="reportBack(2)">← Back</button><button class="btn-blu" onclick="reportNext(2)">Next →</button></div>
+        </div>
+
+        <!-- Step 3: Photos -->
+        <div class="wizard-page" id="rp3">
+          <div class="wform-group"><label>Upload activity photos (up to 10)</label></div>
+          <div class="photo-upload-area" onclick="document.getElementById('photo-input').click()">
+            <div style="font-size:28px;margin-bottom:6px">📷</div>
+            <div style="font-weight:600;color:var(--blue);font-size:13px">Click to upload photos</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:4px">JPG, PNG, PDF — max 10 MB each</div>
+          </div>
+          <input type="file" id="photo-input" multiple accept="image/*,.pdf" style="display:none" onchange="handlePhotos(this)">
+          <div class="photo-preview-grid" id="photo-preview"></div>
+          <div style="font-size:11px;color:var(--muted);margin-top:8px" id="photo-count">No photos uploaded yet</div>
+          <div class="wizard-nav"><button class="btn-sec" onclick="reportBack(3)">← Back</button><button class="btn-blu" onclick="reportNext(3)">Next →</button></div>
+        </div>
+
+        <!-- Step 4: Narrative -->
+        <div class="wizard-page" id="rp4">
+          <div class="wform-group"><label>Key achievements this month</label>
+            <textarea id="r-achieve" placeholder="Describe 2-3 major achievements..."></textarea>
+          </div>
+          <div class="wform-group"><label>Key challenges faced</label>
+            <textarea id="r-challenges" placeholder="What obstacles did you face? What was the impact?"></textarea>
+          </div>
+          <div class="wform-group"><label>Support required from PMU / State</label>
+            <textarea id="r-support" placeholder="Any specific support, coordination, or policy help needed..."></textarea>
+          </div>
+          <div class="wform-group"><label>Plans for next month</label>
+            <textarea id="r-plans" placeholder="Key activities planned for next month..."></textarea>
+          </div>
+          <div class="wizard-nav">
+            <button class="btn-sec" onclick="reportBack(4)">← Back</button>
+            <button class="btn-grn" onclick="submitReport()">Submit Report ✓</button>
+          </div>
+        </div>
+
+        <!-- Success -->
+        <div class="wizard-page" id="rp-success">
+          <div class="success-box">
+            <div class="success-icon">✓</div>
+            <h3>Report submitted successfully!</h3>
+            <p>Your monthly report has been recorded.<br>PMU will review and it will appear on the dashboard.</p>
+            <button class="btn-blu" style="margin-top:16px;width:auto;padding:8px 20px" onclick="showPage('dashboard')">Back to Dashboard</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── PAGE: ALL NGOs (Admin) ── -->
+    <div class="page" id="page-ngo-list">
+      <div class="card">
+        <div class="card-title">👥 All partner organisations</div>
+        <table>
+          <thead><tr><th>#</th><th>Organisation</th><th>Nodal Person</th><th>Theme</th><th>Districts</th><th>Schools</th><th>Reports</th><th>Last Report</th></tr></thead>
+          <tbody id="admin-ngo-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── PAGE: ADMIN REPORTS ── -->
+    <div class="page" id="page-admin-reports">
+      <div class="card no-print">
+        <div class="card-title">📊 Generate reports</div>
+        <div class="report-controls">
+          <select id="rep-month"><option value="all">All months</option><option>April 2026</option><option>May 2026</option><option>March 2026</option><option>February 2026</option></select>
+          <select id="rep-ngo"><option value="all">All NGOs</option></select>
+          <select id="rep-theme"><option value="all">All themes</option><option>Girls Education</option><option>ICT/Digital</option><option>Community</option><option>Literacy</option><option>Inclusion</option></select>
+          <button class="btn-report" onclick="generateReport()">⬇ Generate Report</button>
+          <button class="btn-report" style="background:var(--green)" onclick="window.print()">🖨 Print / PDF</button>
+        </div>
+      </div>
+      <div id="report-output"></div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ════════════════════════════════════
+// DATA
+// ════════════════════════════════════
+const UP_DISTRICTS = [
+  'Agra','Aligarh','Allahabad (Prayagraj)','Ambedkar Nagar','Amethi','Amroha',
+  'Auraiya','Ayodhya','Azamgarh','Baghpat','Bahraich','Ballia','Balrampur',
+  'Banda','Barabanki','Bareilly','Basti','Bhadohi','Bijnor','Budaun',
+  'Bulandshahr','Chandauli','Chitrakoot','Deoria','Etah','Etawah','Farrukhabad',
+  'Fatehpur','Firozabad','Gautam Buddha Nagar','Ghaziabad','Ghazipur','Gonda',
+  'Gorakhpur','Hamirpur','Hapur','Hardoi','Hathras','Jalaun','Jaunpur',
+  'Jhansi','Kannauj','Kanpur Dehat','Kanpur Nagar','Kasganj','Kaushambi',
+  'Kushinagar','Lakhimpur Kheri','Lalitpur','Lucknow','Maharajganj','Mahoba',
+  'Mainpuri','Mathura','Mau','Meerut','Mirzapur','Moradabad','Muzaffarnagar',
+  'Pilibhit','Pratapgarh','Raebareli','Rampur','Saharanpur','Sambhal',
+  'Sant Kabir Nagar','Shahjahanpur','Shamli','Shravasti','Siddharthnagar',
+  'Sitapur','Sonbhadra','Sultanpur','Unnao','Varanasi'
+];
+
+const THEMES = ['Girls Education','ICT/Digital','Community Engagement','Literacy','Inclusion (SC/ST/Divyang)','Teacher Training','Infrastructure'];
+
+const THEME_COLORS = {
+  'Girls Education':'#2E6DB4','ICT/Digital':'#1D9E75','Community Engagement':'#BA7517',
+  'Community':'#BA7517','Literacy':'#534AB7','Inclusion (SC/ST/Divyang)':'#D4537E',
+  'Inclusion':'#D4537E','Teacher Training':'#C8960C','Infrastructure':'#6b7280'
+};
+
+const SAMPLE_NGOS = [
+  {id:1,name:'Educate Girls',theme:'Girls Education',person:'Priya Sharma',dist:'Agra, Mathura, Firozabad',x:462,y:112,schools:320,students:18400,girls:14200,teachers:180,progress:78,month:'March 2026',kmi:'14,200 girls reached with targeted retention support.'},
+  {id:2,name:'Pratham Foundation',theme:'Literacy',person:'Rahul Verma',dist:'Lucknow, Unnao, Barabanki',x:240,y:252,schools:280,students:22000,girls:11000,teachers:210,progress:65,month:'March 2026',kmi:'ASER assessment completed in 6 blocks; learning outcomes improved by 12%.'},
+  {id:3,name:'Room to Read',theme:'Girls Education',person:'Anjali Singh',dist:'Varanasi, Mirzapur, Allahabad',x:372,y:352,schools:190,students:14200,girls:10800,teachers:95,progress:82,month:'April 2026',kmi:'Library program active in 190 schools; 10,800 girls accessing books daily.'},
+  {id:4,name:'Magic Bus',theme:'Community Engagement',person:'Vikram Yadav',dist:'Bareilly, Shahjahanpur',x:242,y:172,schools:145,students:9800,girls:5100,teachers:88,progress:55,month:'March 2026',kmi:'Life skills sessions reached 9,800 students across 145 schools.'},
+  {id:5,name:'Digital Shakti',theme:'ICT/Digital',person:'Amit Kumar',dist:'Ghaziabad, Meerut',x:284,y:62,schools:210,students:31000,girls:14800,teachers:320,progress:90,month:'April 2026',kmi:'Smart Class activated in 210 schools; 31,000 students accessing digital content.'},
+  {id:6,name:'Bal Raksha Bharat',theme:'Inclusion',person:'Sunita Devi',dist:'Bahraich, Lakhimpur, Sitapur',x:160,y:265,schools:175,students:12300,girls:6200,teachers:140,progress:60,month:'March 2026',kmi:'CWSN tracking system set up in 175 schools; 1,800 Divyang students supported.'},
+  {id:7,name:'Action Aid India',theme:'Community Engagement',person:'Manoj Tiwari',dist:'Banda, Jhansi',x:446,y:272,schools:130,students:8700,girls:4400,teachers:75,progress:48,month:'Feb 2026',kmi:'SMC meetings held in 92 schools; 2,400 parents engaged.'},
+  {id:8,name:'CARE India',theme:'Girls Education',person:'Neha Gupta',dist:'Gonda, Faizabad, Sultanpur',x:226,y:390,schools:240,students:19500,girls:15600,teachers:165,progress:72,month:'April 2026',kmi:'Sanitation drive completed in 240 schools; menstrual hygiene kits distributed.'},
+  {id:9,name:'Breakthrough',theme:'Inclusion',person:'Pooja Rastogi',dist:'Kanpur, Rae Bareli',x:372,y:185,schools:165,students:11200,girls:5800,teachers:120,progress:67,month:'March 2026',kmi:'Gender equity workshops in 90 schools; attitude change visible in community surveys.'},
+  {id:10,name:'Jan Shikshan',theme:'Literacy',person:'Rajesh Patel',dist:'Saharanpur, Muzaffarnagar',x:115,y:107,schools:98,students:6400,girls:3100,teachers:60,progress:44,month:'Feb 2026',kmi:'Vocational literacy: 3 batches completed; 640 adults certified.'},
+  {id:11,name:'iDiscoveri Education',theme:'ICT/Digital',person:'Kavita Mishra',dist:'Lucknow, Barabanki',x:258,y:237,schools:120,students:14000,girls:7000,teachers:280,progress:85,month:'April 2026',kmi:'xSeed methodology active in 120 schools; teacher adoption rate 94%.'},
+  {id:12,name:'Smile Foundation',theme:'Community Engagement',person:'Ravi Shankar',dist:'Moradabad, Rampur',x:155,y:178,schools:88,students:5900,girls:2950,teachers:55,progress:51,month:'March 2026',kmi:'14 health & education camps completed; 5,900 students screened.'},
+  {id:13,name:'World Vision India',theme:'Inclusion',person:'Geeta Kumari',dist:'Pratapgarh, Sultanpur',x:384,y:355,schools:112,students:8100,girls:4100,teachers:90,progress:63,month:'April 2026',kmi:'SC/ST student tracking in 112 schools; scholarship facilitation for 840 students.'},
+  {id:14,name:'CRY India',theme:'Girls Education',person:'Shweta Agarwal',dist:'Aligarh, Mathura, Hathras',x:356,y:67,schools:142,students:10800,girls:8600,teachers:105,progress:70,month:'March 2026',kmi:'Girl child tracking system in 142 schools; zero dropout achieved in 28 schools.'},
+  {id:15,name:'Navjyoti Foundation',theme:'Community Engagement',person:'Deepak Chauhan',dist:'Lakhimpur, Bahraich',x:142,y:342,schools:76,students:5200,girls:2600,teachers:48,progress:39,month:'Feb 2026',kmi:'Community library set up in 12 villages; 5,200 students with reading access.'},
+];
+
+// Submitted monthly reports store
+let REPORTS = [
+  {ngo:'Educate Girls',month:'April 2026',schools:335,students:19200,girls:14800,teachers:185,meetings:18,events:6,scst:4200,divyang:180,budget:380000,dropout:42,tasks:'Teacher training Agra\nEnrolment drive Mathura\nKGBV visits Firozabad',status:'85',kmi:'14,800 girls actively enrolled with zero dropout in 28 schools.',achieve:'Record enrolment in Firozabad block.',challenges:'Absenteeism during harvest season.',support:'Need district-level coordination for block officers.',plans:'Sanitation infrastructure audit in April.',photos:[]},
+];
+
+let currentUser = null;
+let currentPage = 'dashboard';
+let reportStep = 0;
+let profileStep = 1;
+let uploadedPhotos = [];
+let activeFilter = 'all';
+
+// ════════════════════════════════════
+// AUTH
+// ════════════════════════════════════
+function switchTab(tab){
+  document.querySelectorAll('.auth-tab').forEach(t=>t.classList.remove('active'));
+  event.target.classList.add('active');
+  document.getElementById('login-form').style.display = tab==='login'?'block':'none';
+  document.getElementById('signup-form').style.display = tab==='signup'?'block':'none';
+}
+
+function doLogin(){
+  const email = document.getElementById('login-email').value;
+  const pass = document.getElementById('login-pass').value;
+  if(!email||!pass){alert('Please enter credentials');return;}
+  const isAdmin = email.includes('pmu') || email.includes('admin') || email.includes('ias');
+  currentUser = {
+    name: isAdmin ? 'PMU Administrator' : 'NGO Nodal Person',
+    email, role: isAdmin ? 'admin' : 'ngo',
+    org: isAdmin ? 'PMU — UP Madhyamik Shiksha Vibhag' : 'Educate Girls',
+    profileDone: true
+  };
+  startApp();
+}
+
+function doSignup(){
+  const org = document.getElementById('reg-org').value;
+  const name = document.getElementById('reg-name').value;
+  const email = document.getElementById('reg-email').value;
+  if(!org||!name||!email){alert('Please fill all fields');return;}
+  currentUser = {name,email,role:'ngo',org,profileDone:false};
+  document.getElementById('auth-screen').style.display='none';
+  showProfileScreen();
+}
+
+function doLogout(){
+  currentUser=null;
+  document.getElementById('main-screen').style.display='none';
+  document.getElementById('auth-screen').style.display='flex';
+}
+
+function startApp(){
+  document.getElementById('auth-screen').style.display='none';
+  if(!currentUser.profileDone){showProfileScreen();return;}
+  initApp();
+}
+
+// ════════════════════════════════════
+// PROFILE SETUP
+// ════════════════════════════════════
+function showProfileScreen(){
+  document.getElementById('profile-screen').style.display='block';
+  document.getElementById('pf-org').value = currentUser.org||'';
+  buildDistChecks('dist-checks');
+  buildThemeChecks('theme-checks');
+}
+
+function buildDistChecks(containerId){
+  document.getElementById(containerId).innerHTML = UP_DISTRICTS.map(d=>
+    `<label style="display:flex;align-items:center;gap:5px;font-size:11px;cursor:pointer">
+      <input type="checkbox" value="${d}" style="width:12px;height:12px"> ${d}
+    </label>`).join('');
+}
+
+function buildThemeChecks(containerId){
+  document.getElementById(containerId).innerHTML = THEMES.map(t=>
+    `<label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer">
+      <input type="checkbox" value="${t}" style="width:13px;height:13px"> ${t}
+    </label>`).join('');
+}
+
+function profileNext(step){
+  document.getElementById(`profile-p${step}`).style.display='none';
+  document.getElementById(`profile-p${step+1}`).style.display='block';
+  document.getElementById(`psi${step}`).classList.remove('active');
+  document.getElementById(`psi${step}`).classList.add('done');
+  document.getElementById(`psl${step}`).classList.add('done');
+  document.getElementById(`psi${step+1}`).classList.add('active');
+}
+function profileBack(step){
+  document.getElementById(`profile-p${step}`).style.display='none';
+  document.getElementById(`profile-p${step-1}`).style.display='block';
+  document.getElementById(`psi${step}`).classList.remove('active');
+  document.getElementById(`psi${step-1}`).classList.remove('done');
+  document.getElementById(`psi${step-1}`).classList.add('active');
+}
+
+function saveProfile(){
+  currentUser.profileDone=true;
+  currentUser.org = document.getElementById('pf-org').value || currentUser.org;
+  currentUser.person = document.getElementById('pf-person').value;
+  document.getElementById('profile-screen').style.display='none';
+  initApp();
+}
+
+// ════════════════════════════════════
+// INIT APP
+// ════════════════════════════════════
+function initApp(){
+  document.getElementById('main-screen').style.display='block';
+  document.getElementById('sb-name').textContent = currentUser.name;
+  document.getElementById('sb-role').textContent = currentUser.role==='admin'?'PMU Administrator':'NGO Partner';
+  document.getElementById('sb-avatar').textContent = currentUser.name[0].toUpperCase();
+  document.getElementById('tb-role-badge').textContent = currentUser.role==='admin'?'PMU Admin':'NGO Partner';
+  document.getElementById('tb-date').textContent = new Date().toLocaleDateString('en-IN',{day:'numeric',month:'long',year:'numeric'});
+
+  if(currentUser.role==='admin'){
+    document.getElementById('nav-admin-sep').style.display='block';
+    document.getElementById('nav-ngos-item').style.display='flex';
+    document.getElementById('nav-admin-report-item').style.display='flex';
+    document.getElementById('tb-role-badge').className='badge badge-red';
+    fillAdminNGOSelect();
+  }
+
+  buildDistChecks('r-dist-checks');
+  renderMap('all');
+  renderPartnerTable();
+  showPage('dashboard');
+}
+
+function showPage(p){
+  document.querySelectorAll('.page').forEach(pg=>pg.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  currentPage=p;
+
+  const pageMap={
+    'dashboard':'page-dashboard','profile-view':'page-profile-view',
+    'monthly-report':'page-monthly-report','ngo-list':'page-ngo-list',
+    'admin-reports':'page-admin-reports'
+  };
+  const titleMap={
+    'dashboard':'Dashboard & Map','profile-view':'My Profile',
+    'monthly-report':'Monthly Report','ngo-list':'All Partners',
+    'admin-reports':'Generate Reports'
+  };
+  document.getElementById(pageMap[p]).classList.add('active');
+  document.getElementById('page-title').textContent = titleMap[p]||p;
+
+  const navMap={'dashboard':0,'profile-view':1,'monthly-report':2,'ngo-list':3,'admin-reports':4};
+  const navItems = document.querySelectorAll('.nav-item');
+  if(navMap[p]!==undefined && navItems[navMap[p]]) navItems[navMap[p]].classList.add('active');
+
+  if(p==='profile-view') renderProfileView();
+  if(p==='ngo-list') renderAdminNGOList();
+  if(p==='monthly-report'){reportStep=0;updateReportSteps();}
+}
+
+// ════════════════════════════════════
+// MAP
+// ════════════════════════════════════
+function renderMap(filter){
+  activeFilter=filter;
+  const g = document.getElementById('map-markers');
+  g.innerHTML='';
+  const ngos = filter==='all' ? SAMPLE_NGOS : SAMPLE_NGOS.filter(n=>n.theme===filter||n.theme.includes(filter));
+  ngos.forEach(n=>{
+    const col = THEME_COLORS[n.theme]||'#2E6DB4';
+    const initials = n.name.split(' ').slice(0,2).map(w=>w[0]).join('');
+    const ci = createSVGEl('circle');
+    Object.assign(ci,{});
+    ci.setAttribute('cx',n.x);ci.setAttribute('cy',n.y);ci.setAttribute('r','10');
+    ci.setAttribute('fill',col);ci.setAttribute('stroke','white');ci.setAttribute('stroke-width','2');
+    ci.style.cursor='pointer';
+
+    const txt = createSVGEl('text');
+    txt.setAttribute('x',n.x);txt.setAttribute('y',n.y+4);
+    txt.setAttribute('text-anchor','middle');txt.setAttribute('font-size','7.5');
+    txt.setAttribute('fill','white');txt.setAttribute('font-weight','700');
+    txt.setAttribute('pointer-events','none');
+    txt.textContent=initials.slice(0,2);
+
+    [ci,txt].forEach(el=>{
+      el.addEventListener('mouseenter',ev=>showMapTooltip(ev,n));
+      el.addEventListener('mouseleave',hideMapTooltip);
+      el.addEventListener('click',()=>showNGODetail(n));
+    });
+    g.appendChild(ci);g.appendChild(txt);
+  });
+}
+
+function createSVGEl(tag){return document.createElementNS('http://www.w3.org/2000/svg',tag);}
+
+function showMapTooltip(ev,n){
+  const tt=document.getElementById('map-tooltip');
+  const wrap=document.getElementById('map-svg').parentElement;
+  const svgR=document.getElementById('map-svg').getBoundingClientRect();
+  const wrapR=wrap.getBoundingClientRect();
+  const sx=svgR.width/620,sy=svgR.height/520;
+  let left=(n.x*sx)+(svgR.left-wrapR.left)+14;
+  let top=(n.y*sy)+(svgR.top-wrapR.top)-20;
+  if(left+200>wrapR.width)left-=215;
+  tt.style.left=left+'px';tt.style.top=top+'px';tt.style.display='block';
+  document.getElementById('mt-name').textContent=n.name;
+  document.getElementById('mt-theme').textContent=n.theme;
+  document.getElementById('mt-dist').textContent=n.dist;
+  document.getElementById('mt-schools').textContent=n.schools.toLocaleString();
+  document.getElementById('mt-students').textContent=n.students.toLocaleString();
+}
+function hideMapTooltip(){document.getElementById('map-tooltip').style.display='none';}
+
+function showNGODetail(n){
+  alert(`${n.name}\n\nTheme: ${n.theme}\nDistricts: ${n.dist}\nSchools: ${n.schools.toLocaleString()}\nStudents: ${n.students.toLocaleString()}\nGirls: ${n.girls.toLocaleString()}\nProgress: ${n.progress}%\n\nKMI: ${n.kmi}`);
+}
+
+function filterMap(theme,btn){
+  document.querySelectorAll('.fbtn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderMap(theme==='all'?'all':theme);
+}
+
+// ════════════════════════════════════
+// PARTNER TABLE
+// ════════════════════════════════════
+function renderPartnerTable(){
+  const tb=document.getElementById('partner-tbody');
+  tb.innerHTML=SAMPLE_NGOS.map(n=>{
+    const col=THEME_COLORS[n.theme]||'#2E6DB4';
+    const pc=n.progress>=75?'#1D9E75':n.progress>=50?'#BA7517':'#E24B4A';
+    return `<tr>
+      <td><strong>${n.name}</strong></td>
+      <td><span class="badge" style="background:${col}22;color:${col}">${n.theme}</span></td>
+      <td style="font-size:11px;color:var(--muted)">${n.dist}</td>
+      <td>${n.schools.toLocaleString()}</td>
+      <td>${n.students.toLocaleString()}</td>
+      <td>
+        <div style="display:flex;align-items:center;gap:6px">
+          <div class="prog-bar"><div class="prog-fill" style="width:${n.progress}%;background:${pc}"></div></div>
+          <span style="font-size:11px;color:${pc}">${n.progress}%</span>
+        </div>
+      </td>
+      <td style="font-size:11px">${n.month}</td>
+      <td><span class="badge ${n.progress>=75?'badge-green':n.progress>=50?'badge-amber':'badge-red'}">${n.progress>=75?'Submitted':n.progress>=50?'Partial':'Pending'}</span></td>
+    </tr>`;
+  }).join('');
+}
+
+// ════════════════════════════════════
+// PROFILE VIEW
+// ════════════════════════════════════
+function renderProfileView(){
+  const u=currentUser;
+  document.getElementById('profile-display').innerHTML=`
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      <div><div style="font-size:11px;color:var(--muted)">Organisation</div><div style="font-weight:700;font-size:15px;color:var(--blue);margin-top:2px">${u.org||'—'}</div></div>
+      <div><div style="font-size:11px;color:var(--muted)">Nodal person</div><div style="font-weight:600;margin-top:2px">${u.name}</div></div>
+      <div><div style="font-size:11px;color:var(--muted)">Email</div><div style="margin-top:2px">${u.email}</div></div>
+      <div><div style="font-size:11px;color:var(--muted)">Role</div><div style="margin-top:2px">${u.role==='admin'?'PMU Administrator':'NGO Partner'}</div></div>
+    </div>
+    <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border)">
+      <button class="btn-blu" style="font-size:12px;padding:7px 16px" onclick="showPage('monthly-report')">Submit Monthly Report →</button>
+    </div>`;
+}
+
+// ════════════════════════════════════
+// REPORT WIZARD
+// ════════════════════════════════════
+function updateReportSteps(){
+  for(let i=0;i<5;i++){
+    const ws=document.getElementById(`rs${i}`);
+    const rp=document.getElementById(`rp${i}`);
+    ws.className='ws'+(i===reportStep?' active':i<reportStep?' done':'');
+    if(rp) rp.className='wizard-page'+(i===reportStep?' active':'');
+  }
+  document.getElementById('rp-success').className='wizard-page';
+}
+
+function reportNext(step){
+  reportStep=step+1;
+  updateReportSteps();
+}
+function reportBack(step){
+  reportStep=step-1;
+  updateReportSteps();
+}
+
+function handlePhotos(input){
+  const files=Array.from(input.files);
+  uploadedPhotos=[...uploadedPhotos,...files].slice(0,10);
+  const prev=document.getElementById('photo-preview');
+  prev.innerHTML=uploadedPhotos.map((f,i)=>`
+    <div class="photo-thumb">
+      <img src="${URL.createObjectURL(f)}" alt="photo ${i+1}">
+      <button class="photo-remove" onclick="removePhoto(${i})">×</button>
+    </div>`).join('');
+  document.getElementById('photo-count').textContent=`${uploadedPhotos.length} photo(s) uploaded`;
+}
+function removePhoto(i){
+  uploadedPhotos.splice(i,1);
+  handlePhotos({files:uploadedPhotos});
+}
+
+function submitReport(){
+  const months=document.getElementById('r-month').value;
+  const report={
+    ngo:currentUser.org, month:months,
+    schools:+document.getElementById('r-schools').value||0,
+    students:+document.getElementById('r-students').value||0,
+    girls:+document.getElementById('r-girls').value||0,
+    teachers:+document.getElementById('r-teachers').value||0,
+    meetings:+document.getElementById('r-meetings').value||0,
+    events:+document.getElementById('r-events').value||0,
+    scst:+document.getElementById('r-scst').value||0,
+    divyang:+document.getElementById('r-divyang').value||0,
+    budget:+document.getElementById('r-budget').value||0,
+    dropout:+document.getElementById('r-dropout').value||0,
+    tasks:document.getElementById('r-tasks').value,
+    status:document.getElementById('r-status').value,
+    kmi:document.getElementById('r-kmi').value,
+    achieve:document.getElementById('r-achieve').value,
+    challenges:document.getElementById('r-challenges').value,
+    support:document.getElementById('r-support').value,
+    plans:document.getElementById('r-plans').value,
+    photos:uploadedPhotos.length,
+    submitted:new Date().toLocaleDateString('en-IN')
+  };
+  REPORTS.push(report);
+  // Update sample NGO data
+  const ngo=SAMPLE_NGOS.find(n=>n.name===currentUser.org);
+  if(ngo){ngo.schools=report.schools||ngo.schools;ngo.students=report.students||ngo.students;ngo.month=months;ngo.progress=+report.status||ngo.progress;}
+  renderPartnerTable();
+  renderMap(activeFilter);
+
+  // Update stats
+  const totalStudents=SAMPLE_NGOS.reduce((a,n)=>a+n.students,0);
+  document.getElementById('s-students').textContent=(totalStudents/100000).toFixed(1)+'L+';
+
+  for(let i=0;i<5;i++){document.getElementById(`rp${i}`).className='wizard-page';}
+  document.getElementById('rp-success').className='wizard-page active';
+  uploadedPhotos=[];
+}
+
+// ════════════════════════════════════
+// ADMIN
+// ════════════════════════════════════
+function fillAdminNGOSelect(){
+  const sel=document.getElementById('rep-ngo');
+  SAMPLE_NGOS.forEach(n=>{
+    const o=document.createElement('option');
+    o.textContent=n.name;sel.appendChild(o);
+  });
+}
+
+function renderAdminNGOList(){
+  document.getElementById('admin-ngo-tbody').innerHTML=SAMPLE_NGOS.map((n,i)=>`<tr>
+    <td>${i+1}</td>
+    <td><strong>${n.name}</strong></td>
+    <td style="font-size:11px">${n.person}</td>
+    <td><span class="badge" style="background:${THEME_COLORS[n.theme]||'#ccc'}22;color:${THEME_COLORS[n.theme]||'#555'}">${n.theme}</span></td>
+    <td style="font-size:11px;color:var(--muted)">${n.dist}</td>
+    <td>${n.schools.toLocaleString()}</td>
+    <td>${REPORTS.filter(r=>r.ngo===n.name).length}</td>
+    <td style="font-size:11px">${n.month}</td>
+  </tr>`).join('');
+}
+
+function generateReport(){
+  const selMonth=document.getElementById('rep-month').value;
+  const selNGO=document.getElementById('rep-ngo').value;
+  const selTheme=document.getElementById('rep-theme').value;
+
+  let ngos=SAMPLE_NGOS;
+  if(selNGO!=='all') ngos=ngos.filter(n=>n.name===selNGO);
+  if(selTheme!=='all') ngos=ngos.filter(n=>n.theme===selTheme||n.theme.includes(selTheme));
+
+  const totSchools=ngos.reduce((a,n)=>a+n.schools,0);
+  const totStudents=ngos.reduce((a,n)=>a+n.students,0);
+  const totGirls=ngos.reduce((a,n)=>a+n.girls,0);
+  const totTeachers=ngos.reduce((a,n)=>a+n.teachers,0);
+
+  const out=document.getElementById('report-output');
+  out.innerHTML=`
+    <div style="text-align:center;margin-bottom:16px;padding:14px;background:#fff;border:1px solid var(--border);border-radius:12px">
+      <div style="font-size:18px;font-weight:700;color:var(--blue)">Samagra UP Secondary Education Programme</div>
+      <div style="font-size:13px;color:var(--muted);margin-top:4px">NGO Progress Report — ${selMonth==='all'?'All Months':selMonth} | Generated: ${new Date().toLocaleDateString('en-IN')}</div>
+      <div style="font-size:12px;color:var(--muted)">Madhyamik Shiksha Vibhag, Uttar Pradesh | PMU</div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px">
+      ${[['Partners','badge-blue',ngos.length],['Schools',  'badge-green',totSchools.toLocaleString()],['Students','badge-amber',totStudents.toLocaleString()],['Girls','badge-red',totGirls.toLocaleString()]].map(([l,b,v])=>`
+        <div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:12px;text-align:center">
+          <div style="font-size:22px;font-weight:700;color:var(--blue)">${v}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:3px">${l}</div>
+        </div>`).join('')}
+    </div>
+
+    ${ngos.map(n=>`
+    <div class="report-card">
+      <div class="report-card-header">
+        <h3>${n.name}</h3>
+        <span style="font-size:11px;opacity:0.8">${n.theme} | ${n.dist}</span>
+      </div>
+      <div class="report-body">
+        <div class="report-kpi-row">
+          <div class="rkpi"><div class="rkpi-val">${n.schools.toLocaleString()}</div><div class="rkpi-label">Schools</div></div>
+          <div class="rkpi"><div class="rkpi-val">${n.students.toLocaleString()}</div><div class="rkpi-label">Students</div></div>
+          <div class="rkpi"><div class="rkpi-val">${n.girls.toLocaleString()}</div><div class="rkpi-label">Girls</div></div>
+          <div class="rkpi"><div class="rkpi-val">${n.teachers.toLocaleString()}</div><div class="rkpi-label">Teachers trained</div></div>
+          <div class="rkpi"><div class="rkpi-val">${n.progress}%</div><div class="rkpi-label">Progress</div></div>
+        </div>
+        <div style="font-size:12px;color:var(--muted);margin-top:4px"><strong style="color:var(--blue)">KMI:</strong> ${n.kmi}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:6px">Last report: ${n.month} | Nodal person: ${n.person}</div>
+      </div>
+    </div>`).join('')}
+
+    <div style="margin-top:14px;padding:12px 16px;background:#F4F6FA;border-radius:10px;font-size:11px;color:var(--muted)">
+      Report generated by PMU Dashboard | Samagra UP Secondary | ${new Date().toLocaleString('en-IN')} | For official use only
+    </div>`;
+}
+
+// ════════════════════════════════════
+// INIT
+// ════════════════════════════════════
+document.getElementById('tb-date').textContent=new Date().toLocaleDateString('en-IN',{day:'numeric',month:'long',year:'numeric'});
+</script>
+</body>
+</html>
