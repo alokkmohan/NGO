@@ -56,6 +56,10 @@ function login(data) {
   for (let i = 1; i < rows.length; i++) {
     const [email, password, role, name, org] = rows[i];
     if (email === data.email && String(password) === String(data.password)) {
+      // Admin always allowed; NGO partners checked against NGO_List status
+      if (role !== 'admin' && !isNGOActive(org)) {
+        return { success: false, error: 'Your organisation is currently inactive. Please contact PMU Admin.' };
+      }
       return { success: true, user: { email, role, name, org, profileDone: true } };
     }
   }
@@ -63,16 +67,29 @@ function login(data) {
 }
 
 // ── GET NGO MASTER LIST (for signup dropdown) ────────────────
-// NGO_List sheet columns: sr_no | name
+// NGO_List sheet columns: sr_no | name | status (active/inactive)
 function getNGOList() {
   const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName('NGO_List');
   if (!sheet) return { success: true, data: [] };
   const rows = sheet.getDataRange().getValues();
   if (rows.length < 2) return { success: true, data: [] };
   const data = rows.slice(1)
-    .filter(r => r[1])           // column B = name
+    .filter(r => r[1] && String(r[2]).toLowerCase().trim() === 'active')  // only active NGOs
     .map(r => ({ sr: r[0], name: String(r[1]).trim() }));
   return { success: true, data };
+}
+
+// Check if NGO is active in NGO_List
+function isNGOActive(orgName) {
+  const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName('NGO_List');
+  if (!sheet) return true; // if no list, allow
+  const rows = sheet.getDataRange().getValues();
+  for (let i = 1; i < rows.length; i++) {
+    if (String(rows[i][1]).trim().toLowerCase() === orgName.trim().toLowerCase()) {
+      return String(rows[i][2]).toLowerCase().trim() === 'active';
+    }
+  }
+  return true; // admin users not in NGO_List are always allowed
 }
 
 // ── GET NGOs ─────────────────────────────────────────────────
