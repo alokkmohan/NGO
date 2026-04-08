@@ -183,7 +183,30 @@ tr:hover td{background:#FAFBFF}
   .content{margin-left:0}
   .page.active{padding:0}
   .report-card{break-inside:avoid;box-shadow:none}
+  .official-report{box-shadow:none!important;border:none!important;margin:0!important}
+  .official-report + .official-report{page-break-before:always}
 }
+/* Official KPI Report styles */
+.official-report{background:#fff;border:1px solid #ccc;border-radius:0;padding:24px 28px;margin-bottom:24px;font-family:'Segoe UI',Arial,sans-serif;font-size:12px;color:#111}
+.or-title{text-align:center;font-size:15px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;border-bottom:2px solid #1A3C6E;padding-bottom:6px;margin-bottom:4px;color:#1A3C6E}
+.or-subtitle{text-align:center;font-size:11px;color:#444;margin-bottom:14px}
+.or-info{width:100%;border-collapse:collapse;margin-bottom:14px}
+.or-info td{padding:5px 8px;border:1px solid #bbb;font-size:11px}
+.or-info td:nth-child(odd){background:#f0f4fa;font-weight:600;width:22%;color:#1A3C6E}
+.or-info td:nth-child(even){width:28%}
+.or-section{font-weight:700;background:#1A3C6E;color:#fff;padding:5px 10px;margin:14px 0 6px;font-size:11px;text-transform:uppercase;letter-spacing:0.5px}
+.or-kpi{width:100%;border-collapse:collapse;font-size:10.5px}
+.or-kpi th{background:#2E6DB4;color:#fff;padding:5px 6px;border:1px solid #bbb;text-align:center;font-weight:600}
+.or-kpi td{padding:5px 6px;border:1px solid #bbb;vertical-align:top}
+.or-kpi tr:nth-child(even) td{background:#f9fbff}
+.or-kpi .sno{text-align:center;width:32px}
+.or-kpi .status-done{color:#1D9E75;font-weight:600}
+.or-kpi .status-prog{color:#BA7517;font-weight:600}
+.or-kpi .status-ns{color:#999}
+.or-narrative{border:1px solid #bbb;padding:8px 10px;min-height:56px;font-size:11px;background:#fff;margin-bottom:8px}
+.or-narrative label{font-weight:600;color:#1A3C6E;display:block;margin-bottom:4px}
+.or-sig{display:flex;justify-content:space-between;margin-top:36px;padding-top:8px}
+.or-sig-box{text-align:center;border-top:1px solid #555;padding-top:6px;font-size:10px;width:220px;color:#333}
 </style>
 </head>
 <body>
@@ -564,11 +587,14 @@ tr:hover td{background:#FAFBFF}
     <!-- ── PAGE: ADMIN REPORTS ── -->
     <div class="page" id="page-admin-reports">
       <div class="card no-print">
-        <div class="card-title">📊 Generate reports</div>
+        <div class="card-title">📊 Generate Reports</div>
         <div class="report-controls">
-          <select id="rep-month"><option value="all">All months</option><option>April 2026</option><option>May 2026</option><option>March 2026</option><option>February 2026</option></select>
+          <select id="rep-type">
+            <option value="official">Official KPI Report (per NGO)</option>
+            <option value="summary">Summary Report (all NGOs)</option>
+          </select>
           <select id="rep-ngo"><option value="all">All NGOs</option></select>
-          <select id="rep-theme"><option value="all">All themes</option></select>
+          <select id="rep-month"><option value="all">All months</option><option>April 2026</option><option>May 2026</option><option>March 2026</option><option>February 2026</option></select>
           <button class="btn-report" onclick="generateReport()">⬇ Generate Report</button>
           <button class="btn-report" style="background:var(--green)" onclick="window.print()">🖨 Print / PDF</button>
         </div>
@@ -1392,57 +1418,137 @@ function renderAdminNGOList(){
 }
 
 function generateReport(){
-  const selMonth=document.getElementById('rep-month').value;
-  const selNGO=document.getElementById('rep-ngo').value;
-  const selTheme=document.getElementById('rep-theme').value;
+  const selType  = document.getElementById('rep-type').value;
+  const selNGO   = document.getElementById('rep-ngo').value;
+  const selMonth = document.getElementById('rep-month').value;
+  const out      = document.getElementById('report-output');
 
-  let ngos=SAMPLE_NGOS;
-  if(selNGO!=='all') ngos=ngos.filter(n=>n.name===selNGO);
-  if(selTheme!=='all') ngos=ngos.filter(n=>n.theme===selTheme||n.theme.includes(selTheme));
+  if(selType === 'official'){
+    // ── OFFICIAL KPI REPORT (per NGO) ──
+    let targetNGOs = selNGO === 'all' ? SAMPLE_NGOS : SAMPLE_NGOS.filter(n=>n.name===selNGO);
+    if(!targetNGOs.length){ out.innerHTML='<p style="color:var(--muted);padding:16px">No NGO data found.</p>'; return; }
+    out.innerHTML = targetNGOs.map(n => buildOfficialReport(n, selMonth)).join('');
 
-  const totSchools=ngos.reduce((a,n)=>a+n.schools,0);
-  const totStudents=ngos.reduce((a,n)=>a+n.students,0);
-  const totGirls=ngos.reduce((a,n)=>a+n.girls,0);
-  const totTeachers=ngos.reduce((a,n)=>a+n.teachers,0);
+  } else {
+    // ── SUMMARY REPORT (all NGOs) ──
+    let ngos = selNGO==='all' ? SAMPLE_NGOS : SAMPLE_NGOS.filter(n=>n.name===selNGO);
+    const tot = (key) => ngos.reduce((a,n)=>a+(+n[key]||0),0);
+    out.innerHTML = `
+      <div class="official-report">
+        <div class="or-title">NGO Partner Progress — Summary Report</div>
+        <div class="or-subtitle">Samagra UP Secondary Education Programme &nbsp;|&nbsp; Madhyamik Shiksha Vibhag, Uttar Pradesh &nbsp;|&nbsp; PMU<br>
+          Period: ${selMonth==='all'?'All Months':selMonth} &nbsp;|&nbsp; Generated: ${new Date().toLocaleDateString('en-IN')}</div>
 
-  const out=document.getElementById('report-output');
-  out.innerHTML=`
-    <div style="text-align:center;margin-bottom:16px;padding:14px;background:#fff;border:1px solid var(--border);border-radius:12px">
-      <div style="font-size:18px;font-weight:700;color:var(--blue)">Samagra UP Secondary Education Programme</div>
-      <div style="font-size:13px;color:var(--muted);margin-top:4px">NGO Progress Report — ${selMonth==='all'?'All Months':selMonth} | Generated: ${new Date().toLocaleDateString('en-IN')}</div>
-      <div style="font-size:12px;color:var(--muted)">Madhyamik Shiksha Vibhag, Uttar Pradesh | PMU</div>
-    </div>
-
-    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px">
-      ${[['Partners','badge-blue',ngos.length],['Schools',  'badge-green',totSchools.toLocaleString()],['Students','badge-amber',totStudents.toLocaleString()],['Girls','badge-red',totGirls.toLocaleString()]].map(([l,b,v])=>`
-        <div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:12px;text-align:center">
-          <div style="font-size:22px;font-weight:700;color:var(--blue)">${v}</div>
-          <div style="font-size:11px;color:var(--muted);margin-top:3px">${l}</div>
-        </div>`).join('')}
-    </div>
-
-    ${ngos.map(n=>`
-    <div class="report-card">
-      <div class="report-card-header">
-        <h3>${n.name}</h3>
-        <span style="font-size:11px;opacity:0.8">${n.theme} | ${n.dist}</span>
-      </div>
-      <div class="report-body">
-        <div class="report-kpi-row">
-          <div class="rkpi"><div class="rkpi-val">${n.schools.toLocaleString()}</div><div class="rkpi-label">Schools</div></div>
-          <div class="rkpi"><div class="rkpi-val">${n.students.toLocaleString()}</div><div class="rkpi-label">Students</div></div>
-          <div class="rkpi"><div class="rkpi-val">${n.girls.toLocaleString()}</div><div class="rkpi-label">Girls</div></div>
-          <div class="rkpi"><div class="rkpi-val">${n.teachers.toLocaleString()}</div><div class="rkpi-label">Teachers trained</div></div>
-          <div class="rkpi"><div class="rkpi-val">${n.progress}%</div><div class="rkpi-label">Progress</div></div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px">
+          ${[['Partners',ngos.length],['Schools',tot('schools').toLocaleString('en-IN')],
+             ['Students',tot('students').toLocaleString('en-IN')],['Girls',tot('girls').toLocaleString('en-IN')]
+            ].map(([l,v])=>`<div style="border:1px solid #bbb;padding:10px;text-align:center">
+              <div style="font-size:20px;font-weight:700;color:#1A3C6E">${v}</div>
+              <div style="font-size:10px;color:#666;margin-top:2px">${l}</div></div>`).join('')}
         </div>
-        <div style="font-size:12px;color:var(--muted);margin-top:4px"><strong style="color:var(--blue)">KMI:</strong> ${n.kmi}</div>
-        <div style="font-size:11px;color:var(--muted);margin-top:6px">Last report: ${n.month} | Nodal person: ${n.person}</div>
-      </div>
-    </div>`).join('')}
 
-    <div style="margin-top:14px;padding:12px 16px;background:#F4F6FA;border-radius:10px;font-size:11px;color:var(--muted)">
-      Report generated by PMU Dashboard | Samagra UP Secondary | ${new Date().toLocaleString('en-IN')} | For official use only
-    </div>`;
+        <table class="or-kpi">
+          <thead><tr><th>S.No</th><th>Organisation</th><th>Theme</th><th>Districts</th>
+            <th>Schools</th><th>Students</th><th>Girls</th><th>Teachers</th><th>Progress</th><th>Last Report</th></tr></thead>
+          <tbody>${ngos.map((n,i)=>`<tr>
+            <td class="sno">${i+1}</td><td><b>${n.name}</b></td><td>${n.theme||'—'}</td><td style="font-size:10px">${n.dist||'—'}</td>
+            <td style="text-align:right">${(+n.schools||0).toLocaleString('en-IN')}</td>
+            <td style="text-align:right">${(+n.students||0).toLocaleString('en-IN')}</td>
+            <td style="text-align:right">${(+n.girls||0).toLocaleString('en-IN')}</td>
+            <td style="text-align:right">${(+n.teachers||0).toLocaleString('en-IN')}</td>
+            <td style="text-align:center;font-weight:700;color:${(+n.progress||0)>=75?'#1D9E75':(+n.progress||0)>=50?'#BA7517':'#E24B4A'}">${+n.progress||0}%</td>
+            <td>${n.month||'—'}</td></tr>`).join('')}
+          </tbody>
+        </table>
+        <div style="margin-top:12px;font-size:10px;color:#888;text-align:right">
+          Generated by PMU Dashboard &nbsp;|&nbsp; ${new Date().toLocaleString('en-IN')} &nbsp;|&nbsp; For official use only</div>
+      </div>`;
+  }
+}
+
+function buildOfficialReport(n, selMonth){
+  // Find matching submitted report
+  const r = REPORTS.find(rep => rep.ngo === n.name &&
+    (selMonth==='all' || rep.month === selMonth)) || {};
+
+  const KPI_ROWS = [
+    { indicator:'Schools covered / reached',         update: r.schools  ? r.schools+' schools'   : '', status: r.schools  ? 'Completed':'Not started' },
+    { indicator:'Students benefited (total)',         update: r.students ? r.students+' students'  : '', status: r.students ? 'Completed':'Not started' },
+    { indicator:'Girls enrolled / retained',          update: r.girls    ? r.girls+' girls'        : '', status: r.girls    ? 'Completed':'Not started' },
+    { indicator:'Teachers trained',                  update: r.teachers ? r.teachers+' teachers'  : '', status: r.teachers ? 'Completed':'Not started' },
+    { indicator:'Community meetings held',           update: r.meetings ? r.meetings+' meetings'  : '', status: r.meetings ? 'Completed':'Not started' },
+    { indicator:'Events / camps organised',          update: r.events   ? r.events+' events'      : '', status: r.events   ? 'Completed':'Not started' },
+    { indicator:'SC / ST / OBC students covered',    update: r.scst     ? r.scst+' students'      : '', status: r.scst     ? 'Completed':'Not started' },
+    { indicator:'Divyang students supported',        update: r.divyang  ? r.divyang+' students'   : '', status: r.divyang  ? 'Completed':'Not started' },
+    { indicator:'Budget utilised (₹)',               update: r.budget   ? '₹'+(+r.budget||0).toLocaleString('en-IN') : '', status: r.budget ? 'Completed':'Not started' },
+    { indicator:'Dropout prevention cases',          update: r.dropout  ? r.dropout+' cases'      : '', status: r.dropout  ? 'Completed':'Not started' },
+    { indicator:'Key Milestone Indicator (KMI)',     update: r.kmi      || '',                         status: r.kmi      ? 'Completed':'Not started' },
+    { indicator:'Additional activities / tasks',     update: (r.tasks||'').split('\n')[0]||'',          status: r.tasks    ? 'In progress':'Not started' },
+  ];
+
+  const statusClass = s => s==='Completed'?'status-done':s==='In progress'?'status-prog':'status-ns';
+
+  return `
+  <div class="official-report">
+    <div class="or-title">Monthly KPI Progress Report — NGO / Partner Organisation</div>
+    <div class="or-subtitle">Samagra UP Secondary Education Programme &nbsp;|&nbsp; Madhyamik Shiksha Vibhag, Uttar Pradesh &nbsp;|&nbsp; PMU</div>
+
+    <table class="or-info">
+      <tr>
+        <td>Organisation Name</td><td><b>${n.name||'—'}</b></td>
+        <td>Name of Nodal Person</td><td>${n.person||r.nodal||'—'}</td>
+      </tr>
+      <tr>
+        <td>Reporting Month &amp; Year</td><td>${r.month||selMonth||'—'}</td>
+        <td>Contact Number</td><td>${n.phone||'—'}</td>
+      </tr>
+      <tr>
+        <td>District(s) of Operation</td><td colspan="3">${n.dist||'—'}</td>
+      </tr>
+    </table>
+
+    <div class="or-section">Section A — KPI Indicators &amp; Activity Details</div>
+    <table class="or-kpi">
+      <thead>
+        <tr>
+          <th class="sno">S.No</th><th style="width:18%">KPI Indicator</th>
+          <th style="width:18%">Activity Details</th>
+          <th style="width:8%">Start Date</th><th style="width:8%">End Date</th>
+          <th style="width:9%">Actual Completion</th><th style="width:8%">Status</th>
+          <th style="width:18%">Monthly Update (this month only)</th>
+          <th style="width:7%">Photo / Doc Link</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${KPI_ROWS.map((k,i)=>`<tr>
+          <td class="sno">${i+1}</td>
+          <td>${k.indicator}</td>
+          <td></td><td></td><td></td><td></td>
+          <td class="${statusClass(k.status)}">${k.status}</td>
+          <td>${k.update}</td>
+          <td>${k.photoLink||''}</td>
+        </tr>`).join('')}
+      </tbody>
+    </table>
+
+    <div class="or-section">Section B — Narrative Report (Brief)</div>
+    <div class="or-narrative"><label>Key Achievements this month:</label>${r.achieve||''}</div>
+    <div class="or-narrative"><label>Challenges faced:</label>${r.challenges||''}</div>
+    <div class="or-narrative"><label>Plans for next month:</label>${r.plans||''}</div>
+    <div class="or-narrative"><label>Support required from PMU:</label>${r.support||''}</div>
+
+    <div class="or-section">Section C — DIOS Observation / Remark</div>
+    <div class="or-narrative" style="min-height:70px"></div>
+
+    <div class="or-section">Section D — Signatures &amp; Certification</div>
+    <div class="or-sig">
+      <div class="or-sig-box">Signature &amp; Stamp — NGO Nodal Officer<br><br><br></div>
+      <div class="or-sig-box">Signature &amp; Stamp (DIOS)<br><br><br></div>
+    </div>
+    <div style="margin-top:16px;font-size:9px;color:#999;text-align:right">
+      Generated: ${new Date().toLocaleString('en-IN')} &nbsp;|&nbsp; PMU Dashboard &nbsp;|&nbsp; For official use only
+    </div>
+  </div>`;
 }
 
 // ════════════════════════════════════
