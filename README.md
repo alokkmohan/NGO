@@ -10,12 +10,6 @@ Interactive web portal for NGO partner reporting under Samagra UP Secondary Educ
 - Admin dashboard with report generation
 - Print / PDF report for IAS review
 
-## Demo Credentials
-| Role | Email | Password |
-|------|-------|----------|
-| PMU Admin | admin@pmu.up.gov.in | admin123 |
-| NGO Partner | ngo@educategirls.org | ngo123 |
-
 ## Deploy on GitHub Pages
 
 1. Create a new GitHub repository named `samagra-ngo-portal`
