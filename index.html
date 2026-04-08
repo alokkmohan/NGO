@@ -456,6 +456,25 @@ tr:hover td{background:#FAFBFF}
 
     <!-- ── PAGE: MONTHLY REPORT ── -->
     <div class="page" id="page-monthly-report">
+
+      <!-- Excel Upload Option -->
+      <div class="card" style="margin-bottom:14px;border:2px dashed var(--blue2);background:#f0f6ff">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+          <div>
+            <div style="font-weight:700;font-size:14px;color:var(--blue)">📥 Fill via Excel / CSV</div>
+            <div style="font-size:12px;color:var(--muted);margin-top:3px">Template download karo → Excel mein bharo → Upload karo → Form auto-fill ho jaayega</div>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn-sec" style="font-size:12px;padding:7px 14px" onclick="downloadReportTemplate()">⬇ Template Download</button>
+            <label style="cursor:pointer">
+              <span class="btn-blu" style="font-size:12px;padding:7px 14px;display:inline-block">📤 CSV Upload</span>
+              <input type="file" accept=".csv" style="display:none" onchange="handleReportCSV(this)">
+            </label>
+          </div>
+        </div>
+        <div id="csv-status" style="display:none;margin-top:10px;padding:8px 12px;background:#d4edda;border-radius:8px;font-size:12px;color:#155724"></div>
+      </div>
+
       <div class="card">
         <div class="card-title">📝 Monthly progress report</div>
         <div class="wizard-steps" id="report-steps">
@@ -1350,6 +1369,122 @@ function updateReportSteps(){
     if(rp) rp.className='wizard-page'+(i===reportStep?' active':'');
   }
   document.getElementById('rp-success').className='wizard-page';
+}
+
+// ════════════════════════════════════
+// EXCEL / CSV UPLOAD FOR REPORT
+// ════════════════════════════════════
+function downloadReportTemplate(){
+  const now = new Date();
+  const mNames=['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const yr = now.getMonth()<=2?2027:2026;
+  const curMonth = mNames[now.getMonth()]+' '+yr;
+  const myNGO = SAMPLE_NGOS.find(n=>n.name===currentUser.org)||{};
+  const dists = (myNGO.dist||'').split(',').map(d=>d.trim()).filter(Boolean).join(' | ');
+
+  const rows = [
+    ['Field','Value','Instructions (do not change Column A)'],
+    ['Month', curMonth, 'April 2026 se March 2027 tak likho'],
+    ['Schools Covered','','Kitne vidyalayo mein kaam kiya'],
+    ['Students Benefited','','Kitne chhatro ko labh mila'],
+    ['Girls Benefited','','Kitni baliakon ko labh mila'],
+    ['Teachers Trained','','Kitne shikshak prashikshit hue'],
+    ['Community Meetings','','Samudayik baithkon ki sankhya'],
+    ['Events / Workshops','','Karyakramon ki sankhya'],
+    ['SC-ST-OBC Students','','SC/ST/OBC chhatro ki sankhya'],
+    ['Divyang Students','','Divyang chhatro ki sankhya'],
+    ['Budget Spent (Rs)','','Vyay ki rashi rupayo mein'],
+    ['Dropouts Prevented','','Kitne bachon ka dropout roka'],
+    ['Tasks Completed','','Kaam ki soochi — alag alag kaam alag line mein'],
+    ['Status','100','100=Poora 85=Sahi disha 60=Aadha 35=Pichhe 0=Shuru nahi'],
+    ['KMI Headline Result','','Is mahine ka sabse bada parinam — ek line mein'],
+    ['Key Achievements','','2-3 mukhy uplabdhiyan'],
+    ['Key Challenges','','Samne aaye avarodhon ka varnan'],
+    ['Support Required','','PMU se kya sahyog chahiye'],
+    ['Plans for Next Month','','Agle mahine ki pramukh yojana'],
+    ['','',''],
+    ['--- Pre-filled info (do not edit below) ---','',''],
+    ['NGO Name', currentUser.org,''],
+    ['Reporting Person', currentUser.name,''],
+    ['Districts', dists,'Profile se — My Profile mein jakar badlein'],
+  ];
+
+  const csv = rows.map(r => r.map(c=>`"${String(c||'').replace(/"/g,'""')}"`).join(',')).join('\r\n');
+  const blob = new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href=url; a.download=`Monthly_Report_Template_${(currentUser.org||'NGO').replace(/[^a-zA-Z0-9]/g,'_')}.csv`;
+  a.click(); URL.revokeObjectURL(url);
+}
+
+function handleReportCSV(input){
+  const file = input.files[0]; if(!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e){
+    try {
+      const data = parseCSVtoMap(e.target.result);
+      fillFormFromData(data);
+      input.value=''; // reset so same file can be re-uploaded
+    } catch(err){ alert('CSV padhne mein error: '+err.message); }
+  };
+  reader.readAsText(file,'UTF-8');
+}
+
+function parseCSVtoMap(csv){
+  const map={};
+  const lines = csv.split(/\r?\n/).filter(l=>l.trim());
+  for(let i=1;i<lines.length;i++){
+    const cols = parseCSVLine(lines[i]);
+    const key = (cols[0]||'').replace(/^"|"$/g,'').trim().toLowerCase();
+    const val = (cols[1]||'').replace(/^"|"$/g,'').trim();
+    if(key && val && !key.startsWith('---')) map[key]=val;
+  }
+  return map;
+}
+
+function parseCSVLine(line){
+  const result=[]; let cur=''; let inQ=false;
+  for(let i=0;i<line.length;i++){
+    if(line[i]==='"'){ if(inQ&&line[i+1]==='"'){cur+='"';i++;} else inQ=!inQ; }
+    else if(line[i]===','&&!inQ){ result.push(cur);cur=''; }
+    else cur+=line[i];
+  }
+  result.push(cur); return result;
+}
+
+function fillFormFromData(data){
+  const set=(id,key)=>{ const el=document.getElementById(id); const v=data[key]; if(el&&v!==undefined&&v!=='') el.value=v; };
+
+  // Month
+  const mSel=document.getElementById('r-month');
+  const mv=data['month'];
+  if(mv){ for(let i=0;i<mSel.options.length;i++){ if(mSel.options[i].text.toLowerCase()===mv.toLowerCase()){mSel.selectedIndex=i;break;} } }
+
+  set('r-schools','schools covered');
+  set('r-students','students benefited');
+  set('r-girls','girls benefited');
+  set('r-teachers','teachers trained');
+  set('r-meetings','community meetings');
+  set('r-events','events / workshops');
+  set('r-scst','sc-st-obc students');
+  set('r-divyang','divyang students');
+  set('r-budget','budget spent (rs)');
+  set('r-dropout','dropouts prevented');
+  set('r-tasks','tasks completed');
+  set('r-status','status');
+  set('r-kmi','kmi headline result');
+  set('r-achieve','key achievements');
+  set('r-challenges','key challenges');
+  set('r-support','support required');
+  set('r-plans','plans for next month');
+
+  // Show success banner
+  const st=document.getElementById('csv-status');
+  st.style.display='block';
+  st.textContent='✓ Data load ho gaya! Review karo, photos add karo, phir Submit karo.';
+
+  // Jump to step 0 to review
+  reportStep=0; updateReportSteps();
 }
 
 function prefillReportForm(){
