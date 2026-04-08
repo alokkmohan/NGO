@@ -810,22 +810,27 @@ async function doChangePassword(){
   if(!np || np.length < 6){ alert('Password kam se kam 6 characters ka hona chahiye'); return; }
   if(np !== cp){ alert('Dono passwords match nahi kar rahe'); return; }
   showLoader('Password save ho raha hai…');
+  // Step 1: API call only
   try {
     const res = await apiFetch({action:'changePassword', email: currentUser.email, newPassword: np});
-    if(res.success){
-      currentUser.password = np;
-      currentUser.firstLogin = false;
-      localStorage.setItem('ngo_session', JSON.stringify(currentUser));
-      document.getElementById('pwd-change-screen').style.display = 'none';
-      await loadSheetData();
-      startApp();
-    } else {
+    if(!res.success){
+      hideLoader();
       alert('Password change nahi ho saka: ' + (res.error||''));
+      return;
     }
   } catch(e){
-    alert('Connection error: ' + e.message);
+    hideLoader();
+    alert('Server se connect nahi ho saka. Internet check karein.');
+    return;
   }
+  // Step 2: Update session and start app (separate from API try-catch)
+  currentUser.password = np;
+  currentUser.firstLogin = false;
+  localStorage.setItem('ngo_session', JSON.stringify(currentUser));
+  document.getElementById('pwd-change-screen').style.display = 'none';
+  try { await loadSheetData(); } catch(e){ console.warn(e); }
   hideLoader();
+  startApp();
 }
 
 function doLogout(){
@@ -848,8 +853,8 @@ function startApp(){
 function showProfileScreen(){
   document.getElementById('profile-screen').style.display='block';
   document.getElementById('pf-org').value = currentUser.org||'';
-  buildDistChecks('dist-checks');
-  buildThemeChecks('theme-checks');
+  if(document.getElementById('dist-checks')) buildDistChecks('dist-checks');
+  if(document.getElementById('theme-checks')) buildThemeChecks('theme-checks');
 }
 
 function buildDistChecks(containerId){
@@ -1060,7 +1065,7 @@ function initApp(){
     document.getElementById('nav-admin-report-item').style.display='none';
   }
 
-  buildDistChecks('r-dist-checks');
+  if(document.getElementById('r-dist-checks')) buildDistChecks('r-dist-checks');
   renderMap('all');
   renderPartnerTable();
   updateDashboardStats();
