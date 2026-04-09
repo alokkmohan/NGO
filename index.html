@@ -2014,38 +2014,64 @@ function renderProfileView(){
   });
 
   document.getElementById('profile-display').innerHTML=`
-    <!-- Header with update button -->
-    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;flex-wrap:wrap;gap:8px">
-      <div>
-        <div style="font-size:18px;font-weight:700;color:var(--blue)">${u.org||'—'}</div>
-        <div style="font-size:12px;color:var(--muted);margin-top:2px">Samagra UP Secondary Education Programme | PMU</div>
-      </div>
-      <button class="btn-blu" style="font-size:12px;padding:7px 16px" onclick="reopenProfileWizard()">✏ Update Profile</button>
+    <!-- Header (no global update button) -->
+    <div style="margin-bottom:16px">
+      <div style="font-size:18px;font-weight:700;color:var(--blue)">${u.org||'—'}</div>
+      <div style="font-size:12px;color:var(--muted);margin-top:2px">Samagra UP Secondary Education Programme | PMU</div>
     </div>
 
-    <!-- Basic Info -->
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px">
-      <div style="background:#f8f9ff;border-radius:8px;padding:10px 12px">
-        <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">Nodal Person</div>
-        <div style="font-weight:600;margin-top:3px">${myNGO.person||u.name||'—'}</div>
-        <div style="font-size:11px;color:var(--muted)">${myNGO.desig||''}</div>
+    <!-- ── SECTION 1: My Organisation Profile ── -->
+    <div id="pv-sec1" style="border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:12px">
+      <div style="background:var(--blue);color:#fff;padding:8px 14px;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:space-between">
+        🏢 My Organisation Profile
+        <button onclick="pvEdit(1)" style="padding:3px 12px;background:#fff;color:var(--blue);border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">✏ Edit</button>
       </div>
-      <div style="background:#f8f9ff;border-radius:8px;padding:10px 12px">
-        <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">Contact</div>
-        <div style="font-weight:600;margin-top:3px">${myNGO.phone||'—'}</div>
-        <div style="font-size:11px;color:var(--muted)">${u.email}</div>
+      <div id="pv-sec1-view" style="padding:12px 14px">
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
+          <div style="background:#f8f9ff;border-radius:8px;padding:10px 12px">
+            <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">Nodal Person</div>
+            <div style="font-weight:600;margin-top:3px">${myNGO.person||u.name||'—'}</div>
+            <div style="font-size:11px;color:var(--muted)">${myNGO.desig||''}</div>
+          </div>
+          <div style="background:#f8f9ff;border-radius:8px;padding:10px 12px">
+            <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">Contact</div>
+            <div style="font-weight:600;margin-top:3px">${myNGO.phone||'—'}</div>
+            <div style="font-size:11px;color:var(--muted)">${u.email}</div>
+          </div>
+          <div style="background:#f8f9ff;border-radius:8px;padding:10px 12px">
+            <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">Organisation Type</div>
+            <div style="font-weight:600;margin-top:3px">${myNGO.org_type||'NGO / Non-profit'}</div>
+            <div style="font-size:11px;color:var(--muted)">Since ${myNGO.start_date||'—'}</div>
+          </div>
+        </div>
       </div>
-      <div style="background:#f8f9ff;border-radius:8px;padding:10px 12px">
-        <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">Organisation Type</div>
-        <div style="font-weight:600;margin-top:3px">${myNGO.org_type||'NGO / Non-profit'}</div>
-        <div style="font-size:11px;color:var(--muted)">Since ${myNGO.start_date||'—'}</div>
+      <div id="pv-sec1-form" style="display:none;padding:14px;border-top:1px solid var(--border);background:#fafcff">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+          <div class="wform-group" style="margin:0"><label style="font-size:11px">Nodal person name</label>
+            <input id="pve-person" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;outline:none" value="${myNGO.person||u.name||''}"></div>
+          <div class="wform-group" style="margin:0"><label style="font-size:11px">Designation</label>
+            <input id="pve-desig" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;outline:none" value="${myNGO.desig||''}"></div>
+          <div class="wform-group" style="margin:0"><label style="font-size:11px">Contact number</label>
+            <input id="pve-phone" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;outline:none" value="${myNGO.phone||''}"></div>
+          <div class="wform-group" style="margin:0"><label style="font-size:11px">Organisation type</label>
+            <select id="pve-type" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;outline:none">
+              ${['NGO / Non-profit','International Organisation','Government Partner','Academic Institution','CSR / Corporate Foundation'].map(o=>`<option${(myNGO.org_type||'NGO / Non-profit')===o?' selected':''}>${o}</option>`).join('')}
+            </select></div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:4px">
+          <button onclick="pvSave(1)" style="padding:6px 20px;background:var(--green);color:#fff;border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer">💾 Save</button>
+          <button onclick="pvCancel(1)" style="padding:6px 16px;background:#f1f1f1;border:1px solid var(--border);border-radius:7px;font-size:12px;cursor:pointer">Cancel</button>
+        </div>
       </div>
     </div>
 
-    <!-- Geographic Coverage -->
-    <div style="border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:12px">
-      <div style="background:var(--blue);color:#fff;padding:8px 14px;font-size:12px;font-weight:700">📍 Geographic Coverage</div>
-      <div style="padding:12px 14px">
+    <!-- ── SECTION 2: Geographic Coverage ── -->
+    <div id="pv-sec2" style="border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:12px">
+      <div style="background:var(--blue);color:#fff;padding:8px 14px;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:space-between">
+        📍 Geographic Coverage
+        <button onclick="pvEdit(2)" style="padding:3px 12px;background:#fff;color:var(--blue);border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">✏ Edit</button>
+      </div>
+      <div id="pv-sec2-view" style="padding:12px 14px">
         <div style="margin-bottom:10px">
           <div style="font-size:11px;color:var(--muted);margin-bottom:4px">Districts (${dists.length})</div>
           <div style="display:flex;flex-wrap:wrap;gap:4px">
@@ -2065,43 +2091,292 @@ function renderProfileView(){
           </div>
         </div>
       </div>
-    </div>
-
-    <!-- Components & Tasks -->
-    <div style="border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:12px">
-      <div style="background:var(--blue);color:#fff;padding:8px 14px;font-size:12px;font-weight:700">🎯 Major Components & Tasks</div>
-      <div style="padding:12px 14px">
-        ${Object.keys(byComp).length ? Object.entries(byComp).map(([comp, tasks])=>`
-          <div style="margin-bottom:12px">
-            <div style="font-weight:700;color:var(--blue);font-size:12px;margin-bottom:5px;padding:5px 8px;background:var(--blue)10;border-radius:6px">▸ ${comp}</div>
-            ${tasks.map(t=>`<div style="padding:7px 10px;background:#f8f9ff;border-radius:6px;margin-bottom:4px;font-size:12px;border-left:3px solid var(--green)">
-              <div style="font-weight:600">${t.task_name||'—'}</div>
-              <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:4px;font-size:11px;color:var(--muted)">
-                ${t.start_date?`<span>📅 Start: ${t.start_date}</span>`:''}
-                ${t.end_date?`<span>🏁 End: ${t.end_date}</span>`:''}
-                ${t.target_schools?`<span>🏫 Target schools: ${t.target_schools}</span>`:''}
-                ${t.target_students?`<span>👥 Students: ${t.target_students}</span>`:''}
-                ${t.target_girls?`<span>👧 Girls: ${t.target_girls}</span>`:''}
-                ${t.target_teachers?`<span>👨‍🏫 Teachers: ${t.target_teachers}</span>`:''}
-              </div>
-            </div>`).join('')}
-          </div>`).join('') : '<div style="color:var(--muted);font-size:12px">No tasks defined. Click Update Profile to add tasks.</div>'}
+      <div id="pv-sec2-form" style="display:none;padding:14px;border-top:1px solid var(--border);background:#fafcff">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:12px">
+          <div>
+            <label style="font-size:11px;font-weight:600;display:block;margin-bottom:5px">Select districts</label>
+            <input type="text" id="pve-dist-search" placeholder="🔍 Search..." oninput="pveFilterDist()"
+              style="width:100%;padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;margin-bottom:5px">
+            <div id="pve-dist-checks" style="max-height:180px;overflow-y:auto;border:1px solid var(--border);border-radius:7px;padding:8px;font-size:11px"></div>
+          </div>
+          <div>
+            <label style="font-size:11px;font-weight:600;display:block;margin-bottom:5px">Select blocks</label>
+            <input type="text" id="pve-block-search" placeholder="🔍 Search..." oninput="pveFilterBlock()"
+              style="width:100%;padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;margin-bottom:5px">
+            <div id="pve-block-checks" style="max-height:180px;overflow-y:auto;border:1px solid var(--border);border-radius:7px;padding:8px;font-size:11px;color:var(--muted)">Select a district first</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button onclick="pvSave(2)" style="padding:6px 20px;background:var(--green);color:#fff;border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer">💾 Save</button>
+          <button onclick="pvCancel(2)" style="padding:6px 16px;background:#f1f1f1;border:1px solid var(--border);border-radius:7px;font-size:12px;cursor:pointer">Cancel</button>
+        </div>
       </div>
     </div>
 
-    <!-- Actions -->
-    <div style="display:flex;gap:8px;flex-wrap:wrap">
-      <button class="btn-sec" style="font-size:12px;padding:7px 16px" onclick="reopenProfileWizard()">✏ Update Profile</button>
+    <!-- ── SECTION 3: Major Components & Tasks ── -->
+    <div id="pv-sec3" style="border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:12px">
+      <div style="background:var(--blue);color:#fff;padding:8px 14px;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:space-between">
+        🎯 Major Components & Tasks
+        <button onclick="pvEdit(3)" style="padding:3px 12px;background:#fff;color:var(--blue);border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">✏ Edit</button>
+      </div>
+      <div id="pv-sec3-view" style="padding:12px 14px">
+        ${Object.keys(byComp).length ? Object.entries(byComp).map(([comp, tasks])=>`
+          <div style="margin-bottom:12px">
+            <div style="font-weight:700;color:var(--blue);font-size:12px;margin-bottom:5px;padding:5px 8px;background:var(--blue)10;border-radius:6px">▸ ${comp}</div>
+            ${tasks.map(t=>{
+              let subs=[];try{subs=JSON.parse(t.sub_activities||'[]');}catch(e){}
+              return `<div style="padding:7px 10px;background:#f8f9ff;border-radius:6px;margin-bottom:4px;font-size:12px;border-left:3px solid var(--green)">
+                <div style="font-weight:600">${t.task_name||'—'}</div>
+                ${subs.length?`<div style="margin-top:5px;padding-left:8px">${subs.map((s,i)=>`<div style="font-size:11px;color:var(--muted);margin-bottom:2px">${i+1}. ${s.name}${s.start_date?' <span style="color:#888">('+s.start_date+(s.end_date?' → '+s.end_date:'')+')</span>':''}</div>`).join('')}</div>`:''}
+              </div>`;
+            }).join('')}
+          </div>`).join('') : '<div style="color:var(--muted);font-size:12px">No tasks defined yet.</div>'}
+      </div>
+      <div id="pv-sec3-form" style="display:none;padding:14px;border-top:1px solid var(--border);background:#fafcff">
+        <div style="font-size:11px;color:var(--blue);background:#eef4ff;border-radius:7px;padding:9px 12px;margin-bottom:12px">
+          Select components and define activities with sub-activities. Existing tasks will be replaced.
+        </div>
+        <div id="pve-comp-task-builder"></div>
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <button onclick="pvSave(3)" style="padding:6px 20px;background:var(--green);color:#fff;border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer">💾 Save</button>
+          <button onclick="pvCancel(3)" style="padding:6px 16px;background:#f1f1f1;border:1px solid var(--border);border-radius:7px;font-size:12px;cursor:pointer">Cancel</button>
+        </div>
+      </div>
     </div>
   `;
 }
 
+// ── Profile View inline-edit helpers ──────────────────────────
+function pvEdit(sec){
+  document.getElementById('pv-sec'+sec+'-view').style.display='none';
+  document.getElementById('pv-sec'+sec+'-form').style.display='block';
+  if(sec===2) pvInitGeo();
+  if(sec===3) pvInitTasks();
+}
+function pvCancel(sec){
+  document.getElementById('pv-sec'+sec+'-form').style.display='none';
+  document.getElementById('pv-sec'+sec+'-view').style.display='block';
+}
+
+// Section 2 — District/Block picker initialisation
+function pvInitGeo(){
+  const myNGO = SAMPLE_NGOS.find(n=>n.name===currentUser.org)||{};
+  const savedDists  = (myNGO.dist||'').split(',').map(d=>d.trim().toUpperCase()).filter(Boolean);
+  const savedBlocks = (myNGO.blocks||'').split(',').map(b=>b.trim()).filter(Boolean);
+
+  // Build district checkboxes
+  const dc = document.getElementById('pve-dist-checks');
+  if(!dc) return;
+  dc.innerHTML = UP_DISTRICTS.map(d=>`
+    <label style="display:flex;align-items:center;gap:5px;cursor:pointer;margin-bottom:2px">
+      <input type="checkbox" value="${d}" onchange="pveOnDistChange()"
+        ${savedDists.includes(d.toUpperCase())?'checked':''}
+        style="width:12px;height:12px"> ${d}
+    </label>`).join('');
+  // Trigger block list build for pre-selected districts
+  pveOnDistChange(savedBlocks);
+}
+
+function pveFilterDist(){
+  const q=(document.getElementById('pve-dist-search')?.value||'').toLowerCase();
+  document.querySelectorAll('#pve-dist-checks label').forEach(l=>{
+    l.style.display=l.textContent.toLowerCase().includes(q)?'':'none';
+  });
+}
+function pveFilterBlock(){
+  const q=(document.getElementById('pve-block-search')?.value||'').toLowerCase();
+  document.querySelectorAll('#pve-block-checks label').forEach(l=>{
+    l.style.display=l.textContent.toLowerCase().includes(q)?'':'none';
+  });
+}
+
+function pveOnDistChange(preselBlocks){
+  const checked=[...document.querySelectorAll('#pve-dist-checks input:checked')].map(c=>c.value);
+  const bc=document.getElementById('pve-block-checks');
+  if(!bc) return;
+  if(!checked.length){ bc.innerHTML='<div style="color:var(--muted);font-size:12px">Select a district first</div>'; return; }
+  const allBlocks=[];
+  checked.forEach(d=>(DIST_BLOCKS[d]||[]).forEach(b=>allBlocks.push({dist:d,block:b})));
+  allBlocks.sort((a,b)=>a.block.localeCompare(b.block));
+  const presels = Array.isArray(preselBlocks) ? preselBlocks.map(b=>b.toUpperCase()) : [];
+  bc.innerHTML=allBlocks.map(({dist,block})=>`
+    <label style="display:flex;align-items:center;gap:5px;cursor:pointer;margin-bottom:2px">
+      <input type="checkbox" value="${dist}|${block}"
+        ${presels.includes(block.toUpperCase())?'checked':''}
+        style="width:12px;height:12px">
+      <span style="color:var(--muted);font-size:10px">[${dist}]</span> ${block}
+    </label>`).join('');
+}
+
+// Section 3 — Component/Task builder initialisation
+function pvInitTasks(){
+  const container=document.getElementById('pve-comp-task-builder');
+  if(!container) return;
+  const myProjs=PROJECTS.filter(p=>p.ngo===currentUser.org&&p.status!=='deleted');
+  // Group existing tasks by component
+  const existing={};
+  myProjs.forEach(p=>{ if(!existing[p.component]) existing[p.component]=[]; existing[p.component].push(p); });
+
+  container.innerHTML=MAJOR_COMPONENTS.map(c=>{
+    const cid='pve_ct_'+c.replace(/[^a-z0-9]/gi,'_').toLowerCase();
+    const isChecked=!!existing[c];
+    return `<div class="comp-block" style="margin-bottom:6px;border:1px solid var(--border);border-radius:8px;overflow:hidden">
+      <label style="display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;background:#fafafa;margin:0">
+        <input type="checkbox" class="pve-comp-cb" value="${c}" onchange="pveToggleComp(this)" style="width:15px;height:15px;flex-shrink:0"${isChecked?' checked':''}>
+        <span style="font-weight:600;font-size:13px;color:var(--blue)">${c}</span>
+      </label>
+      <div class="pve-comp-task-area" style="display:${isChecked?'block':'none'};padding:10px 14px 12px;background:#fff;border-top:1px solid var(--border)">
+        <div class="task-rows" id="${cid}"></div>
+        <button type="button" onclick="addCompTask('${cid}')"
+          style="margin-top:4px;padding:5px 14px;background:var(--blue);color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer">+ Add Activity</button>
+      </div>
+    </div>`;
+  }).join('');
+
+  // Pre-fill existing tasks
+  MAJOR_COMPONENTS.forEach(c=>{
+    if(!existing[c]) return;
+    const cid='pve_ct_'+c.replace(/[^a-z0-9]/gi,'_').toLowerCase();
+    existing[c].forEach(proj=>{
+      addCompTask(cid);
+      const taskRows=document.getElementById(cid);
+      const lastBlock=taskRows.lastElementChild;
+      if(!lastBlock) return;
+      lastBlock.querySelector('.comp-task-input').value=proj.task_name||'';
+      // Pre-fill sub-activities
+      let subs=[];
+      try{subs=JSON.parse(proj.sub_activities||'[]');}catch(e){}
+      const subContainer=lastBlock.querySelector('.sub-act-rows');
+      // Remove auto-added empty row, re-add with data
+      subContainer.innerHTML='';
+      if(subs.length){
+        subs.forEach((sa,i)=>{
+          const addBtn=lastBlock.querySelector('button[onclick*="addSubActivity"]');
+          addSubActivity(addBtn);
+          const row=subContainer.lastElementChild;
+          if(!row) return;
+          row.querySelector('.sub-act-name').value=sa.name||'';
+          row.querySelector('.sub-act-start').value=sa.start_date||'';
+          row.querySelector('.sub-act-end').value=sa.end_date||'';
+        });
+      } else {
+        // restore the one auto-added row (blank)
+        const addBtn=lastBlock.querySelector('button[onclick*="addSubActivity"]');
+        addSubActivity(addBtn);
+      }
+    });
+  });
+}
+
+function pveToggleComp(cb){
+  const area=cb.closest('.comp-block').querySelector('.pve-comp-task-area');
+  area.style.display=cb.checked?'block':'none';
+  if(cb.checked){
+    const tr=area.querySelector('.task-rows');
+    if(!tr.children.length) addCompTask(tr.id);
+  }
+}
+
+// ── pvSave: save each section independently ───────────────────
+async function pvSave(sec){
+  const myNGO=SAMPLE_NGOS.find(n=>n.name===currentUser.org)||{};
+  showLoader('Saving…');
+  try{
+    if(sec===1){
+      const data={
+        action:'saveProfile',
+        email: currentUser.email,
+        org:   currentUser.org,
+        name:  document.getElementById('pve-person').value.trim()||currentUser.name,
+        person:document.getElementById('pve-person').value.trim(),
+        desig: document.getElementById('pve-desig').value.trim(),
+        phone: document.getElementById('pve-phone').value.trim(),
+        org_type:document.getElementById('pve-type').value,
+        theme: myNGO.theme||'',
+        dist:  myNGO.dist||'',
+        blocks:myNGO.blocks||'',
+        schools:myNGO.schools_list||''
+      };
+      await apiFetch(data);
+      // Update local cache
+      if(myNGO.name){
+        myNGO.person=data.person; myNGO.desig=data.desig;
+        myNGO.phone=data.phone;   myNGO.org_type=data.org_type;
+      }
+    }
+
+    if(sec===2){
+      const selDists =[...document.querySelectorAll('#pve-dist-checks input:checked')].map(c=>c.value);
+      const selBlocks=[...document.querySelectorAll('#pve-block-checks input:checked')].map(c=>c.value.split('|')[1]);
+      if(!selDists.length){ hideLoader(); alert('Please select at least one district'); return; }
+      if(!selBlocks.length){ hideLoader(); alert('Please select at least one block'); return; }
+      const data={
+        action:'saveProfile',
+        email: currentUser.email,
+        org:   currentUser.org,
+        name:  myNGO.person||currentUser.name,
+        person:myNGO.person||currentUser.name,
+        desig: myNGO.desig||'',
+        phone: myNGO.phone||'',
+        org_type:myNGO.org_type||'',
+        theme: myNGO.theme||'',
+        dist:  selDists.join(', '),
+        blocks:selBlocks.join(', '),
+        schools:myNGO.schools_list||''
+      };
+      await apiFetch(data);
+      if(myNGO.name){ myNGO.dist=data.dist; myNGO.blocks=data.blocks; }
+    }
+
+    if(sec===3){
+      const checkedComps=[...document.querySelectorAll('.pve-comp-cb:checked')];
+      if(!checkedComps.length){ hideLoader(); alert('Please select at least one component'); return; }
+      // Mark old tasks as deleted first (by sending deleteProjects action if exists, else just re-save)
+      // Re-save all tasks from form
+      const tSchools =myNGO.target_schools ||0;
+      const tStudents=myNGO.target_students||0;
+      const tGirls   =myNGO.target_girls   ||0;
+      const tTeachers=myNGO.target_teachers||0;
+      const tMeetings=myNGO.target_meetings||0;
+      const tEvents  =myNGO.target_events  ||0;
+      for(const cb of checkedComps){
+        const comp=cb.value;
+        const blocks=cb.closest('.comp-block').querySelectorAll('.task-block');
+        for(const block of blocks){
+          const taskName=block.querySelector('.comp-task-input')?.value.trim();
+          if(!taskName) continue;
+          const subActs=[...block.querySelectorAll('.sub-act-rows > div')].map(row=>({
+            name:      row.querySelector('.sub-act-name')?.value.trim()||'',
+            start_date:row.querySelector('.sub-act-start')?.value||'',
+            end_date:  row.querySelector('.sub-act-end')?.value||''
+          })).filter(s=>s.name);
+          const subStarts=subActs.map(s=>s.start_date).filter(Boolean);
+          const subEnds  =subActs.map(s=>s.end_date).filter(Boolean);
+          await apiFetch({
+            action:'saveProject', ngo:currentUser.org, component:comp, task_name:taskName,
+            description:'', sub_activities:JSON.stringify(subActs),
+            target_schools:tSchools,target_students:tStudents,target_girls:tGirls,
+            target_teachers:tTeachers,target_meetings:tMeetings,target_events:tEvents,
+            start_date:subStarts.length?subStarts.sort()[0]:'',
+            end_date:  subEnds.length?subEnds.sort().at(-1):''
+          });
+        }
+      }
+      await loadSheetData();
+    }
+
+    hideLoader();
+    pvCancel(sec);
+    // Reload profile view with fresh data
+    await loadSheetData();
+    renderProfileView();
+    renderMyReports();
+  }catch(e){ hideLoader(); alert('Save failed: '+e.message); }
+}
+
 function reopenProfileWizard(){
-  // Hide main screen, show profile screen for update
-  document.getElementById('main-screen').style.display='none';
-  showProfileScreen();
-  // After saving, come back to profile view
-  window._profileReturnToView = true;
+  // Legacy — redirect to inline edit instead
+  renderProfileView();
 }
 
 function renderMyReports(){
