@@ -1892,6 +1892,7 @@ function showPage(p){
   if(p==='profile-view'){ renderProfileView(); renderMyReports(); }
   if(p==='ngo-list') renderAdminNGOList();
   if(p==='monthly-report'){reportStep=0;updateReportSteps();prefillReportForm();}
+  if(p==='dashboard' && _lmap){ setTimeout(()=>_lmap.invalidateSize(), 100); }
 }
 
 // ════════════════════════════════════
@@ -1944,6 +1945,8 @@ function initLeafletMap(){
     attribution:'© <a href="https://openstreetmap.org">OpenStreetMap</a>',
     maxZoom:13
   }).addTo(_lmap);
+  // Fix tile rendering when container was hidden during init
+  setTimeout(()=>{ _lmap.invalidateSize(); }, 300);
 }
 
 function renderMap(filter){
