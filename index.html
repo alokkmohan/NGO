@@ -226,7 +226,12 @@ tr:hover td{background:#FAFBFF}
         <label>Registered Email</label>
         <input type="email" id="login-email" placeholder="your@ngo.org" onkeydown="if(event.key==='Enter')doSendOTP()">
       </div>
-      <button class="btn-primary" onclick="doSendOTP()">Send OTP →</button>
+      <!-- Admin password field — hidden by default -->
+      <div class="form-group" id="admin-pass-wrap" style="display:none">
+        <label>Password</label>
+        <input type="password" id="admin-pass" placeholder="Admin password" onkeydown="if(event.key==='Enter')doAdminLogin()">
+      </div>
+      <button class="btn-primary" id="login-main-btn" onclick="doSendOTP()">Send OTP →</button>
       <p class="auth-note" style="margin-top:12px;text-align:center">
         OTP will be sent to your registered email.<br>
         <span style="font-size:11px;color:var(--muted)">For access: contact PMU, Madhyamik Shiksha Vibhag, UP</span>
@@ -890,17 +895,24 @@ let activeFilter = 'all';
 async function doSendOTP(isResend){
   const email = document.getElementById('login-email').value.trim();
   if(!email){ alert('Please enter your email address'); return; }
-  showLoader(isResend ? 'Resending OTP…' : 'Sending OTP to your email…');
+  showLoader(isResend ? 'Resending OTP…' : 'Checking email…');
   try {
     const res = await apiFetch({action:'sendOTP', email});
     hideLoader();
     if(res.success){
+      // NGO user — show OTP entry step
       document.getElementById('otp-sent-to').textContent = email;
       document.getElementById('login-step1').style.display = 'none';
       document.getElementById('login-step2').style.display = 'block';
       document.getElementById('login-otp').value = '';
       document.getElementById('login-otp').focus();
       if(isResend) alert('✅ New OTP sent to ' + email);
+    } else if(res.isAdmin){
+      // Admin — show password field
+      document.getElementById('admin-pass-wrap').style.display = 'block';
+      document.getElementById('login-main-btn').textContent = 'Sign In →';
+      document.getElementById('login-main-btn').onclick = doAdminLogin;
+      document.getElementById('admin-pass').focus();
     } else {
       alert(res.error || 'Could not send OTP. Please try again.');
     }
@@ -908,6 +920,25 @@ async function doSendOTP(isResend){
     hideLoader();
     alert('Connection error: ' + e.message);
   }
+}
+
+async function doAdminLogin(){
+  const email = document.getElementById('login-email').value.trim();
+  const pass  = document.getElementById('admin-pass').value;
+  if(!pass){ alert('Please enter password'); return; }
+  showLoader('Signing in…');
+  try {
+    const res = await apiFetch({action:'login', email, password: pass});
+    hideLoader();
+    if(res.success){
+      currentUser = res.user;
+      localStorage.setItem('ngo_session', JSON.stringify(currentUser));
+      await loadSheetData();
+      startApp();
+    } else {
+      alert(res.error || 'Invalid password');
+    }
+  } catch(e){ hideLoader(); alert('Connection error: ' + e.message); }
 }
 
 async function doVerifyOTP(){
@@ -962,10 +993,14 @@ function doLogout(){
   document.getElementById('pwd-change-screen').style.display='none';
   document.getElementById('profile-screen').style.display='none';
   document.getElementById('profile-prompt-overlay').style.display='none';
-  // Reset OTP form back to step 1
+  // Reset login form
   document.getElementById('login-step1').style.display='block';
   document.getElementById('login-step2').style.display='none';
   document.getElementById('login-otp').value='';
+  document.getElementById('admin-pass-wrap').style.display='none';
+  document.getElementById('admin-pass').value='';
+  document.getElementById('login-main-btn').textContent='Send OTP →';
+  document.getElementById('login-main-btn').onclick=doSendOTP;
   document.getElementById('auth-screen').style.display='flex';
 }
 

@@ -79,8 +79,13 @@ function sendOTP(data) {
     const [email, , role, name, org] = rows[i];
     if (String(email).trim().toLowerCase() !== data.email.trim().toLowerCase()) continue;
 
+    // Admin uses password login — skip OTP
+    if (role === 'admin') {
+      return { success: false, isAdmin: true, error: 'admin' };
+    }
+
     // Check NGO active status
-    if (role !== 'admin' && !isNGOActive(org)) {
+    if (!isNGOActive(org)) {
       return { success: false, error: 'Your organisation is currently inactive. Please contact PMU Admin.' };
     }
 
