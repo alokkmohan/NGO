@@ -342,6 +342,7 @@ tr:hover td{background:#FAFBFF}
     <!-- Step 4: KPI Targets -->
     <div class="card" id="profile-p4" style="display:none">
       <div class="card-title">📊 Overall KPI targets</div>
+      <div id="step4-summary" style="margin-bottom:14px"></div>
       <div style="font-size:12px;color:var(--muted);margin-bottom:14px">Poore programme ki duration ke overall targets bharein — ye sabhi tasks par laagu honge.</div>
       <div class="wform-row">
         <div class="wform-group"><label>Programme start date</label><input id="pf-start" type="date"></div>
@@ -1097,6 +1098,56 @@ function profileNext(step){
   const line = document.getElementById(`psl${step}`);
   if(line) line.classList.add('done');
   document.getElementById(`psi${step+1}`).classList.add('active');
+  // Step 3 → Step 4: auto-fill schools + build summary
+  if(step === 3) buildStep4Summary();
+}
+
+function buildStep4Summary(){
+  // Auto-fill target_schools from selected schools count
+  const selectedSchools = [...document.querySelectorAll('#school-list input:checked')];
+  const tSchools = document.getElementById('pf-tschools');
+  if(tSchools && selectedSchools.length) tSchools.value = selectedSchools.length;
+
+  // Collect all selections
+  const dists   = [...document.querySelectorAll('#dist-checks input:checked')].map(c=>c.value);
+  const blocks  = [...document.querySelectorAll('#block-checks input:checked')].map(c=>c.value.split('|')[1]);
+  const schools = selectedSchools.map(c=>c.value);
+
+  // Collect components + tasks
+  const compTaskLines = [];
+  document.querySelectorAll('.comp-cb:checked').forEach(cb => {
+    const tasks = [...cb.closest('.comp-block').querySelectorAll('.comp-task-input')]
+      .map(i=>i.value.trim()).filter(Boolean);
+    if(tasks.length) compTaskLines.push(`<b>${cb.value}:</b> ${tasks.map(t=>`<em>${t}</em>`).join(', ')}`);
+  });
+
+  const summary = document.getElementById('step4-summary');
+  if(!summary) return;
+  summary.innerHTML = `
+    <div style="background:#f0f6ff;border:1px solid #2E6DB430;border-radius:10px;padding:14px 16px;font-size:12px">
+      <div style="font-weight:700;color:var(--blue);margin-bottom:10px;font-size:13px">📋 Aapki selections ka summary — review karein</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+        <div>
+          <div style="color:var(--muted);font-size:11px;margin-bottom:3px">Districts (${dists.length})</div>
+          <div style="display:flex;flex-wrap:wrap;gap:3px">${dists.map(d=>`<span style="background:var(--blue)15;color:var(--blue);border-radius:12px;padding:2px 7px;font-size:11px">${d}</span>`).join('')}</div>
+        </div>
+        <div>
+          <div style="color:var(--muted);font-size:11px;margin-bottom:3px">Blocks (${blocks.length})</div>
+          <div style="display:flex;flex-wrap:wrap;gap:3px">${blocks.slice(0,8).map(b=>`<span style="background:#e8f4ea;color:var(--green);border-radius:12px;padding:2px 7px;font-size:11px">${b}</span>`).join('')}${blocks.length>8?`<span style="font-size:11px;color:var(--muted)">+${blocks.length-8} aur</span>`:''}</div>
+        </div>
+      </div>
+      <div style="margin-bottom:10px">
+        <div style="color:var(--muted);font-size:11px;margin-bottom:3px">Schools (${schools.length}) — <span style="color:var(--green);font-weight:600">Target Schools auto-fill: ${schools.length}</span></div>
+        <div style="display:flex;flex-wrap:wrap;gap:3px">${schools.slice(0,6).map(s=>`<span style="background:#fef9e7;color:var(--amber);border-radius:12px;padding:2px 7px;font-size:11px">${s}</span>`).join('')}${schools.length>6?`<span style="font-size:11px;color:var(--muted)">+${schools.length-6} aur</span>`:''}</div>
+      </div>
+      <div>
+        <div style="color:var(--muted);font-size:11px;margin-bottom:4px">Components & Tasks</div>
+        ${compTaskLines.map(l=>`<div style="margin-bottom:3px;line-height:1.5">${l}</div>`).join('')}
+      </div>
+      <div style="margin-top:10px;padding-top:8px;border-top:1px solid #2E6DB430;font-size:11px;color:var(--muted)">
+        Kuch galat lage to ← Back karke update kar sakte hain.
+      </div>
+    </div>`;
 }
 
 function profileBack(step){
@@ -1175,7 +1226,13 @@ async function saveProfile(){
   } catch(e){ console.warn('Profile save error:', e.message); }
   hideLoader();
   document.getElementById('profile-screen').style.display='none';
-  initApp();
+  if(window._profileReturnToView){
+    window._profileReturnToView = false;
+    document.getElementById('main-screen').style.display='block';
+    showPage('profile-view');
+  } else {
+    initApp();
+  }
 }
 
 // ════════════════════════════════════
@@ -1618,38 +1675,102 @@ function renderPartnerTable(){
 function renderProfileView(){
   const u = currentUser;
   const myNGO = SAMPLE_NGOS.find(n => n.name === u.org) || {};
-  const dists = (myNGO.dist||'').split(',').map(d=>d.trim()).filter(Boolean);
+  const dists  = (myNGO.dist||'').split(',').map(d=>d.trim()).filter(Boolean);
+  const blocks = (myNGO.blocks||'').split(',').map(b=>b.trim()).filter(Boolean);
+  const schools= (myNGO.schools||'').split('|').map(s=>s.trim()).filter(Boolean);
+  const myProjects = PROJECTS.filter(p => p.ngo === u.org && p.status !== 'deleted');
+
+  // Group projects by component
+  const byComp = {};
+  myProjects.forEach(p => {
+    const c = p.component||'Other';
+    if(!byComp[c]) byComp[c]=[];
+    byComp[c].push(p);
+  });
+
   document.getElementById('profile-display').innerHTML=`
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
-      <div><div style="font-size:11px;color:var(--muted)">Organisation</div><div style="font-weight:700;font-size:15px;color:var(--blue);margin-top:2px">${u.org||'—'}</div></div>
-      <div><div style="font-size:11px;color:var(--muted)">Nodal person</div><div style="font-weight:600;margin-top:2px">${u.name}</div></div>
-      <div><div style="font-size:11px;color:var(--muted)">Email</div><div style="margin-top:2px">${u.email}</div></div>
-      <div><div style="font-size:11px;color:var(--muted)">Theme</div><div style="margin-top:2px">${myNGO.theme||'—'}</div></div>
+    <!-- Header with update button -->
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;flex-wrap:wrap;gap:8px">
+      <div>
+        <div style="font-size:18px;font-weight:700;color:var(--blue)">${u.org||'—'}</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:2px">Samagra UP Secondary Education Programme | PMU</div>
+      </div>
+      <button class="btn-blu" style="font-size:12px;padding:7px 16px" onclick="reopenProfileWizard()">✏ Profile Update Karein</button>
     </div>
-    ${u.role !== 'admin' ? `
-    <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border)">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-        <div style="font-size:13px;font-weight:600;color:var(--text)">Districts of operation
-          <span style="font-weight:400;font-size:11px;color:var(--muted);margin-left:6px">(${dists.length} district${dists.length!==1?'s':''})</span>
+
+    <!-- Basic Info -->
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px">
+      <div style="background:#f8f9ff;border-radius:8px;padding:10px 12px">
+        <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">Nodal Person</div>
+        <div style="font-weight:600;margin-top:3px">${myNGO.person||u.name||'—'}</div>
+        <div style="font-size:11px;color:var(--muted)">${myNGO.desig||''}</div>
+      </div>
+      <div style="background:#f8f9ff;border-radius:8px;padding:10px 12px">
+        <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">Contact</div>
+        <div style="font-weight:600;margin-top:3px">${myNGO.phone||'—'}</div>
+        <div style="font-size:11px;color:var(--muted)">${u.email}</div>
+      </div>
+      <div style="background:#f8f9ff;border-radius:8px;padding:10px 12px">
+        <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">Organisation Type</div>
+        <div style="font-weight:600;margin-top:3px">${myNGO.org_type||'NGO / Non-profit'}</div>
+        <div style="font-size:11px;color:var(--muted)">Since ${myNGO.start_date||'—'}</div>
+      </div>
+    </div>
+
+    <!-- Geographic Coverage -->
+    <div style="border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:12px">
+      <div style="background:var(--blue);color:#fff;padding:8px 14px;font-size:12px;font-weight:700">📍 Geographic Coverage</div>
+      <div style="padding:12px 14px">
+        <div style="margin-bottom:10px">
+          <div style="font-size:11px;color:var(--muted);margin-bottom:4px">Districts (${dists.length})</div>
+          <div style="display:flex;flex-wrap:wrap;gap:4px">
+            ${dists.length ? dists.map(d=>`<span style="background:var(--blue)15;color:var(--blue);border:1px solid var(--blue)30;border-radius:20px;padding:3px 10px;font-size:12px">${d}</span>`).join('') : '<span style="color:var(--muted);font-size:12px">—</span>'}
+          </div>
         </div>
-        <button class="btn-sec" style="font-size:11px;padding:5px 12px" onclick="toggleDistrictEdit()">✏ Edit Districts</button>
-      </div>
-      <div id="dist-display" style="display:flex;flex-wrap:wrap;gap:6px;min-height:24px">
-        ${dists.length ? dists.map(d=>`<span style="background:var(--blue)15;color:var(--blue);border:1px solid var(--blue)40;border-radius:20px;padding:3px 10px;font-size:12px">${d}</span>`).join('') : '<span style="color:var(--muted);font-size:12px">No districts set — click Edit Districts</span>'}
-      </div>
-      <div id="dist-edit-panel" style="display:none;margin-top:12px">
-        <div style="font-size:12px;color:var(--muted);margin-bottom:6px">Select all districts where your NGO currently operates:</div>
-        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:5px;max-height:160px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:10px" id="profile-dist-edit"></div>
-        <div style="margin-top:10px;display:flex;gap:8px">
-          <button class="btn-grn" style="font-size:12px;padding:6px 16px" onclick="saveProfileDistricts()">Save Districts ✓</button>
-          <button class="btn-sec" style="font-size:12px;padding:6px 14px" onclick="toggleDistrictEdit()">Cancel</button>
+        <div style="margin-bottom:10px">
+          <div style="font-size:11px;color:var(--muted);margin-bottom:4px">Blocks (${blocks.length})</div>
+          <div style="display:flex;flex-wrap:wrap;gap:4px">
+            ${blocks.length ? blocks.slice(0,12).map(b=>`<span style="background:#e8f4ea;color:var(--green);border:1px solid #a8d5b0;border-radius:20px;padding:3px 10px;font-size:12px">${b}</span>`).join('')+(blocks.length>12?`<span style="font-size:11px;color:var(--muted);padding:3px 6px">+${blocks.length-12} aur</span>`:'') : '<span style="color:var(--muted);font-size:12px">—</span>'}
+          </div>
+        </div>
+        <div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:4px">Schools (${schools.length})</div>
+          <div style="display:flex;flex-wrap:wrap;gap:4px">
+            ${schools.length ? schools.slice(0,10).map(s=>`<span style="background:#fef9e7;color:var(--amber);border:1px solid #f5d48a;border-radius:20px;padding:3px 10px;font-size:11px">${s}</span>`).join('')+(schools.length>10?`<span style="font-size:11px;color:var(--muted);padding:3px 6px">+${schools.length-10} aur</span>`:'') : '<span style="color:var(--muted);font-size:12px">—</span>'}
+          </div>
         </div>
       </div>
     </div>
-    <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border)">
-      <button class="btn-blu" style="font-size:12px;padding:7px 16px" onclick="showPage('monthly-report')">Submit Monthly Report →</button>
-    </div>` : ''}
+
+    <!-- Components & Tasks -->
+    <div style="border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:12px">
+      <div style="background:var(--blue);color:#fff;padding:8px 14px;font-size:12px;font-weight:700">🎯 Major Components & Tasks</div>
+      <div style="padding:12px 14px">
+        ${Object.keys(byComp).length ? Object.entries(byComp).map(([comp, tasks])=>`
+          <div style="margin-bottom:10px">
+            <div style="font-weight:700;color:var(--blue);font-size:12px;margin-bottom:5px">▸ ${comp}</div>
+            ${tasks.map(t=>`<div style="display:flex;align-items:center;gap:6px;padding:4px 8px;background:#f8f9ff;border-radius:6px;margin-bottom:3px;font-size:12px">
+              <span style="color:var(--green)">✓</span> ${t.task_name||'—'}
+              ${t.target_schools?`<span style="margin-left:auto;font-size:10px;color:var(--muted)">Target: ${t.target_schools} schools</span>`:''}
+            </div>`).join('')}
+          </div>`).join('') : '<div style="color:var(--muted);font-size:12px">Koi task define nahi kiya — Profile Update Karein.</div>'}
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn-blu" style="font-size:12px;padding:7px 16px" onclick="showPage('monthly-report')">📝 Monthly Report Submit Karein →</button>
+      <button class="btn-sec" style="font-size:12px;padding:7px 16px" onclick="reopenProfileWizard()">✏ Profile Update Karein</button>
+    </div>
   `;
+}
+
+function reopenProfileWizard(){
+  // Hide main screen, show profile screen for update
+  document.getElementById('main-screen').style.display='none';
+  showProfileScreen();
+  // After saving, come back to profile view
+  window._profileReturnToView = true;
 }
 
 function renderMyReports(){
