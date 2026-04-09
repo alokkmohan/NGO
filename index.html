@@ -2834,25 +2834,96 @@ function generateReport(){
 }
 
 function buildOfficialReport(n, selMonth){
-  // Find matching submitted report
-  const r = REPORTS.find(rep => rep.ngo === n.name &&
-    (selMonth==='all' || rep.month === selMonth)) || {};
+  // Find matching submitted report (latest if 'all')
+  const ngoReps = REPORTS.filter(rep => rep.ngo === n.name &&
+    (selMonth==='all' || rep.month === selMonth))
+    .sort((a,b)=>(+b.id||0)-(+a.id||0));
+  const r = ngoReps[0] || {};
 
+  // Format month display (fix ISO date if stored that way)
+  function fmtMonth(val){
+    if(!val) return '—';
+    // If it looks like an ISO date, convert to readable
+    if(/^\d{4}-\d{2}-\d{2}/.test(val)){
+      const d = new Date(val);
+      return d.toLocaleDateString('en-IN',{month:'long',year:'numeric'});
+    }
+    return val;
+  }
+
+  // Parse tasks JSON safely
+  let taskActs = [];
+  try { taskActs = JSON.parse(r.tasks_json || r.tasks || '[]'); } catch(e){}
+  // If tasks is readable text (old format), taskActs stays empty
+
+  const statusClass = s => s==='Complete'||s==='Completed' ? 'status-done'
+    : s==='In progress' ? 'status-prog' : 'status-ns';
+  const statusLabel = s => s==='Complete'||s==='Completed' ? 'Completed'
+    : s==='In progress' ? 'In progress' : 'Not started';
+
+  // ── Section A Part 1: Fixed KPI rows ────────────────
   const KPI_ROWS = [
-    { indicator:'Schools covered / reached',         update: r.schools  ? r.schools+' schools'   : '', status: r.schools  ? 'Completed':'Not started' },
-    { indicator:'Students benefited (total)',         update: r.students ? r.students+' students'  : '', status: r.students ? 'Completed':'Not started' },
-    { indicator:'Girls enrolled / retained',          update: r.girls    ? r.girls+' girls'        : '', status: r.girls    ? 'Completed':'Not started' },
-    { indicator:'Teachers trained',                  update: r.teachers ? r.teachers+' teachers'  : '', status: r.teachers ? 'Completed':'Not started' },
-    { indicator:'Community meetings held',           update: r.meetings ? r.meetings+' meetings'  : '', status: r.meetings ? 'Completed':'Not started' },
-    { indicator:'Events / camps organised',          update: r.events   ? r.events+' events'      : '', status: r.events   ? 'Completed':'Not started' },
-    { indicator:'SC / ST / OBC students covered',    update: r.scst     ? r.scst+' students'      : '', status: r.scst     ? 'Completed':'Not started' },
-    { indicator:'Divyang students supported',        update: r.divyang  ? r.divyang+' students'   : '', status: r.divyang  ? 'Completed':'Not started' },
-    { indicator:'Dropout prevention cases',          update: r.dropout  ? r.dropout+' cases'      : '', status: r.dropout  ? 'Completed':'Not started' },
-    { indicator:'Key Milestone Indicator (KMI)',     update: r.kmi      || '',                         status: r.kmi      ? 'Completed':'Not started' },
-    { indicator:'Additional activities / tasks',     update: (r.tasks||'').split('\n')[0]||'',          status: r.tasks    ? 'In progress':'Not started' },
+    { indicator:'Schools covered / reached',        update: r.schools  ? r.schools+' schools'  : '', status: r.schools  ?'Completed':'Not started' },
+    { indicator:'Students benefited (total)',        update: r.students ? r.students+' students': '', status: r.students ?'Completed':'Not started' },
+    { indicator:'Girls enrolled / retained',         update: r.girls    ? r.girls+' girls'      : '', status: r.girls    ?'Completed':'Not started' },
+    { indicator:'Teachers trained',                 update: r.teachers ? r.teachers+' teachers': '', status: r.teachers ?'Completed':'Not started' },
+    { indicator:'Community meetings held',          update: r.meetings ? r.meetings+' meetings': '', status: r.meetings ?'Completed':'Not started' },
+    { indicator:'Events / camps organised',         update: r.events   ? r.events+' events'    : '', status: r.events   ?'Completed':'Not started' },
+    { indicator:'SC / ST / OBC students covered',   update: r.scst     ? r.scst+' students'    : '', status: r.scst     ?'Completed':'Not started' },
+    { indicator:'Divyang students supported',       update: r.divyang  ? r.divyang+' students' : '', status: r.divyang  ?'Completed':'Not started' },
+    { indicator:'Dropout prevention cases',         update: r.dropout  ? r.dropout+' cases'    : '', status: r.dropout  ?'Completed':'Not started' },
+    { indicator:'Key Milestone Indicator (KMI)',    update: r.kmi      || '',                        status: r.kmi      ?'Completed':'Not started' },
   ];
 
-  const statusClass = s => s==='Completed'?'status-done':s==='In progress'?'status-prog':'status-ns';
+  // ── Section A Part 2: Task rows (from NGO's projects) ──
+  const myProjs = PROJECTS.filter(p => p.ngo === n.name);
+  const taskRows = myProjs.map(t => {
+    const act = taskActs.find(a => a.task_name === t.task_name) || {};
+    return {
+      component:  t.component || '—',
+      indicator:  t.task_name,
+      activity:   act.activity || '',
+      startDate:  t.start_date || '',
+      endDate:    t.end_date   || '',
+      doneDate:   act.done_date || '',
+      status:     act.status   || 'Not started',
+      update:     act.activity || ''
+    };
+  });
+
+  let sno = 1;
+  const kpiRowsHtml = KPI_ROWS.map(k=>`<tr>
+    <td class="sno">${sno++}</td>
+    <td colspan="2">${k.indicator}</td>
+    <td></td><td></td><td></td>
+    <td class="${statusClass(k.status)}">${k.status}</td>
+    <td>${k.update}</td>
+    <td></td>
+  </tr>`).join('');
+
+  // Group task rows by component
+  const compGroups = {};
+  taskRows.forEach(t=>{ if(!compGroups[t.component]) compGroups[t.component]=[]; compGroups[t.component].push(t); });
+
+  const taskRowsHtml = Object.entries(compGroups).map(([comp, tasks])=>`
+    <tr style="background:#eef2fb">
+      <td class="sno"></td>
+      <td colspan="8" style="font-weight:700;font-size:11px;color:var(--blue);padding:5px 8px">▸ ${comp}</td>
+    </tr>
+    ${tasks.map(t=>`<tr>
+      <td class="sno">${sno++}</td>
+      <td style="font-size:11px;color:var(--muted)"></td>
+      <td style="font-size:12px">${t.indicator}</td>
+      <td style="font-size:11px">${t.startDate}</td>
+      <td style="font-size:11px">${t.endDate}</td>
+      <td style="font-size:11px">${t.doneDate}</td>
+      <td class="${statusClass(t.status)}">${statusLabel(t.status)}</td>
+      <td style="font-size:11px">${t.activity}</td>
+      <td></td>
+    </tr>`).join('')}
+  `).join('');
+
+  const reportMonth = fmtMonth(r.month || (selMonth !== 'all' ? selMonth : ''));
 
   return `
   <div class="official-report">
@@ -2862,10 +2933,10 @@ function buildOfficialReport(n, selMonth){
     <table class="or-info">
       <tr>
         <td>Organisation Name</td><td><b>${n.name||'—'}</b></td>
-        <td>Name of Nodal Person</td><td>${n.person||r.nodal||'—'}</td>
+        <td>Name of Nodal Person</td><td>${n.person||'—'}</td>
       </tr>
       <tr>
-        <td>Reporting Month &amp; Year</td><td>${r.month||selMonth||'—'}</td>
+        <td>Reporting Month &amp; Year</td><td>${reportMonth}</td>
         <td>Contact Number</td><td>${n.phone||'—'}</td>
       </tr>
       <tr>
@@ -2877,23 +2948,20 @@ function buildOfficialReport(n, selMonth){
     <table class="or-kpi">
       <thead>
         <tr>
-          <th class="sno">S.No</th><th style="width:18%">KPI Indicator</th>
-          <th style="width:18%">Activity Details</th>
-          <th style="width:8%">Start Date</th><th style="width:8%">End Date</th>
-          <th style="width:9%">Actual Completion</th><th style="width:8%">Status</th>
-          <th style="width:18%">Monthly Update (this month only)</th>
-          <th style="width:7%">Photo / Doc Link</th>
+          <th class="sno">S.No</th>
+          <th style="width:10%">Component</th>
+          <th style="width:18%">KPI Indicator / Task Name</th>
+          <th style="width:7%">Start Date</th>
+          <th style="width:7%">End Date</th>
+          <th style="width:8%">Actual Completion</th>
+          <th style="width:8%">Status</th>
+          <th style="width:22%">Activity Details (this month)</th>
+          <th style="width:6%">Photo</th>
         </tr>
       </thead>
       <tbody>
-        ${KPI_ROWS.map((k,i)=>`<tr>
-          <td class="sno">${i+1}</td>
-          <td>${k.indicator}</td>
-          <td></td><td></td><td></td><td></td>
-          <td class="${statusClass(k.status)}">${k.status}</td>
-          <td>${k.update}</td>
-          <td>${k.photoLink||''}</td>
-        </tr>`).join('')}
+        ${kpiRowsHtml}
+        ${taskRowsHtml}
       </tbody>
     </table>
 
