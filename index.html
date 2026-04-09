@@ -224,7 +224,10 @@ tr:hover td{background:#FAFBFF}
       <div class="form-group"><label>Email / Username</label><input type="email" id="login-email" placeholder="your@ngo.org"></div>
       <div class="form-group"><label>Password</label><input type="password" id="login-pass" placeholder="Password" onkeydown="if(event.key==='Enter')doLogin()"></div>
       <button class="btn-primary" onclick="doLogin()">Sign In</button>
-      <p class="auth-note" style="margin-top:14px;text-align:center">Login credentials are provided by PMU Admin.<br>
+      <div style="text-align:center;margin-top:10px">
+        <a href="#" onclick="showForgotPassword();return false;" style="font-size:11px;color:var(--blue2)">Forgot password?</a>
+      </div>
+      <p class="auth-note" style="margin-top:10px;text-align:center">Login credentials are provided by PMU Admin.<br>
         <span style="font-size:11px;color:var(--muted)">For access: contact PMU, Madhyamik Shiksha Vibhag, UP</span>
       </p>
     </div>
@@ -248,6 +251,47 @@ tr:hover td{background:#FAFBFF}
       <input type="password" id="pwd-confirm" placeholder="Re-enter password">
     </div>
     <button class="btn-primary" onclick="doChangePassword()">Save Password ✓</button>
+  </div>
+</div>
+
+<!-- Forgot Password Modal -->
+<div id="forgot-pwd-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;align-items:center;justify-content:center">
+  <div class="auth-box" style="width:360px">
+    <div class="auth-logo">
+      <h1 style="font-size:18px">🔑 Forgot Password</h1>
+      <p>Enter your registered email — we'll send a temporary password</p>
+    </div>
+    <div class="form-group"><label>Email address</label>
+      <input type="email" id="forgot-email" placeholder="your@ngo.org" onkeydown="if(event.key==='Enter')doForgotPassword()">
+    </div>
+    <div id="forgot-msg" style="display:none;border-radius:8px;padding:10px 12px;font-size:12px;margin-bottom:10px"></div>
+    <button class="btn-primary" onclick="doForgotPassword()">Send Temporary Password</button>
+    <div style="text-align:center;margin-top:10px">
+      <a href="#" onclick="document.getElementById('forgot-pwd-modal').style.display='none';return false;" style="font-size:12px;color:var(--muted)">← Back to Login</a>
+    </div>
+  </div>
+</div>
+
+<!-- Change Password Modal (for logged-in users) -->
+<div id="change-pwd-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;align-items:center;justify-content:center">
+  <div class="auth-box" style="width:360px">
+    <div class="auth-logo">
+      <h1 style="font-size:18px">🔒 Change Password</h1>
+      <p>Enter your current and new password</p>
+    </div>
+    <div class="form-group"><label>Current Password <span style="color:var(--red)">*</span></label>
+      <input type="password" id="cpwd-current" placeholder="Current password">
+    </div>
+    <div class="form-group"><label>New Password <span style="color:var(--red)">*</span></label>
+      <input type="password" id="cpwd-new" placeholder="Minimum 6 characters">
+    </div>
+    <div class="form-group"><label>Confirm New Password <span style="color:var(--red)">*</span></label>
+      <input type="password" id="cpwd-confirm" placeholder="Re-enter new password">
+    </div>
+    <button class="btn-primary" onclick="doChangePwdModal()">Update Password ✓</button>
+    <div style="text-align:center;margin-top:10px">
+      <a href="#" onclick="document.getElementById('change-pwd-modal').style.display='none';return false;" style="font-size:12px;color:var(--muted)">Cancel</a>
+    </div>
   </div>
 </div>
 
@@ -879,6 +923,67 @@ async function doChangePassword(){
   try { await loadSheetData(); } catch(e){ console.warn(e); }
   hideLoader();
   startApp(); // startApp checks localStorage — if profile not done, shows prompt
+}
+
+function showForgotPassword(){
+  document.getElementById('forgot-email').value = document.getElementById('login-email')?.value || '';
+  const msg = document.getElementById('forgot-msg');
+  msg.style.display = 'none'; msg.textContent = '';
+  document.getElementById('forgot-pwd-modal').style.display = 'flex';
+}
+
+async function doForgotPassword(){
+  const email = document.getElementById('forgot-email').value.trim();
+  const msg   = document.getElementById('forgot-msg');
+  if(!email){ msg.style.display='block'; msg.style.background='#fff3cd'; msg.style.color='#856404'; msg.textContent='Please enter your email address.'; return; }
+  showLoader('Sending temporary password…');
+  try {
+    const res = await apiFetch({action:'forgotPassword', email});
+    hideLoader();
+    msg.style.display = 'block';
+    if(res.success){
+      if(res.emailSent){
+        msg.style.background = '#d4edda'; msg.style.color = '#155724';
+        msg.textContent = '✅ Temporary password sent to your email. Please check your inbox and login.';
+      } else {
+        msg.style.background = '#fff3cd'; msg.style.color = '#856404';
+        msg.innerHTML = '⚠️ Email delivery failed. Temporary password: <strong>' + (res.temp||'') + '</strong> — Please contact PMU Admin.';
+      }
+    } else {
+      msg.style.background = '#f8d7da'; msg.style.color = '#721c24';
+      msg.textContent = res.error || 'Email not found. Please contact PMU Admin.';
+    }
+  } catch(e){ hideLoader(); alert('Connection error: ' + e.message); }
+}
+
+function openChangePwdModal(){
+  document.getElementById('cpwd-current').value = '';
+  document.getElementById('cpwd-new').value     = '';
+  document.getElementById('cpwd-confirm').value = '';
+  document.getElementById('change-pwd-modal').style.display = 'flex';
+}
+
+async function doChangePwdModal(){
+  const cur = document.getElementById('cpwd-current').value;
+  const np  = document.getElementById('cpwd-new').value;
+  const cp  = document.getElementById('cpwd-confirm').value;
+  if(!cur){ alert('Please enter your current password'); return; }
+  if(String(cur) !== String(currentUser.password)){ alert('Current password is incorrect'); return; }
+  if(np.length < 6){ alert('New password must be at least 6 characters'); return; }
+  if(np !== cp){ alert('New passwords do not match'); return; }
+  showLoader('Saving password…');
+  try {
+    const res = await apiFetch({action:'changePassword', email: currentUser.email, newPassword: np});
+    hideLoader();
+    if(res.success){
+      currentUser.password = np;
+      localStorage.setItem('ngo_session', JSON.stringify(currentUser));
+      document.getElementById('change-pwd-modal').style.display = 'none';
+      alert('✅ Password changed successfully!');
+    } else {
+      alert('Failed: ' + (res.error||''));
+    }
+  } catch(e){ hideLoader(); alert('Connection error: ' + e.message); }
 }
 
 function closeProfilePromptAndSetup(){
@@ -1905,41 +2010,7 @@ function renderMap(filter){
         .addTo(_lmap).bindPopup(distPopup,{maxWidth:260});
       _lmarkers.push(distMarker);
 
-      // ── Block markers (small, spread around district centre) ──
-      if(ngoBlocks.length){
-        const distBlockList = getDistBlocks(dist);
-        // Find blocks that belong to this district
-        const myBlocksHere = ngoBlocks.filter(b => distBlockList.includes(b));
-
-        const total = myBlocksHere.length;
-        const radius = total <= 4 ? 0.10 : total <= 8 ? 0.14 : 0.18;
-
-        myBlocksHere.forEach((block, bi) => {
-          const angle = (2 * Math.PI * bi / total) - Math.PI/2;
-          const blat = coords[0] + radius * Math.cos(angle);
-          const blng = coords[1] + radius * 1.4 * Math.sin(angle); // 1.4 = lng stretch correction
-          markerLatLngs.push([blat, blng]);
-
-          const blockIcon = L.divIcon({
-            html:`<div style="background:${col};color:#fff;border-radius:4px;
-              padding:2px 5px;font-size:9px;font-weight:700;white-space:nowrap;
-              box-shadow:0 1px 5px rgba(0,0,0,0.3);border:1px solid #fff;cursor:pointer;
-              max-width:90px;overflow:hidden;text-overflow:ellipsis">${block}</div>`,
-            iconSize:[null,null],iconAnchor:[0,0],className:''
-          });
-
-          const blockPopup = `
-            <div style="font-family:Segoe UI,sans-serif;min-width:140px">
-              <div style="font-weight:700;font-size:12px;color:#1A3C6E;margin-bottom:3px">📍 ${block}</div>
-              <div style="font-size:11px;color:#6b7280">Block — ${dist}</div>
-              <div style="font-size:11px;margin-top:4px;font-weight:600">${n.name}</div>
-            </div>`;
-
-          const bm = L.marker([blat,blng],{icon:blockIcon,zIndexOffset:500})
-            .addTo(_lmap).bindPopup(blockPopup,{maxWidth:200});
-          _lmarkers.push(bm);
-        });
-      }
+      // Block-level pins removed — district markers only for cleaner map
     });
   });
 
@@ -2014,10 +2085,16 @@ function renderProfileView(){
   });
 
   document.getElementById('profile-display').innerHTML=`
-    <!-- Header (no global update button) -->
-    <div style="margin-bottom:16px">
-      <div style="font-size:18px;font-weight:700;color:var(--blue)">${u.org||'—'}</div>
-      <div style="font-size:12px;color:var(--muted);margin-top:2px">Samagra UP Secondary Education Programme | PMU</div>
+    <!-- Header -->
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px">
+      <div>
+        <div style="font-size:18px;font-weight:700;color:var(--blue)">${u.org||'—'}</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:2px">Samagra UP Secondary Education Programme | PMU</div>
+      </div>
+      <button onclick="openChangePwdModal()"
+        style="padding:6px 14px;background:#fff;border:1px solid var(--border);border-radius:7px;font-size:11px;font-weight:600;color:var(--blue);cursor:pointer">
+        🔒 Change Password
+      </button>
     </div>
 
     <!-- ── SECTION 1: My Organisation Profile ── -->

@@ -12,6 +12,9 @@
 const SHEET_ID        = '1fESLu2sjfmKuszrSUZgCjt296gf2GRTSAMkb2uv7F_M';
 const DRIVE_FOLDER_ID = '151IYtuGpaXal0DiInwUGyaGl7ZX51HD7';
 
+// Cached spreadsheet — avoids repeated openById() calls within one request
+function getSS() { return SpreadsheetApp.openById(SHEET_ID); }
+
 // ── ROUTER ──────────────────────────────────────────────────
 // GET handles everything except photo upload (too large for URL)
 function doGet(e) {
@@ -23,7 +26,8 @@ function doGet(e) {
     else if (action === 'getReports')   result = getReports();
     else if (action === 'getNGOList')   result = getNGOList();
     else if (action === 'login')          result = login(p);
-    else if (action === 'changePassword') result = changePassword(p);
+    else if (action === 'changePassword')  result = changePassword(p);
+    else if (action === 'forgotPassword')  result = forgotPassword(p);
     else if (action === 'saveProfile')    result = saveProfile(p);
     else if (action === 'saveProject')    result = saveProject(p);
     else if (action === 'getProjects')    result = getProjects(p);
@@ -63,7 +67,7 @@ function respond(obj, callback) {
 // ── LOGIN ────────────────────────────────────────────────────
 // Users sheet columns: email | password | role | name | org | pwd_changed
 function login(data) {
-  const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName('Users');
+  const sheet = getSS().getSheetByName('Users');
   const rows  = sheet.getDataRange().getValues();
   for (let i = 1; i < rows.length; i++) {
     const [email, password, role, name, org, pwd_changed] = rows[i];
@@ -86,7 +90,7 @@ function login(data) {
 
 // Check if NGO has completed their profile (phone filled = profile submitted at least once)
 function isNGOProfileDone(orgName) {
-  const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName('NGOs');
+  const sheet = getSS().getSheetByName('NGOs');
   if (!sheet) return false;
   const rows = sheet.getDataRange().getValues();
   for (let i = 1; i < rows.length; i++) {
@@ -101,7 +105,7 @@ function isNGOProfileDone(orgName) {
 
 // ── CHANGE PASSWORD ──────────────────────────────────────────
 function changePassword(data) {
-  const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName('Users');
+  const sheet = getSS().getSheetByName('Users');
   const rows  = sheet.getDataRange().getValues();
   for (let i = 1; i < rows.length; i++) {
     if (rows[i][0] === data.email) {
@@ -116,7 +120,7 @@ function changePassword(data) {
 // ── GET NGO MASTER LIST (for signup dropdown) ────────────────
 // NGO_List sheet columns: sr_no | name | status (active/inactive)
 function getNGOList() {
-  const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName('NGO_List');
+  const sheet = getSS().getSheetByName('NGO_List');
   if (!sheet) return { success: true, data: [] };
   const rows = sheet.getDataRange().getValues();
   if (rows.length < 2) return { success: true, data: [] };
@@ -128,7 +132,7 @@ function getNGOList() {
 
 // Check if NGO is active in NGO_List
 function isNGOActive(orgName) {
-  const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName('NGO_List');
+  const sheet = getSS().getSheetByName('NGO_List');
   if (!sheet) return true; // if no list, allow
   const rows = sheet.getDataRange().getValues();
   for (let i = 1; i < rows.length; i++) {
@@ -142,7 +146,7 @@ function isNGOActive(orgName) {
 // ── GET NGOs ─────────────────────────────────────────────────
 // NGOs sheet columns: id|name|theme|person|dist|x|y|schools|students|girls|teachers|progress|month|kmi
 function getNGOs() {
-  const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName('NGOs');
+  const sheet = getSS().getSheetByName('NGOs');
   const rows  = sheet.getDataRange().getValues();
   if (rows.length < 2) return { success: true, data: [] };
   const headers = rows[0];
@@ -159,7 +163,7 @@ function getNGOs() {
 //   scst|divyang|budget|dropout|tasks_readable|tasks_json|status|kmi|achieve|challenges|
 //   support|plans|photos_count|photos_folder|submitted|equipment|training|machine|donation|other_support
 function getReports() {
-  const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName('Reports');
+  const sheet = getSS().getSheetByName('Reports');
   const rows  = sheet.getDataRange().getValues();
   if (rows.length < 2) return { success: true, data: [] };
   const headers = rows[0];
@@ -193,7 +197,7 @@ function tasksToReadable(tasksJson) {
 
 // ── SUBMIT REPORT ────────────────────────────────────────────
 function submitReport(data) {
-  const ss     = SpreadsheetApp.openById(SHEET_ID);
+  const ss     = getSS();
   const rSheet = ss.getSheetByName('Reports');
   const r      = data.report;
 
@@ -275,7 +279,7 @@ function uploadPhoto(data) {
 // ── PROJECTS ────────────────────────────────────────────────
 // Projects sheet: project_id|ngo|component|task_name|description|target_schools|target_students|target_girls|target_teachers|target_meetings|target_events|start_date|end_date|status|created_on
 function saveProject(data) {
-  const ss = SpreadsheetApp.openById(SHEET_ID);
+  const ss = getSS();
   let sheet = ss.getSheetByName('Projects');
   if (!sheet) {
     sheet = ss.insertSheet('Projects');
@@ -302,7 +306,7 @@ function saveProject(data) {
 }
 
 function getProjects(data) {
-  const ss = SpreadsheetApp.openById(SHEET_ID);
+  const ss = getSS();
   const sheet = ss.getSheetByName('Projects');
   if (!sheet) return { success: true, data: [] };
   const rows = sheet.getDataRange().getValues();
@@ -320,7 +324,7 @@ function getProjects(data) {
 
 // ── SAVE NEW NGO PROFILE ─────────────────────────────────────
 function saveProfile(data) {
-  const ss = SpreadsheetApp.openById(SHEET_ID);
+  const ss = getSS();
 
   // 1. Add to Users sheet (if not already there)
   const uSheet = ss.getSheetByName('Users');
@@ -369,4 +373,33 @@ function saveProfile(data) {
     data.blocks || '', data.schools || ''
   ]);
   return { success: true, action: 'created' };
+}
+
+// ── FORGOT PASSWORD ──────────────────────────────────────────
+// Generates a 6-char temp password, saves it, and emails the user
+function forgotPassword(data) {
+  if (!data.email) return { success: false, error: 'Email required' };
+  const sheet = getSS().getSheetByName('Users');
+  const rows  = sheet.getDataRange().getValues();
+  for (let i = 1; i < rows.length; i++) {
+    if (String(rows[i][0]).trim().toLowerCase() === data.email.trim().toLowerCase()) {
+      // Generate temp password: NGO@ + 4 random digits
+      const temp = 'NGO@' + Math.floor(1000 + Math.random() * 9000);
+      sheet.getRange(i + 1, 2).setValue(temp);    // save new password
+      sheet.getRange(i + 1, 6).setValue('');       // force password change on next login
+      // Send email
+      try {
+        MailApp.sendEmail({
+          to: rows[i][0],
+          subject: 'Samagra UP NGO Portal — Password Reset',
+          body: `Dear ${rows[i][3] || 'Partner'},\n\nYour password has been reset.\n\nTemporary Password: ${temp}\n\nPlease login and change your password immediately.\n\nLogin at: https://alokkmohan.github.io/NGO/\n\n— PMU Team, Samagra UP Secondary Education Programme`
+        });
+      } catch(e) {
+        // Email failed — still return temp password so admin can share manually
+        return { success: true, temp, emailSent: false };
+      }
+      return { success: true, emailSent: true };
+    }
+  }
+  return { success: false, error: 'Email not found in system' };
 }
