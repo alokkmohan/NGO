@@ -156,8 +156,8 @@ function getNGOs() {
 
 // ── GET REPORTS ──────────────────────────────────────────────
 // Reports sheet columns: id|ngo|month|schools|students|girls|teachers|meetings|events|
-//   scst|divyang|budget|dropout|tasks|status|kmi|achieve|challenges|support|plans|
-//   photos_count|photos_folder|submitted
+//   scst|divyang|budget|dropout|tasks_readable|tasks_json|status|kmi|achieve|challenges|
+//   support|plans|photos_count|photos_folder|submitted|equipment|training|machine|donation|other_support
 function getReports() {
   const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName('Reports');
   const rows  = sheet.getDataRange().getValues();
@@ -166,9 +166,29 @@ function getReports() {
   const data    = rows.slice(1).map(row => {
     const obj = {};
     headers.forEach((h, i) => obj[h] = row[i]);
+    // App reads 'tasks' — serve tasks_json if available, else tasks_readable
+    if (!obj['tasks'] && obj['tasks_json']) obj['tasks'] = obj['tasks_json'];
+    if (!obj['tasks'] && obj['tasks_readable']) obj['tasks'] = '[]'; // fallback
     return obj;
   });
   return { success: true, data };
+}
+
+// Convert tasks JSON array → human-readable multiline text for Google Sheet
+function tasksToReadable(tasksJson) {
+  try {
+    const tasks = JSON.parse(tasksJson || '[]');
+    if (!tasks.length) return '';
+    return tasks.map((t, i) => {
+      const lines = [
+        `[Task ${i+1}] ${t.task_name} (${t.component||'—'})`,
+        `  Status   : ${t.status||'Not started'}`,
+        `  Activity : ${t.activity||'—'}`
+      ];
+      if (t.done_date) lines.push(`  Completed: ${t.done_date}`);
+      return lines.join('\n');
+    }).join('\n\n');
+  } catch(e) { return tasksJson || ''; }
 }
 
 // ── SUBMIT REPORT ────────────────────────────────────────────
@@ -177,18 +197,37 @@ function submitReport(data) {
   const rSheet = ss.getSheetByName('Reports');
   const r      = data.report;
 
+  // Ensure header row has tasks_readable and tasks_json columns
+  const hRow = rSheet.getRange(1, 1, 1, rSheet.getLastColumn()).getValues()[0];
+  if (!hRow.includes('tasks_readable')) {
+    // First time: rename old 'tasks' header to 'tasks_readable', add 'tasks_json' next to it
+    const taskColIdx = hRow.indexOf('tasks');
+    if (taskColIdx >= 0) {
+      rSheet.getRange(1, taskColIdx + 1).setValue('tasks_readable');
+      // Insert new column for tasks_json after tasks_readable
+      rSheet.insertColumnAfter(taskColIdx + 1);
+      rSheet.getRange(1, taskColIdx + 2).setValue('tasks_json');
+    }
+  }
+
+  const readableText = tasksToReadable(r.tasks);
+
   rSheet.appendRow([
     new Date().getTime(),
     r.ngo, r.month,
     r.schools  || 0, r.students  || 0, r.girls   || 0, r.teachers || 0,
     r.meetings || 0, r.events    || 0, r.scst     || 0, r.divyang  || 0,
     0, r.dropout || 0,
-    r.tasks    || '', r.status   || '',
+    readableText,      // tasks_readable — human friendly
+    r.tasks    || '',  // tasks_json    — raw JSON for app
+    r.status   || '',
     r.kmi      || '', r.achieve  || '', r.challenges || '',
     r.support  || '', r.plans    || '',
     r.photos_count  || 0,
     r.photos_folder || '',
-    new Date().toLocaleDateString('en-IN')
+    new Date().toLocaleDateString('en-IN'),
+    r.equipment || '', r.training || '', r.machine || '',
+    r.donation  || '', r.other_support || ''
   ]);
 
   // Update latest values in NGOs sheet
