@@ -1490,8 +1490,12 @@ function updateDashboardStats(){
 }
 
 function buildThemeFilterBar(){
-  const themes=[...new Set(SAMPLE_NGOS.map(n=>n.theme).filter(Boolean))];
   const bar=document.getElementById('theme-filter-bar');
+  const isNGO = currentUser && currentUser.role !== 'admin';
+  // NGO user doesn't need theme filter — hide the bar
+  if(isNGO){ bar.style.display='none'; return; }
+  bar.style.display='flex';
+  const themes=[...new Set(SAMPLE_NGOS.map(n=>n.theme).filter(Boolean))];
   [...bar.querySelectorAll('.fbtn:not(.all-btn)')].forEach(b=>b.remove());
   themes.forEach(t=>{const btn=document.createElement('button');btn.className='fbtn';btn.textContent=t;btn.onclick=function(){filterMap(t,this);};bar.appendChild(btn);});
   const legend=document.getElementById('map-legend');
@@ -1777,8 +1781,18 @@ function renderMap(filter){
   _lmarkers.forEach(m => _lmap.removeLayer(m));
   _lmarkers = [];
 
-  const ngos = filter==='all' ? SAMPLE_NGOS
-    : SAMPLE_NGOS.filter(n=>(n.theme||'').includes(filter));
+  const isNGO = currentUser && currentUser.role !== 'admin';
+
+  // NGO user: show only their own NGO; Admin: show all (with optional theme filter)
+  let ngos;
+  if(isNGO){
+    ngos = SAMPLE_NGOS.filter(n => n.name === currentUser.org);
+  } else {
+    ngos = filter==='all' ? SAMPLE_NGOS
+      : SAMPLE_NGOS.filter(n=>(n.theme||'').includes(filter));
+  }
+
+  const markerLatLngs = [];
 
   ngos.forEach(n=>{
     const col      = THEME_COLORS[n.theme]||'#2E6DB4';
@@ -1787,8 +1801,15 @@ function renderMap(filter){
     const pctCol   = pct>=75?'#1D9E75':pct>=50?'#BA7517':'#E24B4A';
 
     // Show marker for EVERY district this NGO covers
-    const dists = (n.dist||'').split(',').map(d=>d.trim()).filter(Boolean);
+    const dists  = (n.dist||'').split(',').map(d=>d.trim()).filter(Boolean);
+    const blocks = (n.blocks||'').split(',').map(b=>b.trim()).filter(Boolean);
     if(!dists.length) return;
+
+    // For NGO user: popup shows blocks list too
+    const blocksHtml = isNGO && blocks.length
+      ? `<tr><td style="color:#6b7280;padding:2px 0;vertical-align:top">Blocks</td>
+           <td style="font-weight:600;font-size:10px">${blocks.join(', ')}</td></tr>`
+      : '';
 
     const popup = `
       <div style="min-width:180px;font-family:Segoe UI,sans-serif">
@@ -1796,6 +1817,7 @@ function renderMap(filter){
         <div style="font-size:11px;color:#6b7280;margin-bottom:8px">${n.theme||'—'}</div>
         <table style="width:100%;font-size:11px;border-collapse:collapse">
           <tr><td style="color:#6b7280;padding:2px 0">Districts</td><td style="font-weight:600">${n.dist||'—'}</td></tr>
+          ${blocksHtml}
           <tr><td style="color:#6b7280;padding:2px 0">Schools</td><td style="font-weight:600">${(+n.schools||0).toLocaleString('en-IN')}</td></tr>
           <tr><td style="color:#6b7280;padding:2px 0">Students</td><td style="font-weight:600">${(+n.students||0).toLocaleString('en-IN')}</td></tr>
           <tr><td style="color:#6b7280;padding:2px 0">Girls</td><td style="font-weight:600">${(+n.girls||0).toLocaleString('en-IN')}</td></tr>
@@ -1808,6 +1830,7 @@ function renderMap(filter){
     dists.forEach((dist, idx) => {
       const coords = UP_DIST_COORDS[dist];
       if(!coords) return;
+      markerLatLngs.push(coords);
       // Primary district: large filled circle; secondary: smaller outlined circle
       const isPrimary = idx === 0;
       const size = isPrimary ? 34 : 24;
@@ -1818,10 +1841,19 @@ function renderMap(filter){
           border:2px solid ${col};box-shadow:0 2px 8px rgba(0,0,0,0.2);cursor:pointer">${initials}</div>`,
         iconSize:[size,size],iconAnchor:[size/2,size/2],className:''
       });
-      const marker = L.marker(coords,{icon}).addTo(_lmap).bindPopup(popup,{maxWidth:240});
+      const marker = L.marker(coords,{icon}).addTo(_lmap).bindPopup(popup,{maxWidth:260});
       _lmarkers.push(marker);
     });
   });
+
+  // Auto-zoom to NGO's districts when NGO user logs in
+  if(isNGO && markerLatLngs.length){
+    if(markerLatLngs.length === 1){
+      _lmap.setView(markerLatLngs[0], 9);
+    } else {
+      _lmap.fitBounds(markerLatLngs, {padding:[30,30]});
+    }
+  }
 }
 
 function filterMap(theme,btn){
@@ -1835,22 +1867,31 @@ function filterMap(theme,btn){
 // ════════════════════════════════════
 function renderPartnerTable(){
   const tb=document.getElementById('partner-tbody');
-  tb.innerHTML=SAMPLE_NGOS.map(n=>{
+  const isNGO = currentUser && currentUser.role !== 'admin';
+  // NGO user sees only their own row; admin sees all
+  const list = isNGO ? SAMPLE_NGOS.filter(n=>n.name===currentUser.org) : SAMPLE_NGOS;
+
+  if(!list.length){
+    tb.innerHTML=`<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:16px">No data yet</td></tr>`;
+    return;
+  }
+
+  tb.innerHTML=list.map(n=>{
     const col=THEME_COLORS[n.theme]||'#2E6DB4';
     const pc=n.progress>=75?'#1D9E75':n.progress>=50?'#BA7517':'#E24B4A';
     return `<tr>
       <td><strong>${n.name}</strong></td>
-      <td><span class="badge" style="background:${col}22;color:${col}">${n.theme}</span></td>
-      <td style="font-size:11px;color:var(--muted)">${n.dist}</td>
-      <td>${n.schools.toLocaleString()}</td>
-      <td>${n.students.toLocaleString()}</td>
+      <td><span class="badge" style="background:${col}22;color:${col}">${n.theme||'—'}</span></td>
+      <td style="font-size:11px;color:var(--muted)">${n.dist||'—'}</td>
+      <td>${(+n.schools||0).toLocaleString('en-IN')}</td>
+      <td>${(+n.students||0).toLocaleString('en-IN')}</td>
       <td>
         <div style="display:flex;align-items:center;gap:6px">
           <div class="prog-bar"><div class="prog-fill" style="width:${n.progress}%;background:${pc}"></div></div>
           <span style="font-size:11px;color:${pc}">${n.progress}%</span>
         </div>
       </td>
-      <td style="font-size:11px">${n.month}</td>
+      <td style="font-size:11px">${n.month||'—'}</td>
       <td><span class="badge ${n.progress>=75?'badge-green':n.progress>=50?'badge-amber':'badge-red'}">${n.progress>=75?'Submitted':n.progress>=50?'Partial':'Pending'}</span></td>
     </tr>`;
   }).join('');
