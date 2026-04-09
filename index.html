@@ -1747,6 +1747,14 @@ const UP_DIST_COORDS = {
   'Unnao':[26.55,80.49],'Varanasi':[25.32,83.00]
 };
 
+// Normalised district coord lookup (handles both "Agra" and "AGRA" keys)
+const _distCoordsNorm = {};
+Object.entries(UP_DIST_COORDS).forEach(([k,v]) => { _distCoordsNorm[k.toUpperCase()] = v; });
+function getDistCoords(dist){ return _distCoordsNorm[(dist||'').trim().toUpperCase()]; }
+
+// Normalised DIST_BLOCKS lookup
+function getDistBlocks(dist){ return DIST_BLOCKS[(dist||'').trim().toUpperCase()] || []; }
+
 function initLeafletMap(){
   if(_lmap) return;
   _lmap = L.map('leaflet-map',{center:[26.85,80.94],zoom:7});
@@ -1783,58 +1791,89 @@ function renderMap(filter){
     const pct      = +n.progress||0;
     const pctCol   = pct>=75?'#1D9E75':pct>=50?'#BA7517':'#E24B4A';
 
-    // Show marker for EVERY district this NGO covers
     const dists  = (n.dist||'').split(',').map(d=>d.trim()).filter(Boolean);
-    const blocks = (n.blocks||'').split(',').map(b=>b.trim()).filter(Boolean);
+    const ngoBlocks = (n.blocks||'').split(',').map(b=>b.trim().toUpperCase()).filter(Boolean);
     if(!dists.length) return;
 
-    // For NGO user: popup shows blocks list too
-    const blocksHtml = isNGO && blocks.length
-      ? `<tr><td style="color:#6b7280;padding:2px 0;vertical-align:top">Blocks</td>
-           <td style="font-weight:600;font-size:10px">${blocks.join(', ')}</td></tr>`
-      : '';
-
-    const popup = `
-      <div style="min-width:180px;font-family:Segoe UI,sans-serif">
-        <div style="font-weight:700;font-size:13px;color:#1A3C6E;margin-bottom:6px">${n.name}</div>
-        <div style="font-size:11px;color:#6b7280;margin-bottom:8px">${n.theme||'—'}</div>
-        <table style="width:100%;font-size:11px;border-collapse:collapse">
-          <tr><td style="color:#6b7280;padding:2px 0">Districts</td><td style="font-weight:600">${n.dist||'—'}</td></tr>
-          ${blocksHtml}
-          <tr><td style="color:#6b7280;padding:2px 0">Schools</td><td style="font-weight:600">${(+n.schools||0).toLocaleString('en-IN')}</td></tr>
-          <tr><td style="color:#6b7280;padding:2px 0">Students</td><td style="font-weight:600">${(+n.students||0).toLocaleString('en-IN')}</td></tr>
-          <tr><td style="color:#6b7280;padding:2px 0">Girls</td><td style="font-weight:600">${(+n.girls||0).toLocaleString('en-IN')}</td></tr>
-          <tr><td style="color:#6b7280;padding:2px 0">Progress</td><td style="font-weight:700;color:${pctCol}">${pct}%</td></tr>
-          <tr><td style="color:#6b7280;padding:2px 0">Last report</td><td>${n.month||'—'}</td></tr>
-        </table>
-        ${n.kmi?`<div style="margin-top:8px;font-size:10px;background:#f4f6fa;border-radius:6px;padding:6px;color:#374151">${n.kmi}</div>`:''}
-      </div>`;
-
-    dists.forEach((dist, idx) => {
-      const coords = UP_DIST_COORDS[dist];
+    dists.forEach((dist, distIdx) => {
+      const coords = getDistCoords(dist);
       if(!coords) return;
       markerLatLngs.push(coords);
-      // Primary district: large filled circle; secondary: smaller outlined circle
-      const isPrimary = idx === 0;
-      const size = isPrimary ? 34 : 24;
-      const icon = L.divIcon({
+
+      // ── District marker (large) ──────────────────────
+      const isPrimary = distIdx === 0;
+      const distSize = isPrimary ? 36 : 26;
+      const distIcon = L.divIcon({
         html:`<div style="background:${isPrimary?col:'#fff'};color:${isPrimary?'#fff':col};
-          border-radius:50%;width:${size}px;height:${size}px;
+          border-radius:50%;width:${distSize}px;height:${distSize}px;
           display:flex;align-items:center;justify-content:center;font-size:${isPrimary?11:9}px;font-weight:700;
-          border:2px solid ${col};box-shadow:0 2px 8px rgba(0,0,0,0.2);cursor:pointer">${initials}</div>`,
-        iconSize:[size,size],iconAnchor:[size/2,size/2],className:''
+          border:2px solid ${col};box-shadow:0 3px 10px rgba(0,0,0,0.25);cursor:pointer">${initials}</div>`,
+        iconSize:[distSize,distSize],iconAnchor:[distSize/2,distSize/2],className:''
       });
-      const marker = L.marker(coords,{icon}).addTo(_lmap).bindPopup(popup,{maxWidth:260});
-      _lmarkers.push(marker);
+
+      const distPopup = `
+        <div style="min-width:190px;font-family:Segoe UI,sans-serif">
+          <div style="font-weight:700;font-size:13px;color:#1A3C6E;margin-bottom:2px">${n.name}</div>
+          <div style="font-size:11px;color:#6b7280;margin-bottom:6px">${n.theme||'—'} &nbsp;|&nbsp; 📍 ${dist}</div>
+          <table style="width:100%;font-size:11px;border-collapse:collapse">
+            <tr><td style="color:#6b7280;padding:2px 0">All Districts</td><td style="font-weight:600">${n.dist||'—'}</td></tr>
+            <tr><td style="color:#6b7280;padding:2px 0">Schools</td><td style="font-weight:600">${(+n.schools||0).toLocaleString('en-IN')}</td></tr>
+            <tr><td style="color:#6b7280;padding:2px 0">Students</td><td style="font-weight:600">${(+n.students||0).toLocaleString('en-IN')}</td></tr>
+            <tr><td style="color:#6b7280;padding:2px 0">Girls</td><td style="font-weight:600">${(+n.girls||0).toLocaleString('en-IN')}</td></tr>
+            <tr><td style="color:#6b7280;padding:2px 0">Progress</td><td style="font-weight:700;color:${pctCol}">${pct}%</td></tr>
+            <tr><td style="color:#6b7280;padding:2px 0">Last report</td><td>${n.month||'—'}</td></tr>
+          </table>
+          ${n.kmi?`<div style="margin-top:8px;font-size:10px;background:#f4f6fa;border-radius:6px;padding:6px;color:#374151">${n.kmi}</div>`:''}
+        </div>`;
+
+      const distMarker = L.marker(coords,{icon:distIcon,zIndexOffset:1000})
+        .addTo(_lmap).bindPopup(distPopup,{maxWidth:260});
+      _lmarkers.push(distMarker);
+
+      // ── Block markers (small, spread around district centre) ──
+      if(ngoBlocks.length){
+        const distBlockList = getDistBlocks(dist);
+        // Find blocks that belong to this district
+        const myBlocksHere = ngoBlocks.filter(b => distBlockList.includes(b));
+
+        const total = myBlocksHere.length;
+        const radius = total <= 4 ? 0.10 : total <= 8 ? 0.14 : 0.18;
+
+        myBlocksHere.forEach((block, bi) => {
+          const angle = (2 * Math.PI * bi / total) - Math.PI/2;
+          const blat = coords[0] + radius * Math.cos(angle);
+          const blng = coords[1] + radius * 1.4 * Math.sin(angle); // 1.4 = lng stretch correction
+          markerLatLngs.push([blat, blng]);
+
+          const blockIcon = L.divIcon({
+            html:`<div style="background:${col};color:#fff;border-radius:4px;
+              padding:2px 5px;font-size:9px;font-weight:700;white-space:nowrap;
+              box-shadow:0 1px 5px rgba(0,0,0,0.3);border:1px solid #fff;cursor:pointer;
+              max-width:90px;overflow:hidden;text-overflow:ellipsis">${block}</div>`,
+            iconSize:[null,null],iconAnchor:[0,0],className:''
+          });
+
+          const blockPopup = `
+            <div style="font-family:Segoe UI,sans-serif;min-width:140px">
+              <div style="font-weight:700;font-size:12px;color:#1A3C6E;margin-bottom:3px">📍 ${block}</div>
+              <div style="font-size:11px;color:#6b7280">Block — ${dist}</div>
+              <div style="font-size:11px;margin-top:4px;font-weight:600">${n.name}</div>
+            </div>`;
+
+          const bm = L.marker([blat,blng],{icon:blockIcon,zIndexOffset:500})
+            .addTo(_lmap).bindPopup(blockPopup,{maxWidth:200});
+          _lmarkers.push(bm);
+        });
+      }
     });
   });
 
-  // Auto-zoom to NGO's districts when NGO user logs in
+  // Auto-zoom to NGO's markers when NGO user logs in
   if(isNGO && markerLatLngs.length){
     if(markerLatLngs.length === 1){
       _lmap.setView(markerLatLngs[0], 9);
     } else {
-      _lmap.fitBounds(markerLatLngs, {padding:[30,30]});
+      _lmap.fitBounds(markerLatLngs, {padding:[40,40]});
     }
   }
 }
