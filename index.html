@@ -1102,10 +1102,6 @@ function addCompTask(containerId){
       <span style="font-size:11px;font-weight:700;color:var(--blue);white-space:nowrap">Activity ${taskIdx}:</span>
       <input type="text" class="comp-task-input" placeholder="Activity name (e.g. KGBV - Type I, Free Textbooks)"
         style="flex:1;padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;outline:none">
-      <input type="date" class="task-start-date" title="Activity Start Date"
-        style="padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;outline:none">
-      <input type="date" class="task-end-date" title="Activity End Date"
-        style="padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;outline:none">
       <button type="button" onclick="this.closest('.task-block').remove()" title="Remove Activity"
         style="padding:4px 10px;background:#fff0f0;border:1px solid #f5c6c6;color:var(--red);border-radius:6px;font-size:16px;cursor:pointer;line-height:1">−</button>
     </div>
@@ -1277,14 +1273,17 @@ async function saveProfile(){
       for(const block of taskBlocks){
         const taskName = block.querySelector('.comp-task-input')?.value.trim();
         if(!taskName) continue;
-        const taskStart = block.querySelector('.task-start-date')?.value || startDate;
-        const taskEnd   = block.querySelector('.task-end-date')?.value   || endDate;
-        // Collect sub-activities
+        // Collect sub-activities (dates live here, not on Activity)
         const subActs = [...block.querySelectorAll('.sub-act-rows > div')].map(row => ({
           name:       row.querySelector('.sub-act-name')?.value.trim() || '',
           start_date: row.querySelector('.sub-act-start')?.value || '',
           end_date:   row.querySelector('.sub-act-end')?.value   || ''
         })).filter(s => s.name);
+        // Derive activity-level dates from sub-activities (earliest start, latest end)
+        const subStarts = subActs.map(s=>s.start_date).filter(Boolean);
+        const subEnds   = subActs.map(s=>s.end_date).filter(Boolean);
+        const taskStart = subStarts.length ? subStarts.sort()[0]                   : (startDate || '');
+        const taskEnd   = subEnds.length   ? subEnds.sort().at(-1)                 : (endDate   || '');
 
         await apiFetch({
           action:          'saveProject',
