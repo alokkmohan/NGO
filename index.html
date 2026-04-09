@@ -503,160 +503,138 @@ tr:hover td{background:#FAFBFF}
     <!-- ── PAGE: MONTHLY REPORT ── -->
     <div class="page" id="page-monthly-report">
 
-      <!-- Excel Upload Option -->
-      <div class="card" style="margin-bottom:14px;border:2px dashed var(--blue2);background:#f0f6ff">
-        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
-          <div>
-            <div style="font-weight:700;font-size:14px;color:var(--blue)">📥 Fill via Excel / CSV</div>
-            <div style="font-size:12px;color:var(--muted);margin-top:3px">Template download karo → Excel mein bharo → Upload karo → Form auto-fill ho jaayega</div>
+      <!-- Report Header (auto-filled) -->
+      <div class="card" style="margin-bottom:12px">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:12px">
+          <div class="card-title" style="margin:0">📝 Monthly KPI Progress Report</div>
+          <div style="font-size:11px;color:var(--muted)">Samagra UP Secondary Education Programme | PMU</div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:10px">
+          <div style="background:#f8f9ff;border-radius:8px;padding:8px 12px">
+            <div style="font-size:10px;color:var(--muted)">Organisation</div>
+            <div style="font-weight:700;color:var(--blue)" id="rh-org">—</div>
           </div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap">
-            <button class="btn-sec" style="font-size:12px;padding:7px 14px" onclick="downloadReportTemplate()">⬇ Template Download</button>
-            <label style="cursor:pointer">
-              <span class="btn-blu" style="font-size:12px;padding:7px 14px;display:inline-block">📤 CSV Upload</span>
-              <input type="file" accept=".csv" style="display:none" onchange="handleReportCSV(this)">
-            </label>
+          <div style="background:#f8f9ff;border-radius:8px;padding:8px 12px">
+            <div style="font-size:10px;color:var(--muted)">Nodal Person</div>
+            <div style="font-weight:600" id="rh-person">—</div>
+          </div>
+          <div style="background:#f8f9ff;border-radius:8px;padding:8px 12px">
+            <div style="font-size:10px;color:var(--muted)">Districts</div>
+            <div style="font-size:12px" id="rh-dist">—</div>
           </div>
         </div>
-        <div id="csv-status" style="display:none;margin-top:10px;padding:8px 12px;background:#d4edda;border-radius:8px;font-size:12px;color:#155724"></div>
-      </div>
-
-      <div class="card">
-        <div class="card-title">📝 Monthly progress report</div>
-        <div class="wizard-steps" id="report-steps">
-          <div class="ws active" id="rs0">1. Coverage</div>
-          <div class="ws" id="rs1">2. KPI Numbers</div>
-          <div class="ws" id="rs2">3. Tasks</div>
-          <div class="ws" id="rs3">4. Photos</div>
-          <div class="ws" id="rs4">5. Narrative</div>
-        </div>
-
-        <!-- Step 0: Coverage -->
-        <div class="wizard-page active" id="rp0">
-          <!-- Project selector -->
-          <div class="wform-group" id="r-project-group">
-            <label>Project / Task chunein <span>*</span>
-              <a href="#" onclick="showPage('profile-view');return false;" style="font-weight:400;font-size:11px;color:var(--blue2);margin-left:8px">+ Naya project add karein</a>
-            </label>
-            <select id="r-project" onchange="onProjectChange()">
-              <option value="">-- Project chunein --</option>
+        <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+          <div class="wform-group" style="margin:0;flex:1;min-width:160px">
+            <label style="font-size:11px">Reporting Month <span style="color:var(--red)">*</span></label>
+            <select id="r-month" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:7px;font-size:13px">
+              <option>April 2026</option><option>May 2026</option><option>June 2026</option>
+              <option>July 2026</option><option>August 2026</option><option>September 2026</option>
+              <option>October 2026</option><option>November 2026</option><option>December 2026</option>
+              <option>January 2027</option><option>February 2027</option><option>March 2027</option>
             </select>
-            <div id="r-project-info" style="display:none;margin-top:6px;padding:8px 12px;background:#f0f6ff;border-radius:8px;font-size:12px;color:var(--blue)"></div>
           </div>
-          <div class="wform-row">
-            <div class="wform-group"><label>Reporting month <span>*</span></label>
-              <select id="r-month">
-                <option>April 2026</option><option>May 2026</option><option>June 2026</option>
-                <option>July 2026</option><option>August 2026</option><option>September 2026</option>
-                <option>October 2026</option><option>November 2026</option><option>December 2026</option>
-                <option>January 2027</option><option>February 2027</option><option>March 2027</option>
-              </select>
-            </div>
-            <div class="wform-group"><label>Reporting person</label><input id="r-person" placeholder="Auto-filled from login" readonly style="background:#f0f4fa"></div>
+          <div class="wform-group" style="margin:0;flex:1;min-width:160px">
+            <label style="font-size:11px">Contact Number</label>
+            <input id="rh-phone" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:7px;font-size:13px;background:#f0f4fa" readonly>
           </div>
-          <div class="wform-row3">
-            <div class="wform-group"><label>Schools covered <span>*</span></label><input id="r-schools" type="number" min="0" placeholder="0"></div>
-            <div class="wform-group"><label>Blocks covered</label><input id="r-blocks" type="number" min="0" placeholder="0"></div>
-            <div class="wform-group"><label>Villages / habitations</label><input id="r-villages" type="number" min="0" placeholder="0"></div>
-          </div>
-          <div class="wizard-nav"><span></span><button class="btn-blu" onclick="reportNext(0)">Next →</button></div>
-        </div>
-
-        <!-- Step 1: KPI Numbers -->
-        <div class="wizard-page" id="rp1">
-          <div class="wform-row3">
-            <div class="wform-group"><label>Students benefited <span>*</span></label><input id="r-students" type="number" min="0" placeholder="0"></div>
-            <div class="wform-group"><label>Girls benefited <span>*</span></label><input id="r-girls" type="number" min="0" placeholder="0"></div>
-            <div class="wform-group"><label>Teachers trained</label><input id="r-teachers" type="number" min="0" placeholder="0"></div>
-            <div class="wform-group"><label>Community meetings</label><input id="r-meetings" type="number" min="0" placeholder="0"></div>
-            <div class="wform-group"><label>Events / workshops</label><input id="r-events" type="number" min="0" placeholder="0"></div>
-            <div class="wform-group"><label>SC/ST/OBC students</label><input id="r-scst" type="number" min="0" placeholder="0"></div>
-            <div class="wform-group"><label>Divyang students</label><input id="r-divyang" type="number" min="0" placeholder="0"></div>
-            <div class="wform-group"><label>Dropouts prevented</label><input id="r-dropout" type="number" min="0" placeholder="0"></div>
-          </div>
-          <div class="wizard-nav"><button class="btn-sec" onclick="reportBack(1)">← Back</button><button class="btn-blu" onclick="reportNext(1)">Next →</button></div>
-        </div>
-
-        <!-- Step 2: Activities & Progress -->
-        <div class="wizard-page" id="rp2">
-          <div class="wform-group"><label>Is mahine ki activities / tasks <span>*</span></label>
-            <textarea id="r-tasks" placeholder="Har kaam alag line mein likhein. Jaise:&#10;Agra mein teacher training (3 din, 45 shikshak)&#10;Mathura ke 12 schools mein SMC baithak&#10;Firozabad ke 3 blocks mein balika namaankan abhiyan"></textarea>
-          </div>
-          <div class="wform-row">
-            <div class="wform-group"><label>Physical progress (%) <span>*</span></label>
-              <select id="r-status">
-                <option value="100">100% — Poora ho gaya</option>
-                <option value="85">75–99% — Sahi disha mein</option>
-                <option value="60">50–74% — Aadha hua</option>
-                <option value="35">Below 50% — Pichhe hai</option>
-                <option value="0">Shuru nahi hua</option>
-              </select>
-            </div>
-            <div class="wform-group"><label>KMI — Sabse bada parinam (ek line) <span>*</span></label>
-              <input id="r-kmi" placeholder="E.g: 420 dropout girls re-enrolled in 3 districts">
-            </div>
-          </div>
-          <div class="wform-row">
-            <div class="wform-group"><label>Equipment / material diya (agar koi)</label>
-              <input id="r-equipment" placeholder="E.g: 50 schools ko sports kit, 200 chhatron ko cycle">
-            </div>
-            <div class="wform-group"><label>Training karai (agar koi)</label>
-              <input id="r-training" placeholder="E.g: 30 shikshak, 2 din, Lucknow">
-            </div>
-          </div>
-          <div class="wform-group"><label>Donation / in-kind support (agar koi)</label>
-            <input id="r-donation" placeholder="E.g: 100 chhaton ko school bag, 5 schools ko library books">
-          </div>
-          <div class="wform-group"><label>Drive / document link (optional)</label>
-            <input id="r-drive" placeholder="https://drive.google.com/...">
-          </div>
-          <div class="wizard-nav"><button class="btn-sec" onclick="reportBack(2)">← Back</button><button class="btn-blu" onclick="reportNext(2)">Next →</button></div>
-        </div>
-
-        <!-- Step 3: Photos -->
-        <div class="wizard-page" id="rp3">
-          <div class="wform-group"><label>Upload activity photos (up to 10)</label></div>
-          <div class="photo-upload-area" onclick="document.getElementById('photo-input').click()">
-            <div style="font-size:28px;margin-bottom:6px">📷</div>
-            <div style="font-weight:600;color:var(--blue);font-size:13px">Click to upload photos</div>
-            <div style="font-size:11px;color:var(--muted);margin-top:4px">JPG, PNG, PDF — max 10 MB each</div>
-          </div>
-          <input type="file" id="photo-input" multiple accept="image/*,.pdf" style="display:none" onchange="handlePhotos(this)">
-          <div class="photo-preview-grid" id="photo-preview"></div>
-          <div style="font-size:11px;color:var(--muted);margin-top:8px" id="photo-count">No photos uploaded yet</div>
-          <div class="wizard-nav"><button class="btn-sec" onclick="reportBack(3)">← Back</button><button class="btn-blu" onclick="reportNext(3)">Next →</button></div>
-        </div>
-
-        <!-- Step 4: Narrative -->
-        <div class="wizard-page" id="rp4">
-          <div class="wform-group"><label>Key achievements this month</label>
-            <textarea id="r-achieve" placeholder="Describe 2-3 major achievements..."></textarea>
-          </div>
-          <div class="wform-group"><label>Key challenges faced</label>
-            <textarea id="r-challenges" placeholder="What obstacles did you face? What was the impact?"></textarea>
-          </div>
-          <div class="wform-group"><label>Support required from PMU / State</label>
-            <textarea id="r-support" placeholder="Any specific support, coordination, or policy help needed..."></textarea>
-          </div>
-          <div class="wform-group"><label>Plans for next month</label>
-            <textarea id="r-plans" placeholder="Key activities planned for next month..."></textarea>
-          </div>
-          <div class="wizard-nav">
-            <button class="btn-sec" onclick="reportBack(4)">← Back</button>
-            <button class="btn-grn" onclick="submitReport()">Submit Report ✓</button>
-          </div>
-        </div>
-
-        <!-- Success -->
-        <div class="wizard-page" id="rp-success">
-          <div class="success-box">
-            <div class="success-icon">✓</div>
-            <h3>Report submitted successfully!</h3>
-            <p>Your monthly report has been recorded.<br>PMU will review and it will appear on the dashboard.</p>
-            <button class="btn-blu" style="margin-top:16px;width:auto;padding:8px 20px" onclick="showPage('dashboard')">Back to Dashboard</button>
+          <div class="wform-group" style="margin:0;flex:1;min-width:160px">
+            <label style="font-size:11px">Email</label>
+            <input id="rh-email" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:7px;font-size:13px;background:#f0f4fa" readonly>
           </div>
         </div>
       </div>
+
+      <!-- SECTION A: Task-wise KPI Progress -->
+      <div class="card" style="margin-bottom:12px">
+        <div class="card-title">📊 Section A — Task-wise KPI Progress</div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:12px">Har task ke liye is mahine ki activity, status aur update likhein.</div>
+        <div id="r-task-cards">
+          <div style="color:var(--muted);font-size:13px;padding:20px;text-align:center">
+            Loading tasks… (pehle profile mein tasks define karein)
+          </div>
+        </div>
+        <div style="margin-top:8px">
+          <a href="#" onclick="showPage('profile-view');return false;" style="font-size:12px;color:var(--blue2)">+ Naya task add karna ho to My Profile mein jayein</a>
+        </div>
+      </div>
+
+      <!-- SECTION B: Monthly Summary Numbers -->
+      <div class="card" style="margin-bottom:12px">
+        <div class="card-title">🔢 Section B — Is Mahine ke Numbers</div>
+        <div class="wform-row3">
+          <div class="wform-group"><label>Schools covered</label><input id="r-schools" type="number" min="0" placeholder="0"></div>
+          <div class="wform-group"><label>Students benefited</label><input id="r-students" type="number" min="0" placeholder="0"></div>
+          <div class="wform-group"><label>Girls benefited</label><input id="r-girls" type="number" min="0" placeholder="0"></div>
+          <div class="wform-group"><label>Teachers trained</label><input id="r-teachers" type="number" min="0" placeholder="0"></div>
+          <div class="wform-group"><label>Community meetings</label><input id="r-meetings" type="number" min="0" placeholder="0"></div>
+          <div class="wform-group"><label>Events / workshops</label><input id="r-events" type="number" min="0" placeholder="0"></div>
+          <div class="wform-group"><label>SC/ST/OBC students</label><input id="r-scst" type="number" min="0" placeholder="0"></div>
+          <div class="wform-group"><label>Divyang students</label><input id="r-divyang" type="number" min="0" placeholder="0"></div>
+          <div class="wform-group"><label>Dropouts prevented</label><input id="r-dropout" type="number" min="0" placeholder="0"></div>
+        </div>
+      </div>
+
+      <!-- SECTION C: Photos Upload -->
+      <div class="card" style="margin-bottom:12px">
+        <div class="card-title">📷 Section C — Photos / Documents</div>
+        <div class="photo-upload-area" onclick="document.getElementById('photo-input').click()">
+          <div style="font-size:28px;margin-bottom:6px">📷</div>
+          <div style="font-weight:600;color:var(--blue);font-size:13px">Click karke photos upload karein</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:4px">JPG, PNG — max 5 MB each | Up to 10 photos</div>
+        </div>
+        <input type="file" id="photo-input" multiple accept="image/*" style="display:none" onchange="handlePhotos(this)">
+        <div class="photo-preview-grid" id="photo-preview"></div>
+        <div style="font-size:11px;color:var(--muted);margin-top:8px" id="photo-count">Abhi koi photo upload nahi ki</div>
+        <div style="margin-top:10px">
+          <div class="wform-group" style="margin:0">
+            <label style="font-size:11px">Ya Google Drive folder link paste karein</label>
+            <input id="r-drive" placeholder="https://drive.google.com/drive/folders/..." style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:7px;font-size:12px">
+          </div>
+        </div>
+      </div>
+
+      <!-- SECTION D: Narrative -->
+      <div class="card" style="margin-bottom:12px">
+        <div class="card-title">📋 Section D — Narrative Report</div>
+        <div class="wform-group">
+          <label>KMI — Is mahine ka sabse bada parinam (ek line mein) <span style="color:var(--red)">*</span></label>
+          <input id="r-kmi" placeholder="E.g: 420 dropout girls re-enrolled in 3 districts of Agra">
+        </div>
+        <div class="wform-group">
+          <label>Key achievements this month</label>
+          <textarea id="r-achieve" placeholder="2-3 major achievements describe karein..."></textarea>
+        </div>
+        <div class="wform-group">
+          <label>Key challenges faced</label>
+          <textarea id="r-challenges" placeholder="Kya mushkilein aayi? Kya asar pada?"></textarea>
+        </div>
+        <div class="wform-group">
+          <label>Support required from PMU / State</label>
+          <textarea id="r-support" placeholder="Koi specific support, coordination ya policy help chahiye?"></textarea>
+        </div>
+        <div class="wform-group">
+          <label>Plans for next month</label>
+          <textarea id="r-plans" placeholder="Agle mahine ki key activities..."></textarea>
+        </div>
+      </div>
+
+      <!-- Submit -->
+      <div id="r-submit-area" style="margin-bottom:24px">
+        <button class="btn-grn" style="width:100%;padding:14px;font-size:15px" onclick="submitMonthlyReport()">✅ Report Submit Karein</button>
+        <div style="font-size:11px;color:var(--muted);text-align:center;margin-top:6px">Submit karne ke baad PMU ko notification jayega. Month ke last working day se pehle submit karein.</div>
+      </div>
+
+      <!-- Success message -->
+      <div id="r-success-msg" style="display:none" class="card">
+        <div class="success-box">
+          <div class="success-icon">✓</div>
+          <h3>Report submit ho gaya!</h3>
+          <p>Aapki monthly KPI report record ho gayi hai.<br>PMU review karega aur dashboard par dikhega.</p>
+          <button class="btn-blu" style="margin-top:16px;width:auto;padding:8px 20px" onclick="showPage('dashboard')">Dashboard par jayein</button>
+          <button class="btn-sec" style="margin-top:8px;width:auto;padding:8px 20px" onclick="resetMonthlyReport()">Nayi report bharo</button>
+        </div>
+      </div>
+
     </div>
 
     <!-- ── PAGE: ALL NGOs (Admin) ── -->
@@ -1854,15 +1832,7 @@ async function saveProfileDistricts(){
 // ════════════════════════════════════
 // REPORT WIZARD
 // ════════════════════════════════════
-function updateReportSteps(){
-  for(let i=0;i<5;i++){
-    const ws=document.getElementById(`rs${i}`);
-    const rp=document.getElementById(`rp${i}`);
-    ws.className='ws'+(i===reportStep?' active':i<reportStep?' done':'');
-    if(rp) rp.className='wizard-page'+(i===reportStep?' active':'');
-  }
-  document.getElementById('rp-success').className='wizard-page';
-}
+function updateReportSteps(){ /* legacy stub — no longer used */ }
 
 // ════════════════════════════════════
 // EXCEL / CSV UPLOAD FOR REPORT
@@ -1979,83 +1949,93 @@ function fillFormFromData(data){
 }
 
 function prefillReportForm(){
-  // 0. Fill project dropdown from NGO's projects
-  const projSel = document.getElementById('r-project');
-  if(projSel){
-    const myProjs = PROJECTS.filter(p => p.ngo === currentUser.org);
-    projSel.innerHTML = '<option value="">-- Project chunein --</option>' +
-      myProjs.map(p => `<option value="${p.project_id||p.task_name}">${p.component} — ${p.task_name}</option>`).join('');
-    if(myProjs.length === 1) projSel.selectedIndex = 1; // auto-select if only one
-    onProjectChange();
-  }
+  const myNGO = SAMPLE_NGOS.find(n => n.name === currentUser.org) || {};
 
-  // 1. Auto-select current month
+  // Auto-fill header
+  const set = (id, val) => { const el=document.getElementById(id); if(el) el.value=val||''; };
+  const setText = (id, val) => { const el=document.getElementById(id); if(el) el.textContent=val||'—'; };
+  setText('rh-org',    currentUser.org);
+  setText('rh-person', myNGO.person || currentUser.name);
+  setText('rh-dist',   myNGO.dist || '—');
+  set('rh-phone', myNGO.phone);
+  set('rh-email', currentUser.email);
+
+  // Auto-select current month
   const now = new Date();
-  const mNames = ['January','February','March','April','May','June',
-                  'July','August','September','October','November','December'];
-  // Financial year: April 2026 – March 2027
+  const mNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
   const yr = now.getMonth() <= 2 ? 2027 : 2026;
   const curMonthStr = mNames[now.getMonth()] + ' ' + yr;
   const mSel = document.getElementById('r-month');
-  for(let i=0;i<mSel.options.length;i++){
-    if(mSel.options[i].text===curMonthStr){ mSel.selectedIndex=i; break; }
-  }
+  if(mSel){ for(let i=0;i<mSel.options.length;i++){ if(mSel.options[i].text===curMonthStr){ mSel.selectedIndex=i; break; } } }
 
-  // 2. Auto-fill reporting person (read-only — tied to login)
-  const personFld = document.getElementById('r-person');
-  if(personFld){
-    personFld.value = currentUser.name || '';
-    personFld.readOnly = true;
-    personFld.style.cssText += ';background:#f0f4fa;cursor:not-allowed;color:var(--muted)';
-    personFld.title = 'Name from your login account';
-  }
+  // Build task cards
+  buildReportTaskCards();
 
-  // 3. Pre-check districts from NGO profile
-  const myNGO = SAMPLE_NGOS.find(n => n.name === currentUser.org);
-  const profileDists = myNGO ? (myNGO.dist||'').split(',').map(d=>d.trim()).filter(Boolean) : [];
-  const distBoxes = document.querySelectorAll('#r-dist-checks input[type=checkbox]');
-  distBoxes.forEach(cb => { cb.checked = profileDists.length ? profileDists.includes(cb.value) : false; });
-
-  // 4. Pre-fill numbers from last submitted report (carry-over reference)
-  const myReports = REPORTS.filter(r => r.ngo === currentUser.org);
-  if(myReports.length){
-    const last = myReports.sort((a,b) => (+b.id||0) - (+a.id||0))[0];
-    const setIfVal = (id, val) => { const el=document.getElementById(id); if(el && val) el.value=val; };
-    setIfVal('r-schools',  last.schools);
-    setIfVal('r-students', last.students);
-    setIfVal('r-girls',    last.girls);
-    setIfVal('r-teachers', last.teachers);
-    setIfVal('r-meetings', last.meetings);
-    setIfVal('r-events',   last.events);
-    setIfVal('r-scst',     last.scst);
-    setIfVal('r-divyang',  last.divyang);
-    setIfVal('r-dropout',  last.dropout);
-  }
+  // Hide success, show submit
+  document.getElementById('r-success-msg').style.display = 'none';
+  document.getElementById('r-submit-area').style.display = 'block';
 }
 
-function onProjectChange(){
-  const sel = document.getElementById('r-project');
-  const info = document.getElementById('r-project-info');
-  const pid = sel.value;
-  const proj = PROJECTS.find(p => p.project_id == pid || p.task_name === pid);
-  if(proj){
-    info.style.display = 'block';
-    info.innerHTML = `<b>${proj.component}</b> &nbsp;|&nbsp; ${proj.task_name}<br>
-      <span style="color:var(--muted)">Target: ${proj.target_schools||0} schools · ${proj.target_students||0} students · ${proj.target_girls||0} girls · ${proj.target_teachers||0} teachers</span><br>
-      <span style="color:var(--muted)">${proj.start_date||''} → ${proj.end_date||''}</span>`;
-  } else {
-    info.style.display = 'none';
+function buildReportTaskCards(){
+  const container = document.getElementById('r-task-cards');
+  if(!container) return;
+  const myProjs = PROJECTS.filter(p => p.ngo === currentUser.org);
+  if(!myProjs.length){
+    container.innerHTML = `<div style="text-align:center;padding:20px;color:var(--muted)">
+      Koi task nahi mila. <a href="#" onclick="showPage('profile-view');return false;" style="color:var(--blue2)">My Profile</a> mein jakar tasks define karein.
+    </div>`;
+    return;
   }
+  // Group by component
+  const byComp = {};
+  myProjs.forEach(p => { const c=p.component||'Other'; if(!byComp[c]) byComp[c]=[]; byComp[c].push(p); });
+
+  container.innerHTML = Object.entries(byComp).map(([comp, tasks]) =>
+    `<div style="margin-bottom:14px">
+      <div style="font-size:11px;font-weight:700;color:var(--blue);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;padding:4px 8px;background:var(--blue)10;border-radius:6px">▸ ${comp}</div>
+      ${tasks.map(t => {
+        const tid = 'task_' + (t.project_id || t.task_name).toString().replace(/[^a-z0-9]/gi,'_');
+        return `<div style="border:1px solid var(--border);border-radius:8px;margin-bottom:8px;overflow:hidden">
+          <div style="background:#f0f6ff;padding:8px 12px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px">
+            <div>
+              <span style="font-weight:700;font-size:13px;color:var(--blue)">${t.task_name}</span>
+              ${t.start_date?`<span style="font-size:11px;color:var(--muted);margin-left:8px">${t.start_date}${t.end_date?' → '+t.end_date:''}</span>`:''}
+            </div>
+            <select class="task-status-sel" data-tid="${tid}" style="padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:#fff">
+              <option value="Not started">⚪ Not started</option>
+              <option value="In progress">🟡 In progress</option>
+              <option value="Complete">🟢 Complete</option>
+            </select>
+          </div>
+          <div style="padding:10px 12px">
+            <div class="wform-group" style="margin-bottom:8px">
+              <label style="font-size:11px">Activity Details — is mahine kya kiya <span style="color:var(--red)">*</span></label>
+              <textarea id="${tid}_activity" placeholder="Is task ke andar is mahine jo kiya uski detail likhein..." style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;height:64px;resize:vertical;outline:none"></textarea>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+              <div class="wform-group" style="margin:0">
+                <label style="font-size:11px">Monthly Update (brief, 1-2 line)</label>
+                <input id="${tid}_update" placeholder="E.g: 3 schools mein teacher training complete" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;outline:none">
+              </div>
+              <div class="wform-group" style="margin:0">
+                <label style="font-size:11px">Actual Completion Date (agar 100% complete hua)</label>
+                <input type="date" id="${tid}_done" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;outline:none">
+              </div>
+            </div>
+            <div class="wform-group" style="margin-top:8px;margin-bottom:0">
+              <label style="font-size:11px">Photo / Document link (Drive link paste karein)</label>
+              <input id="${tid}_photo" placeholder="https://drive.google.com/..." style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;outline:none">
+            </div>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>`
+  ).join('');
 }
 
-function reportNext(step){
-  reportStep=step+1;
-  updateReportSteps();
-}
-function reportBack(step){
-  reportStep=step-1;
-  updateReportSteps();
-}
+function onProjectChange(){ /* legacy stub */ }
+function reportNext(step){ /* legacy stub */ }
+function reportBack(step){ /* legacy stub */ }
 
 function handlePhotos(input){
   const files=Array.from(input.files);
@@ -2073,81 +2053,99 @@ function removePhoto(i){
   handlePhotos({files:uploadedPhotos});
 }
 
-async function submitReport(){
+async function submitMonthlyReport(){
   const months = document.getElementById('r-month').value;
+  const kmi = document.getElementById('r-kmi').value.trim();
+  if(!kmi){ alert('KMI (sabse bada parinam) zaroori hai'); document.getElementById('r-kmi').focus(); return; }
 
-  const projSel = document.getElementById('r-project');
-  const selProj = PROJECTS.find(p => (p.project_id||p.task_name) == projSel?.value);
+  // Collect task-wise data
+  const myProjs = PROJECTS.filter(p => p.ngo === currentUser.org);
+  const activities = myProjs.map(t => {
+    const tid = 'task_' + (t.project_id || t.task_name).toString().replace(/[^a-z0-9]/gi,'_');
+    return {
+      task_id:    t.project_id || '',
+      task_name:  t.task_name,
+      component:  t.component,
+      activity:   document.getElementById(tid+'_activity')?.value.trim() || '',
+      status:     document.querySelector(`.task-status-sel[data-tid="${tid}"]`)?.value || 'Not started',
+      update:     document.getElementById(tid+'_update')?.value.trim() || '',
+      done_date:  document.getElementById(tid+'_done')?.value || '',
+      photo_link: document.getElementById(tid+'_photo')?.value.trim() || ''
+    };
+  });
+
+  // Overall status: if any task complete → In progress overall
+  const overallStatus = activities.some(a=>a.status==='Complete') ? '100' :
+                        activities.some(a=>a.status==='In progress') ? '60' : '0';
 
   const report = {
-    ngo:        currentUser.org,
-    month:      months,
-    project_id: projSel?.value || '',
-    component:  selProj?.component || '',
-    task_name:  selProj?.task_name || '',
-    schools:    +document.getElementById('r-schools').value  || 0,
-    students:   +document.getElementById('r-students').value || 0,
-    girls:      +document.getElementById('r-girls').value    || 0,
-    teachers:   +document.getElementById('r-teachers').value || 0,
-    meetings:   +document.getElementById('r-meetings').value || 0,
-    events:     +document.getElementById('r-events').value   || 0,
-    scst:       +document.getElementById('r-scst').value     || 0,
-    divyang:    +document.getElementById('r-divyang').value  || 0,
-    dropout:    +document.getElementById('r-dropout').value  || 0,
-    tasks:      document.getElementById('r-tasks').value,
-    status:     document.getElementById('r-status').value,
-    kmi:        document.getElementById('r-kmi').value,
-    equipment:  document.getElementById('r-equipment')?.value || '',
-    training:   document.getElementById('r-training')?.value  || '',
-    donation:   document.getElementById('r-donation')?.value  || '',
-    achieve:    document.getElementById('r-achieve').value,
-    challenges: document.getElementById('r-challenges').value,
-    support:    document.getElementById('r-support').value,
-    plans:      document.getElementById('r-plans').value,
+    ngo:          currentUser.org,
+    month:        months,
+    schools:      +document.getElementById('r-schools').value  || 0,
+    students:     +document.getElementById('r-students').value || 0,
+    girls:        +document.getElementById('r-girls').value    || 0,
+    teachers:     +document.getElementById('r-teachers').value || 0,
+    meetings:     +document.getElementById('r-meetings').value || 0,
+    events:       +document.getElementById('r-events').value   || 0,
+    scst:         +document.getElementById('r-scst').value     || 0,
+    divyang:      +document.getElementById('r-divyang').value  || 0,
+    dropout:      +document.getElementById('r-dropout').value  || 0,
+    tasks:        JSON.stringify(activities),
+    status:       overallStatus,
+    kmi:          kmi,
+    achieve:      document.getElementById('r-achieve').value,
+    challenges:   document.getElementById('r-challenges').value,
+    support:      document.getElementById('r-support').value,
+    plans:        document.getElementById('r-plans').value,
     photos_count: uploadedPhotos.length,
-    photos_folder: ''
+    photos_folder: document.getElementById('r-drive')?.value || ''
   };
 
-  showLoader('Uploading photos…');
-  // Upload each photo to Drive
+  showLoader('Photos upload ho rahi hain…');
+  // Upload photos to Drive
   for(let i = 0; i < uploadedPhotos.length; i++){
     try {
-      showLoader(`Uploading photo ${i+1} of ${uploadedPhotos.length}…`);
+      showLoader(`Photo ${i+1} of ${uploadedPhotos.length} upload ho rahi hai…`);
       const b64 = await fileToBase64(uploadedPhotos[i]);
-      const res = await apiPost({
-        action:'uploadPhoto',
-        ngo: currentUser.org, month: months,
-        base64: b64, mimeType: uploadedPhotos[i].type,
-        filename: uploadedPhotos[i].name
-      });
-      if(res.success && res.folderId) report.photos_folder = res.folderId;
+      const res = await apiPost({ action:'uploadPhoto', ngo:currentUser.org, month:months,
+        base64:b64, mimeType:uploadedPhotos[i].type, filename:uploadedPhotos[i].name });
+      if(res.success && res.folderId) report.photos_folder = 'https://drive.google.com/drive/folders/' + res.folderId;
     } catch(e){ console.warn('Photo upload failed:', e.message); }
   }
 
-  showLoader('Saving report to Google Sheets…');
+  showLoader('Report Google Sheets mein save ho raha hai…');
   try {
     await apiFetch({action:'submitReport', report: JSON.stringify(report)});
-  } catch(e){ alert('Report saved locally but could not sync to Sheets. Check your connection.'); }
+  } catch(e){ console.warn('Sync error:', e.message); }
 
   // Update local state
   REPORTS.push(report);
   const ngo = SAMPLE_NGOS.find(n => n.name === currentUser.org);
-  if(ngo){
-    ngo.schools  = report.schools  || ngo.schools;
-    ngo.students = report.students || ngo.students;
-    ngo.month    = months;
-    ngo.progress = +report.status  || ngo.progress;
-  }
-  renderPartnerTable();
-  renderMap(activeFilter);
-  const totalStudents = SAMPLE_NGOS.reduce((a,n) => a + n.students, 0);
-  document.getElementById('s-students').textContent = (totalStudents/100000).toFixed(1)+'L+';
+  if(ngo){ ngo.schools=report.schools||ngo.schools; ngo.students=report.students||ngo.students; ngo.month=months; }
+  renderPartnerTable(); renderMap(activeFilter);
 
   hideLoader();
-  for(let i = 0; i < 5; i++){ document.getElementById(`rp${i}`).className = 'wizard-page'; }
-  document.getElementById('rp-success').className = 'wizard-page active';
   uploadedPhotos = [];
+  document.getElementById('r-submit-area').style.display = 'none';
+  document.getElementById('r-success-msg').style.display = 'block';
+  document.getElementById('r-success-msg').scrollIntoView({behavior:'smooth'});
 }
+
+function resetMonthlyReport(){
+  document.getElementById('r-success-msg').style.display = 'none';
+  document.getElementById('r-submit-area').style.display = 'block';
+  document.getElementById('r-kmi').value = '';
+  document.getElementById('r-achieve').value = '';
+  document.getElementById('r-challenges').value = '';
+  document.getElementById('r-support').value = '';
+  document.getElementById('r-plans').value = '';
+  document.getElementById('photo-preview').innerHTML = '';
+  document.getElementById('photo-count').textContent = 'Abhi koi photo upload nahi ki';
+  buildReportTaskCards();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function submitReport(){ submitMonthlyReport(); } // legacy alias
 
 // Convert File object to base64 string (data stripped)
 function fileToBase64(file){

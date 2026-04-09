@@ -162,7 +162,7 @@ function submitReport(data) {
     r.ngo, r.month,
     r.schools  || 0, r.students  || 0, r.girls   || 0, r.teachers || 0,
     r.meetings || 0, r.events    || 0, r.scst     || 0, r.divyang  || 0,
-    r.budget   || 0, r.dropout   || 0,
+    0, r.dropout || 0,
     r.tasks    || '', r.status   || '',
     r.kmi      || '', r.achieve  || '', r.challenges || '',
     r.support  || '', r.plans    || '',
