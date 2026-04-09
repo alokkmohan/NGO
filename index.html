@@ -2521,13 +2521,18 @@ function downloadKPIReport(){
   rows.push([]);
   // Section B: Monthly numbers
   rows.push(['SECTION B — MONTHLY SUMMARY NUMBERS']);
-  rows.push(['Month','Schools','Students','Girls','Teachers','Meetings','Events','SC/ST/OBC','Divyang','Dropout','Equipment/Material','Training Kit','Machine','Donation','Other Support','KMI']);
-  let cumS=0,cumSt=0,cumG=0,cumT=0;
+  rows.push(['Month','Schools','Students','Girls','Teachers','Meetings','Events','SC/ST/OBC','Divyang','Dropout','Equipment / Training Kit','Machine','Donation','Other Support','KMI']);
+  let cumS=0,cumSt=0,cumG=0,cumT=0,cumM=0,cumEv=0,cumSc=0,cumDv=0,cumDr=0;
   myReps.forEach(rep => {
-    cumS+=+rep.schools||0; cumSt+=+rep.students||0; cumG+=+rep.girls||0; cumT+=+rep.teachers||0;
-    rows.push([rep.month,rep.schools||0,rep.students||0,rep.girls||0,rep.teachers||0,rep.meetings||0,rep.events||0,rep.scst||0,rep.divyang||0,rep.dropout||0,rep.equipment||'',rep.training||'',rep.machine||'',rep.donation||'',rep.other_support||'',rep.kmi||'']);
+    cumS +=+rep.schools||0;  cumSt+=+rep.students||0; cumG +=+rep.girls||0;
+    cumT +=+rep.teachers||0; cumM +=+rep.meetings||0; cumEv+=+rep.events||0;
+    cumSc+=+rep.scst||0;     cumDv+=+rep.divyang||0;  cumDr+=+rep.dropout||0;
+    const eqpt = [rep.equipment, rep.training].filter(Boolean).join(' | ');
+    rows.push([rep.month, rep.schools||0, rep.students||0, rep.girls||0, rep.teachers||0,
+      rep.meetings||0, rep.events||0, rep.scst||0, rep.divyang||0, rep.dropout||0,
+      eqpt, rep.machine||'', rep.donation||'', rep.other_support||'', rep.kmi||'']);
   });
-  rows.push(['CUMULATIVE TOTAL','',cumS,cumSt,cumG,cumT,'','','','','']);
+  rows.push(['CUMULATIVE TOTAL', cumS, cumSt, cumG, cumT, cumM, cumEv, cumSc, cumDv, cumDr, '', '', '', '', '']);
 
   rows.push([]);
   // Section C: Narrative (last month)
