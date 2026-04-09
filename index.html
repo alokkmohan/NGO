@@ -698,6 +698,32 @@ tr:hover td{background:#FAFBFF}
           <button class="btn-report" style="background:var(--green)" onclick="window.print()">🖨 Print / PDF</button>
         </div>
       </div>
+
+      <!-- Admin master download -->
+      <div class="card no-print" style="margin-bottom:14px;padding:16px">
+        <div class="card-title" style="margin-bottom:10px">📥 Download All NGOs — Master Summary</div>
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+          <div>
+            <div style="font-size:12px;color:var(--muted);margin-bottom:6px">Filter by month (optional)</div>
+            <select id="dl-month" style="padding:7px 12px;border:1px solid var(--border);border-radius:7px;font-size:13px">
+              <option value="all">All months</option>
+              <option>April 2026</option><option>May 2026</option><option>June 2026</option>
+              <option>July 2026</option><option>August 2026</option><option>September 2026</option>
+              <option>October 2026</option><option>November 2026</option><option>December 2026</option>
+              <option>January 2027</option><option>February 2027</option><option>March 2027</option>
+            </select>
+          </div>
+          <div style="margin-top:18px">
+            <button onclick="downloadAllNGOsSummary()" style="padding:9px 22px;background:var(--blue);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">
+              ⬇ Download Master CSV
+            </button>
+          </div>
+          <div style="font-size:11px;color:var(--muted);margin-top:18px;line-height:1.6">
+            Includes: All NGOs · Month-wise numbers · Section B cumulative · Task status · KMI · Narrative
+          </div>
+        </div>
+      </div>
+
       <div id="report-output"></div>
     </div>
 
@@ -2552,6 +2578,149 @@ function downloadKPIReport(){
   a.href=url;
   a.download=`KPI_Report_${(currentUser.org||'NGO').replace(/[^a-zA-Z0-9]/g,'_')}_${new Date().toISOString().slice(0,7)}.csv`;
   a.click(); URL.revokeObjectURL(url);
+}
+
+// ════════════════════════════════════
+// ADMIN — Download All NGOs Master Summary CSV
+// ════════════════════════════════════
+function downloadAllNGOsSummary(){
+  const filterMonth = document.getElementById('dl-month')?.value || 'all';
+  const rows = [];
+  const today = new Date().toLocaleDateString('en-IN');
+
+  // ── Cover ──────────────────────────────────────────────
+  rows.push(['SAMAGRA UP SECONDARY EDUCATION PROGRAMME']);
+  rows.push(['All NGO Partners — Master Summary Report']);
+  rows.push(['Madhyamik Shiksha Vibhag, Uttar Pradesh | PMU Office']);
+  rows.push(['Generated:', today, '', 'Period:', filterMonth === 'all' ? 'All Months' : filterMonth]);
+  rows.push([]);
+
+  // ── Overall totals ─────────────────────────────────────
+  const allReps = filterMonth === 'all' ? REPORTS : REPORTS.filter(r => r.month === filterMonth);
+  const totSchools   = allReps.reduce((a,r)=>a+(+r.schools||0),0);
+  const totStudents  = allReps.reduce((a,r)=>a+(+r.students||0),0);
+  const totGirls     = allReps.reduce((a,r)=>a+(+r.girls||0),0);
+  const totTeachers  = allReps.reduce((a,r)=>a+(+r.teachers||0),0);
+  const totMeetings  = allReps.reduce((a,r)=>a+(+r.meetings||0),0);
+  const totEvents    = allReps.reduce((a,r)=>a+(+r.events||0),0);
+  rows.push(['OVERALL PROGRAMME TOTALS']);
+  rows.push(['Total NGO Partners', SAMPLE_NGOS.length, '', 'Reports submitted', allReps.length]);
+  rows.push(['Schools', totSchools, 'Students', totStudents, 'Girls', totGirls]);
+  rows.push(['Teachers trained', totTeachers, 'Meetings', totMeetings, 'Events', totEvents]);
+  rows.push([]);
+
+  // ── Section 1: NGO-wise Monthly Numbers ───────────────
+  rows.push(['SECTION 1 — NGO-WISE MONTHLY NUMBERS']);
+  rows.push(['S.No','Organisation','Theme','Districts','Month','Schools','Students','Girls',
+    'Teachers','Meetings','Events','SC/ST/OBC','Divyang','Dropout',
+    'Equipment / Training Kit','Machine','Donation','Other Support','KMI']);
+
+  let sno = 1;
+  SAMPLE_NGOS.forEach(ngo => {
+    const ngoReps = filterMonth === 'all'
+      ? REPORTS.filter(r => r.ngo === ngo.name).sort((a,b)=>(+a.id||0)-(+b.id||0))
+      : REPORTS.filter(r => r.ngo === ngo.name && r.month === filterMonth);
+
+    if(!ngoReps.length){
+      // NGO has no report for selected period
+      rows.push([sno++, ngo.name, ngo.theme||'—', ngo.dist||'—', filterMonth==='all'?'(no reports)':filterMonth,
+        0,0,0,0,0,0,0,0,0,'','','','','']);
+      return;
+    }
+
+    // One row per month
+    ngoReps.forEach((rep, ri) => {
+      const eqpt = [rep.equipment, rep.training].filter(Boolean).join(' | ');
+      rows.push([
+        ri === 0 ? sno : '',  // S.No only on first row of each NGO
+        ri === 0 ? ngo.name : '',
+        ri === 0 ? (ngo.theme||'—') : '',
+        ri === 0 ? (ngo.dist||'—') : '',
+        rep.month,
+        rep.schools||0, rep.students||0, rep.girls||0, rep.teachers||0,
+        rep.meetings||0, rep.events||0, rep.scst||0, rep.divyang||0, rep.dropout||0,
+        eqpt, rep.machine||'', rep.donation||'', rep.other_support||'', rep.kmi||''
+      ]);
+    });
+
+    // Cumulative row for this NGO (only if multiple months)
+    if(ngoReps.length > 1){
+      rows.push([
+        '', '↳ CUMULATIVE', '', '', '',
+        ngoReps.reduce((a,r)=>a+(+r.schools||0),0),
+        ngoReps.reduce((a,r)=>a+(+r.students||0),0),
+        ngoReps.reduce((a,r)=>a+(+r.girls||0),0),
+        ngoReps.reduce((a,r)=>a+(+r.teachers||0),0),
+        ngoReps.reduce((a,r)=>a+(+r.meetings||0),0),
+        ngoReps.reduce((a,r)=>a+(+r.events||0),0),
+        ngoReps.reduce((a,r)=>a+(+r.scst||0),0),
+        ngoReps.reduce((a,r)=>a+(+r.divyang||0),0),
+        ngoReps.reduce((a,r)=>a+(+r.dropout||0),0),
+        '','','','',''
+      ]);
+    }
+    rows.push([]); // blank row between NGOs
+    sno++;
+  });
+
+  rows.push([]);
+
+  // ── Section 2: Task-wise Status Summary ───────────────
+  rows.push(['SECTION 2 — TASK-WISE STATUS SUMMARY (LATEST MONTH)']);
+  rows.push(['S.No','Organisation','Component','Task Name','Status','Activity Detail','Done Date']);
+
+  let tsno = 1;
+  SAMPLE_NGOS.forEach(ngo => {
+    const projs = PROJECTS.filter(p => p.ngo === ngo.name);
+    if(!projs.length) return;
+    const ngoReps = REPORTS.filter(r => r.ngo === ngo.name).sort((a,b)=>(+b.id||0)-(+a.id||0));
+    const lastRep = ngoReps[0] || {};
+    let lastActs = [];
+    try { lastActs = JSON.parse(lastRep.tasks_json || lastRep.tasks || '[]'); } catch(e){}
+
+    projs.forEach((t, ti) => {
+      const act = lastActs.find(a => a.task_name === t.task_name) || {};
+      rows.push([
+        ti === 0 ? tsno : '',
+        ti === 0 ? ngo.name : '',
+        t.component||'—',
+        t.task_name,
+        act.status || 'Not started',
+        act.activity || '—',
+        act.done_date || ''
+      ]);
+    });
+    rows.push([]);
+    tsno++;
+  });
+
+  rows.push([]);
+
+  // ── Section 3: KMI & Narrative Highlights ─────────────
+  rows.push(['SECTION 3 — KMI & NARRATIVE HIGHLIGHTS (LATEST MONTH PER NGO)']);
+  rows.push(['S.No','Organisation','Month','KMI','Key Achievements','Challenges','Support Required','Next Month Plans']);
+
+  SAMPLE_NGOS.forEach((ngo, i) => {
+    const ngoReps = REPORTS.filter(r => r.ngo === ngo.name).sort((a,b)=>(+b.id||0)-(+a.id||0));
+    const last = ngoReps[0] || {};
+    rows.push([
+      i+1, ngo.name, last.month||'—', last.kmi||'—',
+      last.achieve||'—', last.challenges||'—', last.support||'—', last.plans||'—'
+    ]);
+  });
+
+  // ── Generate CSV ───────────────────────────────────────
+  const csv = rows.map(r =>
+    r.map(c => `"${String(c||'').replace(/"/g,'""')}"`).join(',')
+  ).join('\r\n');
+
+  const blob = new Blob(['\uFEFF'+csv], {type:'text/csv;charset=utf-8;'});
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url;
+  a.download = `AllNGOs_Master_Summary_${filterMonth==='all'?'AllMonths':filterMonth.replace(/\s/g,'_')}_${today.replace(/\//g,'-')}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 // Convert File object to base64 string (data stripped)
