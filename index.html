@@ -595,24 +595,7 @@ tr:hover td{background:#FAFBFF}
         </div>
       </div>
 
-      <!-- SECTION C: Photos Upload -->
-      <div class="card" style="margin-bottom:12px">
-        <div class="card-title">📷 Section C — Photos / Documents</div>
-        <div class="photo-upload-area" onclick="document.getElementById('photo-input').click()">
-          <div style="font-size:28px;margin-bottom:6px">📷</div>
-          <div style="font-weight:600;color:var(--blue);font-size:13px">Click to upload photos</div>
-          <div style="font-size:11px;color:var(--muted);margin-top:4px">JPG, PNG — max 5 MB each | Up to 10 photos</div>
-        </div>
-        <input type="file" id="photo-input" multiple accept="image/*" style="display:none" onchange="handlePhotos(this)">
-        <div class="photo-preview-grid" id="photo-preview"></div>
-        <div style="font-size:11px;color:var(--muted);margin-top:8px" id="photo-count">No photos uploaded yet</div>
-        <div style="margin-top:10px">
-          <div class="wform-group" style="margin:0">
-            <label style="font-size:11px">Or paste a Google Drive folder link</label>
-            <input id="r-drive" placeholder="https://drive.google.com/drive/folders/..." style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:7px;font-size:12px">
-          </div>
-        </div>
-      </div>
+      <!-- SECTION C: Photos are now per-task inside each task card -->
 
       <!-- SECTION E: In-kind / Material Support -->
       <div class="card" style="margin-bottom:12px">
@@ -2272,7 +2255,9 @@ function buildReportTaskCards(){
               <span style="font-weight:700;font-size:13px;color:var(--blue)">${t.task_name}</span>
               ${t.start_date?`<span style="font-size:11px;color:var(--muted);margin-left:8px">${t.start_date}${t.end_date?' → '+t.end_date:''}</span>`:''}
             </div>
-            <select class="task-status-sel" data-tid="${tid}" style="padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:#fff">
+            <select class="task-status-sel" data-tid="${tid}"
+              onchange="document.getElementById('${tid}_done_wrap').style.display=this.value==='Complete'?'block':'none'"
+              style="padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:#fff">
               <option value="Not started"${lastAct?.status==='Not started'?' selected':''}>⚪ Not started</option>
               <option value="In progress"${lastAct?.status==='In progress'?' selected':''}>🟡 In progress</option>
               <option value="Complete"${lastAct?.status==='Complete'?' selected':''}>🟢 Complete</option>
@@ -2284,19 +2269,20 @@ function buildReportTaskCards(){
               <label style="font-size:11px">Activity Details — what was done this month <span style="color:var(--red)">*</span></label>
               <textarea id="${tid}_activity" placeholder="Describe in detail what was done for this task this month..." style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;height:64px;resize:vertical;outline:none"></textarea>
             </div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-              <div class="wform-group" style="margin:0">
-                <label style="font-size:11px">Monthly Update (brief, 1-2 line)</label>
-                <input id="${tid}_update" placeholder="E.g: Teacher training completed in 3 schools" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;outline:none">
-              </div>
-              <div class="wform-group" style="margin:0">
-                <label style="font-size:11px">Actual Completion Date (if 100% complete)</label>
-                <input type="date" id="${tid}_done" value="${lastAct?.done_date||''}" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;outline:none">
-              </div>
+            <div id="${tid}_done_wrap" style="display:${lastAct?.status==='Complete'?'block':'none'};margin-bottom:8px">
+              <label style="font-size:11px">Actual Completion Date</label>
+              <input type="date" id="${tid}_done" value="${lastAct?.done_date||''}" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;outline:none">
             </div>
-            <div class="wform-group" style="margin-top:8px;margin-bottom:0">
-              <label style="font-size:11px">Photo / Document link (paste Drive link)</label>
-              <input id="${tid}_photo" placeholder="https://drive.google.com/..." value="${lastAct?.photo_link||''}" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;outline:none">
+            <div style="border:1px dashed var(--border);border-radius:8px;padding:10px;background:#fafbff;margin-top:4px">
+              <div style="font-size:11px;font-weight:600;color:var(--blue);margin-bottom:6px">📷 Photos / Documents</div>
+              <div onclick="document.getElementById('${tid}_file').click()"
+                style="border:1px dashed #b0bcd4;border-radius:6px;padding:8px;text-align:center;cursor:pointer;background:#fff;font-size:11px;color:var(--muted)">
+                Click to upload photos (JPG/PNG, max 5MB each, up to 5)
+              </div>
+              <input type="file" id="${tid}_file" multiple accept="image/*" style="display:none"
+                onchange="handleTaskPhotos(this,'${tid}')">
+              <div class="photo-preview-grid" id="${tid}_preview" style="margin-top:6px"></div>
+              <div style="font-size:10px;color:var(--muted);margin-top:4px" id="${tid}_count"></div>
             </div>
           </div>
         </div>`;
@@ -2309,21 +2295,36 @@ function onProjectChange(){ /* legacy stub */ }
 function reportNext(step){ /* legacy stub */ }
 function reportBack(step){ /* legacy stub */ }
 
-function handlePhotos(input){
-  const files=Array.from(input.files);
-  uploadedPhotos=[...uploadedPhotos,...files].slice(0,10);
-  const prev=document.getElementById('photo-preview');
-  prev.innerHTML=uploadedPhotos.map((f,i)=>`
+// Per-task photo store: { tid: [File, ...] }
+const taskPhotos = {};
+
+function handleTaskPhotos(input, tid){
+  const files = Array.from(input.files);
+  if(!taskPhotos[tid]) taskPhotos[tid] = [];
+  taskPhotos[tid] = [...taskPhotos[tid], ...files].slice(0, 5);
+  renderTaskPhotoPreview(tid);
+}
+
+function removeTaskPhoto(tid, idx){
+  if(taskPhotos[tid]) taskPhotos[tid].splice(idx, 1);
+  renderTaskPhotoPreview(tid);
+}
+
+function renderTaskPhotoPreview(tid){
+  const prev  = document.getElementById(tid+'_preview');
+  const count = document.getElementById(tid+'_count');
+  const photos = taskPhotos[tid] || [];
+  if(prev) prev.innerHTML = photos.map((f,i)=>`
     <div class="photo-thumb">
       <img src="${URL.createObjectURL(f)}" alt="photo ${i+1}">
-      <button class="photo-remove" onclick="removePhoto(${i})">×</button>
+      <button class="photo-remove" onclick="removeTaskPhoto('${tid}',${i})">×</button>
     </div>`).join('');
-  document.getElementById('photo-count').textContent=`${uploadedPhotos.length} photo(s) uploaded`;
+  if(count) count.textContent = photos.length ? `${photos.length} photo(s) selected` : '';
 }
-function removePhoto(i){
-  uploadedPhotos.splice(i,1);
-  handlePhotos({files:uploadedPhotos});
-}
+
+// Legacy stub (global Section C no longer used)
+function handlePhotos(input){}
+function removePhoto(i){}
 
 async function submitMonthlyReport(){
   const months = document.getElementById('r-month').value;
@@ -2342,13 +2343,19 @@ async function submitMonthlyReport(){
       status:     document.querySelector(`.task-status-sel[data-tid="${tid}"]`)?.value || 'Not started',
       update:     document.getElementById(tid+'_update')?.value.trim() || '',
       done_date:  document.getElementById(tid+'_done')?.value || '',
-      photo_link: document.getElementById(tid+'_photo')?.value.trim() || ''
+      photos:     []  // filled below after upload
     };
   });
 
   // Overall status: if any task complete → In progress overall
   const overallStatus = activities.some(a=>a.status==='Complete') ? '100' :
                         activities.some(a=>a.status==='In progress') ? '60' : '0';
+
+  // Collect all per-task photos for total count
+  const allTaskPhotos = activities.flatMap(a => {
+    const tid = 'task_' + (a.task_id || a.task_name).toString().replace(/[^a-z0-9]/gi,'_');
+    return (taskPhotos[tid] || []).map(f => ({ file: f, tid, task_name: a.task_name }));
+  });
 
   const report = {
     ngo:          currentUser.org,
@@ -2374,18 +2381,18 @@ async function submitMonthlyReport(){
     challenges:   document.getElementById('r-challenges').value,
     support:      document.getElementById('r-support').value,
     plans:        document.getElementById('r-plans').value,
-    photos_count: uploadedPhotos.length,
-    photos_folder: document.getElementById('r-drive')?.value || ''
+    photos_count: allTaskPhotos.length,
+    photos_folder: ''
   };
 
-  showLoader('Uploading photos…');
-  // Upload photos to Drive
-  for(let i = 0; i < uploadedPhotos.length; i++){
+  // Upload per-task photos to Drive
+  for(let i = 0; i < allTaskPhotos.length; i++){
+    const { file, task_name } = allTaskPhotos[i];
     try {
-      showLoader(`Uploading photo ${i+1} of ${uploadedPhotos.length}…`);
-      const b64 = await fileToBase64(uploadedPhotos[i]);
+      showLoader(`Uploading photo ${i+1} of ${allTaskPhotos.length} (${task_name})…`);
+      const b64 = await fileToBase64(file);
       const res = await apiPost({ action:'uploadPhoto', ngo:currentUser.org, month:months,
-        base64:b64, mimeType:uploadedPhotos[i].type, filename:uploadedPhotos[i].name });
+        base64:b64, mimeType:file.type, filename:file.name });
       if(res.success && res.folderId) report.photos_folder = 'https://drive.google.com/drive/folders/' + res.folderId;
     } catch(e){ console.warn('Photo upload failed:', e.message); }
   }
@@ -2416,8 +2423,8 @@ function resetMonthlyReport(){
   document.getElementById('r-challenges').value = '';
   document.getElementById('r-support').value = '';
   document.getElementById('r-plans').value = '';
-  document.getElementById('photo-preview').innerHTML = '';
-  document.getElementById('photo-count').textContent = 'No photos uploaded yet';
+  // Clear per-task photos
+  Object.keys(taskPhotos).forEach(k => delete taskPhotos[k]);
   buildReportTaskCards();
   window.scrollTo({top:0,behavior:'smooth'});
 }
