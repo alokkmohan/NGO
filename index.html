@@ -220,16 +220,36 @@ tr:hover td{background:#FAFBFF}
       <h1>Samagra UP Secondary<br>NGO Partner Portal</h1>
       <p>Madhyamik Shiksha Vibhag, Uttar Pradesh | PMU</p>
     </div>
-    <div id="login-form">
-      <div class="form-group"><label>Email / Username</label><input type="email" id="login-email" placeholder="your@ngo.org"></div>
-      <div class="form-group"><label>Password</label><input type="password" id="login-pass" placeholder="Password" onkeydown="if(event.key==='Enter')doLogin()"></div>
-      <button class="btn-primary" onclick="doLogin()">Sign In</button>
-      <div style="text-align:center;margin-top:10px">
-        <a href="#" onclick="showForgotPassword();return false;" style="font-size:11px;color:var(--blue2)">Forgot password?</a>
+    <!-- Step 1: Email -->
+    <div id="login-step1">
+      <div class="form-group">
+        <label>Registered Email</label>
+        <input type="email" id="login-email" placeholder="your@ngo.org" onkeydown="if(event.key==='Enter')doSendOTP()">
       </div>
-      <p class="auth-note" style="margin-top:10px;text-align:center">Login credentials are provided by PMU Admin.<br>
+      <button class="btn-primary" onclick="doSendOTP()">Send OTP →</button>
+      <p class="auth-note" style="margin-top:12px;text-align:center">
+        OTP will be sent to your registered email.<br>
         <span style="font-size:11px;color:var(--muted)">For access: contact PMU, Madhyamik Shiksha Vibhag, UP</span>
       </p>
+    </div>
+
+    <!-- Step 2: OTP entry (hidden initially) -->
+    <div id="login-step2" style="display:none">
+      <div style="background:#e8f4ea;border:1px solid #a8d5b0;border-radius:8px;padding:10px 12px;font-size:12px;color:#155724;margin-bottom:14px">
+        ✅ OTP sent to <strong id="otp-sent-to"></strong><br>
+        <span style="font-size:11px;color:#1a6b31">Valid for 10 minutes. Check your inbox.</span>
+      </div>
+      <div class="form-group">
+        <label>Enter OTP <span style="font-size:11px;font-weight:400;color:var(--muted)">(6 digits)</span></label>
+        <input type="number" id="login-otp" placeholder="_ _ _ _ _ _" maxlength="6"
+          style="letter-spacing:6px;font-size:20px;text-align:center;font-weight:700"
+          onkeydown="if(event.key==='Enter')doVerifyOTP()">
+      </div>
+      <button class="btn-primary" onclick="doVerifyOTP()">Verify & Login ✓</button>
+      <div style="text-align:center;margin-top:10px;display:flex;justify-content:space-between">
+        <a href="#" onclick="backToEmail();return false;" style="font-size:11px;color:var(--muted)">← Change email</a>
+        <a href="#" onclick="doSendOTP(true);return false;" style="font-size:11px;color:var(--blue2)">Resend OTP</a>
+      </div>
     </div>
   </div>
 </div>
@@ -865,126 +885,63 @@ let uploadedPhotos = [];
 let activeFilter = 'all';
 
 // ════════════════════════════════════
-// AUTH
+// AUTH — OTP LOGIN
 // ════════════════════════════════════
-async function doLogin(){
+async function doSendOTP(isResend){
   const email = document.getElementById('login-email').value.trim();
-  const pass  = document.getElementById('login-pass').value;
-  if(!email||!pass){alert('Please enter both email and password');return;}
-  showLoader('Signing in…');
+  if(!email){ alert('Please enter your email address'); return; }
+  showLoader(isResend ? 'Resending OTP…' : 'Sending OTP to your email…');
   try {
-    const res = await apiFetch({action:'login', email, password:pass});
+    const res = await apiFetch({action:'sendOTP', email});
+    hideLoader();
     if(res.success){
-      currentUser = res.user;
-      currentUser.password = pass; // store for session (needed for changePassword)
-      localStorage.setItem('ngo_session', JSON.stringify(currentUser));
-      hideLoader();
-      if(res.user.firstLogin){
-        // First login — show mandatory password change screen
-        document.getElementById('auth-screen').style.display = 'none';
-        document.getElementById('pwd-change-screen').style.display = 'flex';
-      } else {
-        await loadSheetData();
-        startApp();
-      }
+      document.getElementById('otp-sent-to').textContent = email;
+      document.getElementById('login-step1').style.display = 'none';
+      document.getElementById('login-step2').style.display = 'block';
+      document.getElementById('login-otp').value = '';
+      document.getElementById('login-otp').focus();
+      if(isResend) alert('✅ New OTP sent to ' + email);
     } else {
-      alert(res.error || 'Invalid email or password');
+      alert(res.error || 'Could not send OTP. Please try again.');
     }
   } catch(e){
+    hideLoader();
     alert('Connection error: ' + e.message);
   }
-  hideLoader();
 }
 
-async function doChangePassword(){
-  const np = document.getElementById('pwd-new').value;
-  const cp = document.getElementById('pwd-confirm').value;
-  if(!np || np.length < 6){ alert('Password must be at least 6 characters'); return; }
-  if(np !== cp){ alert('Passwords do not match'); return; }
-  showLoader('Saving password…');
-  // Step 1: API call only
+async function doVerifyOTP(){
+  const email = document.getElementById('login-email').value.trim();
+  const otp   = document.getElementById('login-otp').value.trim();
+  if(!otp || otp.length !== 6){ alert('Please enter the 6-digit OTP'); return; }
+  showLoader('Verifying OTP…');
   try {
-    const res = await apiFetch({action:'changePassword', email: currentUser.email, newPassword: np});
-    if(!res.success){
+    const res = await apiFetch({action:'verifyOTP', email, otp});
+    if(res.success){
+      currentUser = res.user;
+      localStorage.setItem('ngo_session', JSON.stringify(currentUser));
       hideLoader();
-      alert('Could not change password: ' + (res.error||''));
-      return;
+      await loadSheetData();
+      startApp();
+    } else {
+      hideLoader();
+      alert(res.error || 'Invalid or expired OTP.');
     }
   } catch(e){
     hideLoader();
-    alert('Could not connect to server. Please check your internet connection.');
-    return;
+    alert('Connection error: ' + e.message);
   }
-  // Step 2: Update session and start app (separate from API try-catch)
-  currentUser.password = np;
-  currentUser.firstLogin = false;
-  localStorage.setItem('ngo_session', JSON.stringify(currentUser));
-  document.getElementById('pwd-change-screen').style.display = 'none';
-  try { await loadSheetData(); } catch(e){ console.warn(e); }
-  hideLoader();
-  startApp(); // startApp checks localStorage — if profile not done, shows prompt
 }
 
-function showForgotPassword(){
-  document.getElementById('forgot-email').value = document.getElementById('login-email')?.value || '';
-  const msg = document.getElementById('forgot-msg');
-  msg.style.display = 'none'; msg.textContent = '';
-  document.getElementById('forgot-pwd-modal').style.display = 'flex';
+function backToEmail(){
+  document.getElementById('login-step2').style.display = 'none';
+  document.getElementById('login-step1').style.display = 'block';
 }
 
-async function doForgotPassword(){
-  const email = document.getElementById('forgot-email').value.trim();
-  const msg   = document.getElementById('forgot-msg');
-  if(!email){ msg.style.display='block'; msg.style.background='#fff3cd'; msg.style.color='#856404'; msg.textContent='Please enter your email address.'; return; }
-  showLoader('Sending temporary password…');
-  try {
-    const res = await apiFetch({action:'forgotPassword', email});
-    hideLoader();
-    msg.style.display = 'block';
-    if(res.success){
-      if(res.emailSent){
-        msg.style.background = '#d4edda'; msg.style.color = '#155724';
-        msg.textContent = '✅ Temporary password sent to your email. Please check your inbox and login.';
-      } else {
-        msg.style.background = '#fff3cd'; msg.style.color = '#856404';
-        msg.innerHTML = '⚠️ Email delivery failed. Temporary password: <strong>' + (res.temp||'') + '</strong> — Please contact PMU Admin.';
-      }
-    } else {
-      msg.style.background = '#f8d7da'; msg.style.color = '#721c24';
-      msg.textContent = res.error || 'Email not found. Please contact PMU Admin.';
-    }
-  } catch(e){ hideLoader(); alert('Connection error: ' + e.message); }
-}
-
-function openChangePwdModal(){
-  document.getElementById('cpwd-current').value = '';
-  document.getElementById('cpwd-new').value     = '';
-  document.getElementById('cpwd-confirm').value = '';
-  document.getElementById('change-pwd-modal').style.display = 'flex';
-}
-
-async function doChangePwdModal(){
-  const cur = document.getElementById('cpwd-current').value;
-  const np  = document.getElementById('cpwd-new').value;
-  const cp  = document.getElementById('cpwd-confirm').value;
-  if(!cur){ alert('Please enter your current password'); return; }
-  if(String(cur) !== String(currentUser.password)){ alert('Current password is incorrect'); return; }
-  if(np.length < 6){ alert('New password must be at least 6 characters'); return; }
-  if(np !== cp){ alert('New passwords do not match'); return; }
-  showLoader('Saving password…');
-  try {
-    const res = await apiFetch({action:'changePassword', email: currentUser.email, newPassword: np});
-    hideLoader();
-    if(res.success){
-      currentUser.password = np;
-      localStorage.setItem('ngo_session', JSON.stringify(currentUser));
-      document.getElementById('change-pwd-modal').style.display = 'none';
-      alert('✅ Password changed successfully!');
-    } else {
-      alert('Failed: ' + (res.error||''));
-    }
-  } catch(e){ hideLoader(); alert('Connection error: ' + e.message); }
-}
+// No password change needed with OTP — these are no-ops kept for any legacy references
+function openChangePwdModal(){ alert('Password is not used. Login is via OTP sent to your email.'); }
+function doChangePassword(){}
+function doChangePwdModal(){}
 
 function closeProfilePromptAndSetup(){
   const overlay = document.getElementById('profile-prompt-overlay');
@@ -1005,6 +962,10 @@ function doLogout(){
   document.getElementById('pwd-change-screen').style.display='none';
   document.getElementById('profile-screen').style.display='none';
   document.getElementById('profile-prompt-overlay').style.display='none';
+  // Reset OTP form back to step 1
+  document.getElementById('login-step1').style.display='block';
+  document.getElementById('login-step2').style.display='none';
+  document.getElementById('login-otp').value='';
   document.getElementById('auth-screen').style.display='flex';
 }
 

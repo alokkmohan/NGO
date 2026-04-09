@@ -22,16 +22,18 @@ function doGet(e) {
     const p      = e.parameter;
     const action = p.action;
     let result;
-    if (action === 'getNGOs')      result = getNGOs();
-    else if (action === 'getReports')   result = getReports();
-    else if (action === 'getNGOList')   result = getNGOList();
+    if (action === 'getNGOs')         result = getNGOs();
+    else if (action === 'getReports') result = getReports();
+    else if (action === 'getNGOList') result = getNGOList();
+    else if (action === 'sendOTP')    result = sendOTP(p);
+    else if (action === 'verifyOTP')  result = verifyOTP(p);
+    else if (action === 'saveProfile')   result = saveProfile(p);
+    else if (action === 'saveProject')   result = saveProject(p);
+    else if (action === 'getProjects')   result = getProjects(p);
+    else if (action === 'submitReport')  result = submitReport({ report: JSON.parse(p.report) });
+    // legacy — kept for backward compat
     else if (action === 'login')          result = login(p);
-    else if (action === 'changePassword')  result = changePassword(p);
-    else if (action === 'forgotPassword')  result = forgotPassword(p);
-    else if (action === 'saveProfile')    result = saveProfile(p);
-    else if (action === 'saveProject')    result = saveProject(p);
-    else if (action === 'getProjects')    result = getProjects(p);
-    else if (action === 'submitReport') result = submitReport({ report: JSON.parse(p.report) });
+    else if (action === 'changePassword') result = changePassword(p);
     else result = { error: 'Unknown action' };
     return respond(result, p.callback);
   } catch (err) {
@@ -64,53 +66,123 @@ function respond(obj, callback) {
     .setMimeType(ContentService.MimeType.JSON);
 }
 
-// ── LOGIN ────────────────────────────────────────────────────
-// Users sheet columns: email | password | role | name | org | pwd_changed
-function login(data) {
+// ── OTP LOGIN ────────────────────────────────────────────────
+// Users sheet columns: email | password(unused) | role | name | org | pwd_changed | otp | otp_expiry
+//
+// Step 1 — sendOTP: generate 6-digit OTP, save to sheet, email to user
+function sendOTP(data) {
+  if (!data.email) return { success: false, error: 'Email required' };
   const sheet = getSS().getSheetByName('Users');
   const rows  = sheet.getDataRange().getValues();
+
   for (let i = 1; i < rows.length; i++) {
-    const [email, password, role, name, org, pwd_changed] = rows[i];
-    if (email === data.email && String(password) === String(data.password)) {
-      if (role !== 'admin' && !isNGOActive(org)) {
-        return { success: false, error: 'Your organisation is currently inactive. Please contact PMU Admin.' };
-      }
-      // firstLogin = true if pwd_changed column is empty (admin just created the account)
-      const firstLogin = role !== 'admin' && (!pwd_changed || String(pwd_changed).trim() === '');
-      // profileDone = true only if NGO has filled phone (col 15) in NGOs sheet
-      let profileDone = true;
-      if (role !== 'admin') {
-        profileDone = isNGOProfileDone(org);
-      }
-      return { success: true, user: { email, role, name, org, profileDone, firstLogin } };
+    const [email, , role, name, org] = rows[i];
+    if (String(email).trim().toLowerCase() !== data.email.trim().toLowerCase()) continue;
+
+    // Check NGO active status
+    if (role !== 'admin' && !isNGOActive(org)) {
+      return { success: false, error: 'Your organisation is currently inactive. Please contact PMU Admin.' };
+    }
+
+    // Ensure OTP columns exist (col 7 = otp, col 8 = otp_expiry)
+    const hRow = sheet.getRange(1, 1, 1, 8).getValues()[0];
+    if (!hRow[6]) sheet.getRange(1, 7).setValue('otp');
+    if (!hRow[7]) sheet.getRange(1, 8).setValue('otp_expiry');
+
+    // Generate 6-digit OTP
+    const otp    = String(Math.floor(100000 + Math.random() * 900000));
+    const expiry = new Date(Date.now() + 10 * 60 * 1000).toISOString(); // 10 min
+
+    sheet.getRange(i + 1, 7).setValue(otp);
+    sheet.getRange(i + 1, 8).setValue(expiry);
+
+    // Send email
+    try {
+      MailApp.sendEmail({
+        to: email,
+        subject: 'Your OTP — Samagra UP NGO Portal',
+        body:
+          'Dear ' + (name || 'Partner') + ',\n\n' +
+          'Your One-Time Password (OTP) for login is:\n\n' +
+          '  ' + otp + '\n\n' +
+          'This OTP is valid for 10 minutes.\n' +
+          'Do not share this OTP with anyone.\n\n' +
+          'Login at: https://alokkmohan.github.io/NGO/\n\n' +
+          '— PMU Team, Samagra UP Secondary Education Programme'
+      });
+      return { success: true };
+    } catch (e) {
+      return { success: false, error: 'Could not send email: ' + e.message };
     }
   }
-  return { success: false, error: 'Invalid email or password' };
+  return { success: false, error: 'Email not registered. Please contact PMU Admin.' };
 }
 
-// Check if NGO has completed their profile (phone filled = profile submitted at least once)
+// Step 2 — verifyOTP: check OTP, return user object on success
+function verifyOTP(data) {
+  if (!data.email || !data.otp) return { success: false, error: 'Email and OTP required' };
+  const sheet = getSS().getSheetByName('Users');
+  const rows  = sheet.getDataRange().getValues();
+
+  for (let i = 1; i < rows.length; i++) {
+    const [email, , role, name, org, , storedOtp, otpExpiry] = rows[i];
+    if (String(email).trim().toLowerCase() !== data.email.trim().toLowerCase()) continue;
+
+    if (!storedOtp) return { success: false, error: 'No OTP found. Please request a new one.' };
+    if (String(storedOtp).trim() !== String(data.otp).trim()) {
+      return { success: false, error: 'Incorrect OTP. Please try again.' };
+    }
+    if (otpExpiry && new Date() > new Date(otpExpiry)) {
+      return { success: false, error: 'OTP has expired. Please request a new one.' };
+    }
+
+    // Clear OTP after successful use (one-time use)
+    sheet.getRange(i + 1, 7).setValue('');
+    sheet.getRange(i + 1, 8).setValue('');
+
+    const profileDone = role !== 'admin' ? isNGOProfileDone(org) : true;
+    return { success: true, user: { email, role, name, org, profileDone } };
+  }
+  return { success: false, error: 'Email not found.' };
+}
+
+// Check if NGO has completed their profile
 function isNGOProfileDone(orgName) {
   const sheet = getSS().getSheetByName('NGOs');
   if (!sheet) return false;
   const rows = sheet.getDataRange().getValues();
   for (let i = 1; i < rows.length; i++) {
     if (String(rows[i][1]).trim().toLowerCase() === orgName.trim().toLowerCase()) {
-      const phone = String(rows[i][14] || '').trim(); // col 15 = phone (0-indexed: 14)
-      const dist  = String(rows[i][4]  || '').trim(); // col 5  = dist  (0-indexed: 4)
+      const phone = String(rows[i][14] || '').trim();
+      const dist  = String(rows[i][4]  || '').trim();
       return phone !== '' || dist !== '';
     }
   }
-  return false; // NGO row not found = profile not done
+  return false;
 }
 
-// ── CHANGE PASSWORD ──────────────────────────────────────────
+// ── LEGACY (kept for backward compat) ───────────────────────
+function login(data) {
+  const sheet = getSS().getSheetByName('Users');
+  const rows  = sheet.getDataRange().getValues();
+  for (let i = 1; i < rows.length; i++) {
+    const [email, password, role, name, org] = rows[i];
+    if (email === data.email && String(password) === String(data.password)) {
+      if (role !== 'admin' && !isNGOActive(org)) {
+        return { success: false, error: 'Your organisation is currently inactive.' };
+      }
+      const profileDone = role !== 'admin' ? isNGOProfileDone(org) : true;
+      return { success: true, user: { email, role, name, org, profileDone } };
+    }
+  }
+  return { success: false, error: 'Invalid email or password' };
+}
 function changePassword(data) {
   const sheet = getSS().getSheetByName('Users');
   const rows  = sheet.getDataRange().getValues();
   for (let i = 1; i < rows.length; i++) {
     if (rows[i][0] === data.email) {
-      sheet.getRange(i + 1, 2).setValue(data.newPassword);  // col 2 = password
-      sheet.getRange(i + 1, 6).setValue('yes');              // col 6 = pwd_changed
+      sheet.getRange(i + 1, 2).setValue(data.newPassword);
       return { success: true };
     }
   }
