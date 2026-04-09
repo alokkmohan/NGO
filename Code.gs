@@ -89,10 +89,18 @@ function sendOTP(data) {
       return { success: false, error: 'Your organisation is currently inactive. Please contact PMU Admin.' };
     }
 
-    // Ensure OTP columns exist (col 7 = otp, col 8 = otp_expiry)
-    const hRow = sheet.getRange(1, 1, 1, 8).getValues()[0];
+    // Ensure OTP columns exist (col 7 = otp, col 8 = otp_expiry, col 9 = otp_sent_at)
+    const hRow = sheet.getRange(1, 1, 1, 9).getValues()[0];
     if (!hRow[6]) sheet.getRange(1, 7).setValue('otp');
     if (!hRow[7]) sheet.getRange(1, 8).setValue('otp_expiry');
+    if (!hRow[8]) sheet.getRange(1, 9).setValue('otp_sent_at');
+
+    // Rate limiting — allow only 1 OTP per 60 seconds
+    const sentAt = rows[i][8] ? new Date(rows[i][8]) : null;
+    if (sentAt && (Date.now() - sentAt.getTime()) < 60 * 1000) {
+      const secsLeft = Math.ceil((60 * 1000 - (Date.now() - sentAt.getTime())) / 1000);
+      return { success: false, error: `Please wait ${secsLeft} seconds before requesting a new OTP.` };
+    }
 
     // Generate 6-digit OTP
     const otp    = String(Math.floor(100000 + Math.random() * 900000));
@@ -100,6 +108,7 @@ function sendOTP(data) {
 
     sheet.getRange(i + 1, 7).setValue(otp);
     sheet.getRange(i + 1, 8).setValue(expiry);
+    sheet.getRange(i + 1, 9).setValue(new Date().toISOString()); // rate limit timestamp
 
     // Send email
     try {

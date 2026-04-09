@@ -970,9 +970,38 @@ function backToEmail(){
 }
 
 // No password change needed with OTP — these are no-ops kept for any legacy references
-function openChangePwdModal(){ alert('Password is not used. Login is via OTP sent to your email.'); }
+function openChangePwdModal(){
+  if(currentUser.role !== 'admin'){
+    alert('NGO users login via OTP — no password to change.');
+    return;
+  }
+  document.getElementById('cpwd-current').value = '';
+  document.getElementById('cpwd-new').value     = '';
+  document.getElementById('cpwd-confirm').value = '';
+  document.getElementById('change-pwd-modal').style.display = 'flex';
+}
 function doChangePassword(){}
-function doChangePwdModal(){}
+async function doChangePwdModal(){
+  const cur = document.getElementById('cpwd-current').value;
+  const np  = document.getElementById('cpwd-new').value;
+  const cp  = document.getElementById('cpwd-confirm').value;
+  if(!cur){ alert('Please enter your current password'); return; }
+  if(np.length < 6){ alert('New password must be at least 6 characters'); return; }
+  if(np !== cp){ alert('New passwords do not match'); return; }
+  showLoader('Saving password…');
+  try {
+    const check = await apiFetch({action:'login', email: currentUser.email, password: cur});
+    if(!check.success){ hideLoader(); alert('Current password is incorrect'); return; }
+    const res = await apiFetch({action:'changePassword', email: currentUser.email, newPassword: np});
+    hideLoader();
+    if(res.success){
+      document.getElementById('change-pwd-modal').style.display = 'none';
+      alert('✅ Password changed successfully!');
+    } else {
+      alert('Failed: ' + (res.error||'Unknown error'));
+    }
+  } catch(e){ hideLoader(); alert('Connection error: ' + e.message); }
+}
 
 function closeProfilePromptAndSetup(){
   const overlay = document.getElementById('profile-prompt-overlay');
@@ -2812,9 +2841,21 @@ function reportBack(step){ /* legacy stub */ }
 const taskPhotos = {};
 
 function handleTaskPhotos(input, tid){
+  const MAX_SIZE = 5 * 1024 * 1024; // 5MB
   const files = Array.from(input.files);
+  const oversized = files.filter(f => f.size > MAX_SIZE);
+  if(oversized.length){
+    alert(`⚠️ ${oversized.length} file(s) are too large (max 5MB each):\n${oversized.map(f=>f.name).join('\n')}\n\nThese files were not added.`);
+  }
+  const valid = files.filter(f => f.size <= MAX_SIZE);
   if(!taskPhotos[tid]) taskPhotos[tid] = [];
-  taskPhotos[tid] = [...taskPhotos[tid], ...files].slice(0, 5);
+  const combined = [...taskPhotos[tid], ...valid].slice(0, 5);
+  if(combined.length === taskPhotos[tid].length && valid.length > 0){
+    alert('Maximum 5 photos per task allowed.');
+  }
+  taskPhotos[tid] = combined;
+  // Reset input so same file can be re-selected after removal
+  input.value = '';
   renderTaskPhotoPreview(tid);
 }
 
@@ -2842,7 +2883,23 @@ function removePhoto(i){}
 async function submitMonthlyReport(){
   const months = document.getElementById('r-month').value;
   const kmi = document.getElementById('r-kmi').value.trim();
+
+  // Duplicate check — same NGO + same month
+  const already = REPORTS.find(r => r.ngo === currentUser.org && r.month === months);
+  if(already){
+    const ok = confirm(`⚠️ You have already submitted a report for "${months}".\n\nSubmitting again will add a duplicate entry.\n\nClick OK to submit anyway, or Cancel to go back.`);
+    if(!ok) return;
+  }
+
+  // Validate at least some KPI numbers filled
+  const schools  = +document.getElementById('r-schools').value  || 0;
+  const students = +document.getElementById('r-students').value || 0;
+  const achieve  = document.getElementById('r-achieve').value.trim();
   if(!kmi){ alert('KMI (Key Milestone Indicator) is required'); document.getElementById('r-kmi').focus(); return; }
+  if(!schools && !students && !achieve){
+    alert('Please fill at least Schools covered or Students benefited or Key Achievements before submitting.');
+    return;
+  }
 
   // Collect task-wise data
   const myProjs = PROJECTS.filter(p => p.ngo === currentUser.org);
@@ -2931,15 +2988,20 @@ async function submitMonthlyReport(){
   };
 
   // Upload per-task photos to Drive
+  let photoFailCount = 0;
   for(let i = 0; i < allTaskPhotos.length; i++){
     const { file, task_name } = allTaskPhotos[i];
     try {
-      showLoader(`Uploading photo ${i+1} of ${allTaskPhotos.length} (${task_name})…`);
+      showLoader(`Uploading photo ${i+1} of ${allTaskPhotos.length} — ${task_name}…`);
       const b64 = await fileToBase64(file);
       const res = await apiPost({ action:'uploadPhoto', ngo:currentUser.org, month:months,
         base64:b64, mimeType:file.type, filename:file.name });
       if(res.success && res.folderId) report.photos_folder = 'https://drive.google.com/drive/folders/' + res.folderId;
-    } catch(e){ console.warn('Photo upload failed:', e.message); }
+      else photoFailCount++;
+    } catch(e){ photoFailCount++; console.warn('Photo upload failed:', e.message); }
+  }
+  if(photoFailCount > 0){
+    alert(`⚠️ ${photoFailCount} photo(s) could not be uploaded (network or size issue).\nThe report will still be saved without those photos.`);
   }
 
   showLoader('Saving report to Google Sheets…');
@@ -3533,10 +3595,27 @@ function buildOfficialReport(n, selMonth){
 }
 
 // ════════════════════════════════════
-// INIT — always show login screen
+// INIT — restore session if available
 // ════════════════════════════════════
-// Session auto-restore disabled: user must always log in fresh
-localStorage.removeItem('ngo_session');
+(async function(){
+  const saved = localStorage.getItem('ngo_session');
+  if(saved){
+    try {
+      const u = JSON.parse(saved);
+      if(u && u.email && u.role){
+        currentUser = u;
+        document.getElementById('auth-screen').style.display = 'none';
+        showLoader('Restoring session…');
+        try { await loadSheetData(); } catch(e){ console.warn(e); }
+        hideLoader();
+        startApp();
+        return;
+      }
+    } catch(e){ localStorage.removeItem('ngo_session'); }
+  }
+  // No valid session — show login
+  document.getElementById('auth-screen').style.display = 'flex';
+})();
 </script>
 </body>
 </html>
