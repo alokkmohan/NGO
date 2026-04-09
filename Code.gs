@@ -73,10 +73,30 @@ function login(data) {
       }
       // firstLogin = true if pwd_changed column is empty (admin just created the account)
       const firstLogin = role !== 'admin' && (!pwd_changed || String(pwd_changed).trim() === '');
-      return { success: true, user: { email, role, name, org, profileDone: true, firstLogin } };
+      // profileDone = true only if NGO has filled phone (col 15) in NGOs sheet
+      let profileDone = true;
+      if (role !== 'admin') {
+        profileDone = isNGOProfileDone(org);
+      }
+      return { success: true, user: { email, role, name, org, profileDone, firstLogin } };
     }
   }
   return { success: false, error: 'Invalid email or password' };
+}
+
+// Check if NGO has completed their profile (phone filled = profile submitted at least once)
+function isNGOProfileDone(orgName) {
+  const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName('NGOs');
+  if (!sheet) return false;
+  const rows = sheet.getDataRange().getValues();
+  for (let i = 1; i < rows.length; i++) {
+    if (String(rows[i][1]).trim().toLowerCase() === orgName.trim().toLowerCase()) {
+      const phone = String(rows[i][14] || '').trim(); // col 15 = phone (0-indexed: 14)
+      const dist  = String(rows[i][4]  || '').trim(); // col 5  = dist  (0-indexed: 4)
+      return phone !== '' || dist !== '';
+    }
+  }
+  return false; // NGO row not found = profile not done
 }
 
 // ── CHANGE PASSWORD ──────────────────────────────────────────
