@@ -560,7 +560,10 @@ tr:hover td{background:#FAFBFF}
 
       <!-- SECTION B: Monthly Summary Numbers -->
       <div class="card" style="margin-bottom:12px">
-        <div class="card-title">🔢 Section B — Is Mahine ke Numbers</div>
+        <div class="card-title">🔢 Section B — Is Mahine ke Numbers
+          <span style="font-size:11px;font-weight:400;color:var(--muted);margin-left:8px">Cumulative total neeche dikhega</span>
+        </div>
+        <div id="r-cumulative" style="display:none;background:#f0f6ff;border-radius:8px;padding:8px 12px;margin-bottom:10px;font-size:12px;color:var(--blue)"></div>
         <div class="wform-row3">
           <div class="wform-group"><label>Schools covered</label><input id="r-schools" type="number" min="0" placeholder="0"></div>
           <div class="wform-group"><label>Students benefited</label><input id="r-students" type="number" min="0" placeholder="0"></div>
@@ -631,6 +634,7 @@ tr:hover td{background:#FAFBFF}
           <h3>Report submit ho gaya!</h3>
           <p>Aapki monthly KPI report record ho gayi hai.<br>PMU review karega aur dashboard par dikhega.</p>
           <button class="btn-blu" style="margin-top:16px;width:auto;padding:8px 20px" onclick="showPage('dashboard')">Dashboard par jayein</button>
+          <button class="btn-grn" style="margin-top:8px;width:auto;padding:8px 20px" onclick="downloadKPIReport()">⬇ Is mahine ki KPI Report Download karein</button>
           <button class="btn-sec" style="margin-top:8px;width:auto;padding:8px 20px" onclick="resetMonthlyReport()">Nayi report bharo</button>
         </div>
       </div>
@@ -1971,6 +1975,24 @@ function prefillReportForm(){
   // Build task cards
   buildReportTaskCards();
 
+  // Show cumulative totals from past reports
+  const myReps = REPORTS.filter(r=>r.ngo===currentUser.org);
+  if(myReps.length){
+    const cum = {schools:0,students:0,girls:0,teachers:0,meetings:0,events:0};
+    myReps.forEach(r=>{ for(const k in cum) cum[k]+=(+r[k]||0); });
+    const cumEl = document.getElementById('r-cumulative');
+    if(cumEl){
+      cumEl.style.display='block';
+      cumEl.innerHTML=`📊 <b>Cumulative totals (sab mahine milakar):</b> &nbsp;
+        Schools: <b>${cum.schools}</b> &nbsp;|&nbsp;
+        Students: <b>${cum.students}</b> &nbsp;|&nbsp;
+        Girls: <b>${cum.girls}</b> &nbsp;|&nbsp;
+        Teachers: <b>${cum.teachers}</b> &nbsp;|&nbsp;
+        Meetings: <b>${cum.meetings}</b> &nbsp;|&nbsp;
+        Events: <b>${cum.events}</b>`;
+    }
+  }
+
   // Hide success, show submit
   document.getElementById('r-success-msg').style.display = 'none';
   document.getElementById('r-submit-area').style.display = 'block';
@@ -1995,6 +2017,12 @@ function buildReportTaskCards(){
       <div style="font-size:11px;font-weight:700;color:var(--blue);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;padding:4px 8px;background:var(--blue)10;border-radius:6px">▸ ${comp}</div>
       ${tasks.map(t => {
         const tid = 'task_' + (t.project_id || t.task_name).toString().replace(/[^a-z0-9]/gi,'_');
+        // Find last report's activity for this task (for carry-over)
+        const lastAct = (() => {
+          const lastRep = REPORTS.filter(r=>r.ngo===currentUser.org).sort((a,b)=>(+b.id||0)-(+a.id||0))[0];
+          if(!lastRep || !lastRep.tasks) return null;
+          try { return JSON.parse(lastRep.tasks).find(a=>a.task_name===t.task_name); } catch(e){ return null; }
+        })();
         return `<div style="border:1px solid var(--border);border-radius:8px;margin-bottom:8px;overflow:hidden">
           <div style="background:#f0f6ff;padding:8px 12px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px">
             <div>
@@ -2002,11 +2030,12 @@ function buildReportTaskCards(){
               ${t.start_date?`<span style="font-size:11px;color:var(--muted);margin-left:8px">${t.start_date}${t.end_date?' → '+t.end_date:''}</span>`:''}
             </div>
             <select class="task-status-sel" data-tid="${tid}" style="padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:#fff">
-              <option value="Not started">⚪ Not started</option>
-              <option value="In progress">🟡 In progress</option>
-              <option value="Complete">🟢 Complete</option>
+              <option value="Not started"${lastAct?.status==='Not started'?' selected':''}>⚪ Not started</option>
+              <option value="In progress"${lastAct?.status==='In progress'?' selected':''}>🟡 In progress</option>
+              <option value="Complete"${lastAct?.status==='Complete'?' selected':''}>🟢 Complete</option>
             </select>
           </div>
+          ${t.description?`<div style="padding:6px 12px;background:#fffbe6;font-size:11px;color:var(--amber);border-bottom:1px solid var(--border)">📌 Profile se: ${t.description}</div>`:''}
           <div style="padding:10px 12px">
             <div class="wform-group" style="margin-bottom:8px">
               <label style="font-size:11px">Activity Details — is mahine kya kiya <span style="color:var(--red)">*</span></label>
@@ -2019,12 +2048,12 @@ function buildReportTaskCards(){
               </div>
               <div class="wform-group" style="margin:0">
                 <label style="font-size:11px">Actual Completion Date (agar 100% complete hua)</label>
-                <input type="date" id="${tid}_done" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;outline:none">
+                <input type="date" id="${tid}_done" value="${lastAct?.done_date||''}" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;outline:none">
               </div>
             </div>
             <div class="wform-group" style="margin-top:8px;margin-bottom:0">
               <label style="font-size:11px">Photo / Document link (Drive link paste karein)</label>
-              <input id="${tid}_photo" placeholder="https://drive.google.com/..." style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;outline:none">
+              <input id="${tid}_photo" placeholder="https://drive.google.com/..." value="${lastAct?.photo_link||''}" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;outline:none">
             </div>
           </div>
         </div>`;
@@ -2146,6 +2175,85 @@ function resetMonthlyReport(){
 }
 
 function submitReport(){ submitMonthlyReport(); } // legacy alias
+
+function downloadKPIReport(){
+  const myNGO = SAMPLE_NGOS.find(n=>n.name===currentUser.org)||{};
+  const myProjs = PROJECTS.filter(p=>p.ngo===currentUser.org);
+  const myReps = REPORTS.filter(r=>r.ngo===currentUser.org).sort((a,b)=>(+a.id||0)-(+b.id||0));
+
+  // Build month-wise activity map
+  const monthActMap = {};
+  myReps.forEach(rep => {
+    const m = rep.month;
+    let acts = [];
+    try { acts = JSON.parse(rep.tasks||'[]'); } catch(e){ acts=[{task_name:'Activities',activity:rep.tasks||''}]; }
+    monthActMap[m] = {rep, acts};
+  });
+
+  const months = Object.keys(monthActMap);
+
+  // Header rows
+  const rows = [];
+  rows.push(['SAMAGRA UP SECONDARY EDUCATION PROGRAMME']);
+  rows.push(['NGO / Partner Organisation — Monthly KPI Report']);
+  rows.push(['Madhyamik Shiksha Vibhag, Uttar Pradesh | PMU Office']);
+  rows.push([]);
+  rows.push(['Organisation Name:', currentUser.org, '', '', 'Name of Nodal Person:', myNGO.person||currentUser.name]);
+  rows.push(['Districts of Operation:', myNGO.dist||'', '', '', 'Contact Number:', myNGO.phone||'']);
+  rows.push(['Email ID:', currentUser.email]);
+  rows.push([]);
+
+  // Section A: Task-wise month columns
+  rows.push(['SECTION A — TASK-WISE KPI PROGRESS']);
+  const hdr = ['S.No','Component','KPI Indicator / Task Name','Start Date','End Date',...months.map(m=>m+'\nActivity'),...months.map(m=>m+'\nStatus'),...months.map(m=>m+'\nPhoto Link')];
+  rows.push(hdr);
+
+  myProjs.forEach((t, idx) => {
+    const actCols = months.map(m => {
+      const ma = monthActMap[m]?.acts?.find(a=>a.task_name===t.task_name);
+      return ma?.activity || '';
+    });
+    const statusCols = months.map(m => {
+      const ma = monthActMap[m]?.acts?.find(a=>a.task_name===t.task_name);
+      return ma?.status || '';
+    });
+    const photoCols = months.map(m => {
+      const ma = monthActMap[m]?.acts?.find(a=>a.task_name===t.task_name);
+      return ma?.photo_link || '';
+    });
+    rows.push([idx+1, t.component, t.task_name, t.start_date||'', t.end_date||'', ...actCols, ...statusCols, ...photoCols]);
+  });
+
+  rows.push([]);
+  // Section B: Monthly numbers
+  rows.push(['SECTION B — MONTHLY SUMMARY NUMBERS']);
+  rows.push(['Month','Schools','Students','Girls','Teachers','Meetings','Events','SC/ST/OBC','Divyang','Dropout','KMI']);
+  let cumS=0,cumSt=0,cumG=0,cumT=0;
+  myReps.forEach(rep => {
+    cumS+=+rep.schools||0; cumSt+=+rep.students||0; cumG+=+rep.girls||0; cumT+=+rep.teachers||0;
+    rows.push([rep.month,rep.schools||0,rep.students||0,rep.girls||0,rep.teachers||0,rep.meetings||0,rep.events||0,rep.scst||0,rep.divyang||0,rep.dropout||0,rep.kmi||'']);
+  });
+  rows.push(['CUMULATIVE TOTAL','',cumS,cumSt,cumG,cumT,'','','','','']);
+
+  rows.push([]);
+  // Section C: Narrative (last month)
+  if(myReps.length){
+    const last = myReps[myReps.length-1];
+    rows.push(['SECTION C — NARRATIVE REPORT (Latest Month: '+last.month+')']);
+    rows.push(['Key Achievements:', last.achieve||'']);
+    rows.push(['Key Challenges:', last.challenges||'']);
+    rows.push(['Support Required:', last.support||'']);
+    rows.push(['Plans for Next Month:', last.plans||'']);
+  }
+
+  const csv = rows.map(r => r.map(c=>`"${String(c||'').replace(/"/g,'""')}"`).join(',')).join('\r\n');
+  const blob = new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href=url;
+  a.download=`KPI_Report_${(currentUser.org||'NGO').replace(/[^a-zA-Z0-9]/g,'_')}_${new Date().toISOString().slice(0,7)}.csv`;
+  a.click(); URL.revokeObjectURL(url);
+}
 
 // Convert File object to base64 string (data stripped)
 function fileToBase64(file){
