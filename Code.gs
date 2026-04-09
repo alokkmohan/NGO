@@ -281,7 +281,13 @@ function saveProject(data) {
     sheet = ss.insertSheet('Projects');
     sheet.appendRow(['project_id','ngo','component','task_name','description',
       'target_schools','target_students','target_girls','target_teachers',
-      'target_meetings','target_events','start_date','end_date','status','created_on']);
+      'target_meetings','target_events','start_date','end_date','status','created_on','sub_activities']);
+  } else {
+    // Ensure sub_activities column exists
+    const hRow = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+    if (!hRow.includes('sub_activities')) {
+      sheet.getRange(1, hRow.length + 1).setValue('sub_activities');
+    }
   }
   const id = new Date().getTime();
   sheet.appendRow([
@@ -289,7 +295,8 @@ function saveProject(data) {
     +data.target_schools||0, +data.target_students||0, +data.target_girls||0,
     +data.target_teachers||0, +data.target_meetings||0, +data.target_events||0,
     data.start_date||'', data.end_date||'', 'active',
-    new Date().toLocaleDateString('en-IN')
+    new Date().toLocaleDateString('en-IN'),
+    data.sub_activities || '[]'
   ]);
   return { success: true, project_id: id };
 }

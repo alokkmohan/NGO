@@ -1093,12 +1093,53 @@ function toggleCompTasks(cb){
 function addCompTask(containerId){
   const taskRows = document.getElementById(containerId);
   if(!taskRows) return;
+  const taskIdx = taskRows.children.length + 1;
   const div = document.createElement('div');
-  div.style.cssText = 'display:flex;gap:6px;margin-bottom:6px';
-  div.innerHTML = `<input type="text" class="comp-task-input" placeholder="Enter task name... (e.g. Girls dropout prevention drive)" style="flex:1;padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;outline:none">
-    <button type="button" onclick="this.parentElement.remove()" title="Remove" style="padding:4px 10px;background:#fff0f0;border:1px solid #f5c6c6;color:var(--red);border-radius:6px;font-size:16px;cursor:pointer;line-height:1">−</button>`;
+  div.className = 'task-block';
+  div.style.cssText = 'border:1px solid #d0daf0;border-radius:8px;padding:10px 12px;margin-bottom:8px;background:#fafcff';
+  div.innerHTML = `
+    <div style="display:flex;gap:6px;margin-bottom:8px;align-items:center">
+      <span style="font-size:11px;font-weight:700;color:var(--blue);white-space:nowrap">Activity ${taskIdx}:</span>
+      <input type="text" class="comp-task-input" placeholder="Activity name (e.g. KGBV - Type I, Free Textbooks)"
+        style="flex:1;padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;outline:none">
+      <input type="date" class="task-start-date" title="Activity Start Date"
+        style="padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;outline:none">
+      <input type="date" class="task-end-date" title="Activity End Date"
+        style="padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;outline:none">
+      <button type="button" onclick="this.closest('.task-block').remove()" title="Remove Activity"
+        style="padding:4px 10px;background:#fff0f0;border:1px solid #f5c6c6;color:var(--red);border-radius:6px;font-size:16px;cursor:pointer;line-height:1">−</button>
+    </div>
+    <div style="margin-left:12px">
+      <div style="font-size:11px;color:var(--muted);margin-bottom:5px">Sub Activities (numbered steps under this activity):</div>
+      <div class="sub-act-rows"></div>
+      <button type="button" onclick="addSubActivity(this)"
+        style="padding:4px 14px;background:#e8f0fe;color:var(--blue);border:1px solid #c2d0f5;border-radius:6px;font-size:11px;cursor:pointer;font-weight:600">
+        + Add Sub Activity
+      </button>
+    </div>`;
   taskRows.appendChild(div);
-  div.querySelector('input').focus();
+  div.querySelector('.comp-task-input').focus();
+  // Auto-add first sub-activity
+  addSubActivity(div.querySelector('button[onclick*="addSubActivity"]'));
+}
+
+function addSubActivity(btn){
+  const subRows = btn.previousElementSibling; // .sub-act-rows
+  const idx = subRows.children.length + 1;
+  const row = document.createElement('div');
+  row.style.cssText = 'display:flex;gap:6px;margin-bottom:5px;align-items:center';
+  row.innerHTML = `
+    <span style="font-size:11px;color:var(--muted);width:16px;flex-shrink:0">${idx}.</span>
+    <input type="text" class="sub-act-name" placeholder="Sub activity (e.g. Food/Lodging per child per month)"
+      style="flex:1;padding:6px 9px;border:1px solid var(--border);border-radius:6px;font-size:12px;outline:none">
+    <input type="date" class="sub-act-start" title="Start Date"
+      style="padding:5px 7px;border:1px solid var(--border);border-radius:6px;font-size:11px;outline:none">
+    <input type="date" class="sub-act-end" title="End Date"
+      style="padding:5px 7px;border:1px solid var(--border);border-radius:6px;font-size:11px;outline:none">
+    <button type="button" onclick="this.parentElement.remove()"
+      style="padding:2px 8px;background:#fff0f0;border:1px solid #f5c6c6;color:var(--red);border-radius:5px;font-size:14px;cursor:pointer;line-height:1">−</button>`;
+  subRows.appendChild(row);
+  row.querySelector('.sub-act-name').focus();
 }
 
 function profileNext(step){
@@ -1232,26 +1273,35 @@ async function saveProfile(){
     const tEvents   = document.getElementById('pf-tevents')?.value   || 0;
     for(const cb of checkedComps){
       const comp = cb.value;
-      const taskInputs = cb.closest('.comp-block').querySelectorAll('.comp-task-input');
-      for(const inp of taskInputs){
-        const taskName = inp.value.trim();
-        if(taskName){
-          await apiFetch({
-            action:          'saveProject',
-            ngo:             currentUser.org,
-            component:       comp,
-            task_name:       taskName,
-            description:     '',
-            target_schools:  tSchools,
-            target_students: tStudents,
-            target_girls:    tGirls,
-            target_teachers: tTeachers,
-            target_meetings: tMeetings,
-            target_events:   tEvents,
-            start_date:      startDate,
-            end_date:        endDate
-          });
-        }
+      const taskBlocks = cb.closest('.comp-block').querySelectorAll('.task-block');
+      for(const block of taskBlocks){
+        const taskName = block.querySelector('.comp-task-input')?.value.trim();
+        if(!taskName) continue;
+        const taskStart = block.querySelector('.task-start-date')?.value || startDate;
+        const taskEnd   = block.querySelector('.task-end-date')?.value   || endDate;
+        // Collect sub-activities
+        const subActs = [...block.querySelectorAll('.sub-act-rows > div')].map(row => ({
+          name:       row.querySelector('.sub-act-name')?.value.trim() || '',
+          start_date: row.querySelector('.sub-act-start')?.value || '',
+          end_date:   row.querySelector('.sub-act-end')?.value   || ''
+        })).filter(s => s.name);
+
+        await apiFetch({
+          action:          'saveProject',
+          ngo:             currentUser.org,
+          component:       comp,
+          task_name:       taskName,
+          description:     '',
+          sub_activities:  JSON.stringify(subActs),
+          target_schools:  tSchools,
+          target_students: tStudents,
+          target_girls:    tGirls,
+          target_teachers: tTeachers,
+          target_meetings: tMeetings,
+          target_events:   tEvents,
+          start_date:      taskStart,
+          end_date:        taskEnd
+        });
       }
     }
     currentUser.profileDone = true;
@@ -2299,56 +2349,98 @@ function buildReportTaskCards(){
     </div>`;
     return;
   }
+
+  // Last report for carry-over
+  const lastRep = REPORTS.filter(r=>r.ngo===currentUser.org).sort((a,b)=>(+b.id||0)-(+a.id||0))[0] || {};
+  let lastTasks = [];
+  try { lastTasks = JSON.parse(lastRep.tasks_json || lastRep.tasks || '[]'); } catch(e){}
+
   // Group by component
   const byComp = {};
   myProjs.forEach(p => { const c=p.component||'Other'; if(!byComp[c]) byComp[c]=[]; byComp[c].push(p); });
 
   container.innerHTML = Object.entries(byComp).map(([comp, tasks]) =>
     `<div style="margin-bottom:14px">
-      <div style="font-size:11px;font-weight:700;color:var(--blue);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;padding:4px 8px;background:var(--blue)10;border-radius:6px">▸ ${comp}</div>
+      <div style="font-size:11px;font-weight:700;color:var(--blue);text-transform:uppercase;letter-spacing:.5px;
+        margin-bottom:6px;padding:5px 10px;background:var(--blue)10;border-radius:6px">▸ ${comp}</div>
       ${tasks.map(t => {
         const tid = 'task_' + (t.project_id || t.task_name).toString().replace(/[^a-z0-9]/gi,'_');
-        // Find last report's activity for this task (for carry-over)
-        const lastAct = (() => {
-          const lastRep = REPORTS.filter(r=>r.ngo===currentUser.org).sort((a,b)=>(+b.id||0)-(+a.id||0))[0];
-          if(!lastRep || !lastRep.tasks) return null;
-          try { return JSON.parse(lastRep.tasks).find(a=>a.task_name===t.task_name); } catch(e){ return null; }
-        })();
-        return `<div style="border:1px solid var(--border);border-radius:8px;margin-bottom:8px;overflow:hidden">
+        const lastAct = lastTasks.find(a => a.task_name === t.task_name) || {};
+        // Parse sub-activities from project definition
+        let subActs = [];
+        try { subActs = JSON.parse(t.sub_activities || '[]'); } catch(e){}
+
+        // Sub-activity rows HTML
+        const subRowsHtml = subActs.length
+          ? subActs.map((sa, si) => {
+              const sid = `${tid}_sub${si}`;
+              const lastSub = (lastAct.sub_activities || [])[si] || {};
+              return `<div style="border:1px solid #e0e8f8;border-radius:7px;padding:10px 12px;margin-bottom:6px;background:#fff">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap">
+                  <span style="font-size:12px;font-weight:600;color:var(--text);flex:1">${si+1}. ${sa.name}</span>
+                  ${sa.start_date?`<span style="font-size:10px;color:var(--muted)">${sa.start_date}${sa.end_date?' → '+sa.end_date:''}</span>`:''}
+                  <select id="${sid}_status"
+                    onchange="document.getElementById('${sid}_done_wrap').style.display=this.value==='Complete'?'flex':'none'"
+                    style="padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:#fff">
+                    <option value="Not started"${(lastSub.status||'Not started')==='Not started'?' selected':''}>⚪ Not started</option>
+                    <option value="In progress"${lastSub.status==='In progress'?' selected':''}>🟡 In progress</option>
+                    <option value="Complete"${lastSub.status==='Complete'?' selected':''}>🟢 Complete</option>
+                  </select>
+                </div>
+                <textarea id="${sid}_update" placeholder="Monthly update for this sub-activity..."
+                  style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;height:52px;resize:vertical;outline:none;margin-bottom:6px">${lastSub.update||''}</textarea>
+                <div id="${sid}_done_wrap" style="display:${lastSub.status==='Complete'?'flex':'none'};align-items:center;gap:8px;margin-bottom:6px">
+                  <label style="font-size:11px;white-space:nowrap">Completion Date:</label>
+                  <input type="date" id="${sid}_done" value="${lastSub.done_date||''}"
+                    style="padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;outline:none">
+                </div>
+                <div style="border:1px dashed var(--border);border-radius:7px;padding:8px;background:#fafbff">
+                  <div style="font-size:11px;font-weight:600;color:var(--blue);margin-bottom:5px">📷 Photos</div>
+                  <div onclick="document.getElementById('${sid}_file').click()"
+                    style="border:1px dashed #b0bcd4;border-radius:6px;padding:7px;text-align:center;cursor:pointer;background:#fff;font-size:11px;color:var(--muted)">
+                    Click to upload photos
+                  </div>
+                  <input type="file" id="${sid}_file" multiple accept="image/*" style="display:none"
+                    onchange="handleTaskPhotos(this,'${sid}')">
+                  <div class="photo-preview-grid" id="${sid}_preview" style="margin-top:5px"></div>
+                  <div style="font-size:10px;color:var(--muted)" id="${sid}_count"></div>
+                </div>
+              </div>`;
+            }).join('')
+          : `<div style="padding:10px 12px">
+              <div class="wform-group" style="margin-bottom:8px">
+                <label style="font-size:11px">Activity Details — what was done this month <span style="color:var(--red)">*</span></label>
+                <textarea id="${tid}_activity" placeholder="Describe what was done this month..."
+                  style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;height:64px;resize:vertical;outline:none">${lastAct.activity||''}</textarea>
+              </div>
+              <div id="${tid}_done_wrap" style="display:${lastAct.status==='Complete'?'block':'none'};margin-bottom:8px">
+                <label style="font-size:11px">Actual Completion Date</label>
+                <input type="date" id="${tid}_done" value="${lastAct.done_date||''}"
+                  style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;outline:none">
+              </div>
+              <div style="border:1px dashed var(--border);border-radius:8px;padding:10px;background:#fafbff;margin-top:4px">
+                <div style="font-size:11px;font-weight:600;color:var(--blue);margin-bottom:6px">📷 Photos / Documents</div>
+                <div onclick="document.getElementById('${tid}_file').click()"
+                  style="border:1px dashed #b0bcd4;border-radius:6px;padding:8px;text-align:center;cursor:pointer;background:#fff;font-size:11px;color:var(--muted)">
+                  Click to upload photos (JPG/PNG, max 5MB each, up to 5)
+                </div>
+                <input type="file" id="${tid}_file" multiple accept="image/*" style="display:none"
+                  onchange="handleTaskPhotos(this,'${tid}')">
+                <div class="photo-preview-grid" id="${tid}_preview" style="margin-top:6px"></div>
+                <div style="font-size:10px;color:var(--muted);margin-top:4px" id="${tid}_count"></div>
+              </div>
+            </div>`;
+
+        return `<div style="border:1px solid var(--border);border-radius:8px;margin-bottom:10px;overflow:hidden">
           <div style="background:#f0f6ff;padding:8px 12px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px">
             <div>
               <span style="font-weight:700;font-size:13px;color:var(--blue)">${t.task_name}</span>
               ${t.start_date?`<span style="font-size:11px;color:var(--muted);margin-left:8px">${t.start_date}${t.end_date?' → '+t.end_date:''}</span>`:''}
+              ${subActs.length?`<span style="font-size:10px;background:#dde8fb;color:var(--blue);border-radius:10px;padding:1px 7px;margin-left:6px">${subActs.length} sub-activities</span>`:''}
             </div>
-            <select class="task-status-sel" data-tid="${tid}"
-              onchange="document.getElementById('${tid}_done_wrap').style.display=this.value==='Complete'?'block':'none'"
-              style="padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:#fff">
-              <option value="Not started"${lastAct?.status==='Not started'?' selected':''}>⚪ Not started</option>
-              <option value="In progress"${lastAct?.status==='In progress'?' selected':''}>🟡 In progress</option>
-              <option value="Complete"${lastAct?.status==='Complete'?' selected':''}>🟢 Complete</option>
-            </select>
           </div>
-          ${t.description?`<div style="padding:6px 12px;background:#fffbe6;font-size:11px;color:var(--amber);border-bottom:1px solid var(--border)">📌 From profile: ${t.description}</div>`:''}
-          <div style="padding:10px 12px">
-            <div class="wform-group" style="margin-bottom:8px">
-              <label style="font-size:11px">Activity Details — what was done this month <span style="color:var(--red)">*</span></label>
-              <textarea id="${tid}_activity" placeholder="Describe in detail what was done for this task this month..." style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;height:64px;resize:vertical;outline:none"></textarea>
-            </div>
-            <div id="${tid}_done_wrap" style="display:${lastAct?.status==='Complete'?'block':'none'};margin-bottom:8px">
-              <label style="font-size:11px">Actual Completion Date</label>
-              <input type="date" id="${tid}_done" value="${lastAct?.done_date||''}" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;outline:none">
-            </div>
-            <div style="border:1px dashed var(--border);border-radius:8px;padding:10px;background:#fafbff;margin-top:4px">
-              <div style="font-size:11px;font-weight:600;color:var(--blue);margin-bottom:6px">📷 Photos / Documents</div>
-              <div onclick="document.getElementById('${tid}_file').click()"
-                style="border:1px dashed #b0bcd4;border-radius:6px;padding:8px;text-align:center;cursor:pointer;background:#fff;font-size:11px;color:var(--muted)">
-                Click to upload photos (JPG/PNG, max 5MB each, up to 5)
-              </div>
-              <input type="file" id="${tid}_file" multiple accept="image/*" style="display:none"
-                onchange="handleTaskPhotos(this,'${tid}')">
-              <div class="photo-preview-grid" id="${tid}_preview" style="margin-top:6px"></div>
-              <div style="font-size:10px;color:var(--muted);margin-top:4px" id="${tid}_count"></div>
-            </div>
+          <div style="padding:${subActs.length?'8px':'0px'} 10px ${subActs.length?'4px':'0px'}">
+            ${subRowsHtml}
           </div>
         </div>`;
       }).join('')}
@@ -2400,15 +2492,40 @@ async function submitMonthlyReport(){
   const myProjs = PROJECTS.filter(p => p.ngo === currentUser.org);
   const activities = myProjs.map(t => {
     const tid = 'task_' + (t.project_id || t.task_name).toString().replace(/[^a-z0-9]/gi,'_');
+
+    // Parse sub-activities defined in project profile
+    let subActDefs = [];
+    try { subActDefs = JSON.parse(t.sub_activities || '[]'); } catch(e){}
+
+    // Collect sub-activity monthly data
+    const sub_activities = subActDefs.map((sa, si) => {
+      const sid = `${tid}_sub${si}`;
+      return {
+        name:       sa.name,
+        start_date: sa.start_date || '',
+        end_date:   sa.end_date   || '',
+        update:     document.getElementById(sid+'_update')?.value.trim() || '',
+        status:     document.getElementById(sid+'_status')?.value || 'Not started',
+        done_date:  document.getElementById(sid+'_done')?.value  || ''
+      };
+    });
+
+    // Derive task-level status from sub-activities (or fallback single select)
+    const taskStatus = sub_activities.length
+      ? (sub_activities.every(s=>s.status==='Complete') ? 'Complete'
+         : sub_activities.some(s=>s.status==='In progress'||s.status==='Complete') ? 'In progress' : 'Not started')
+      : (document.querySelector(`.task-status-sel[data-tid="${tid}"]`)?.value || 'Not started');
+
     return {
-      task_id:    t.project_id || '',
-      task_name:  t.task_name,
-      component:  t.component,
-      activity:   document.getElementById(tid+'_activity')?.value.trim() || '',
-      status:     document.querySelector(`.task-status-sel[data-tid="${tid}"]`)?.value || 'Not started',
-      update:     document.getElementById(tid+'_update')?.value.trim() || '',
-      done_date:  document.getElementById(tid+'_done')?.value || '',
-      photos:     []  // filled below after upload
+      task_id:        t.project_id || '',
+      task_name:      t.task_name,
+      component:      t.component,
+      activity:       document.getElementById(tid+'_activity')?.value.trim() || '',
+      status:         taskStatus,
+      update:         document.getElementById(tid+'_update')?.value.trim()  || '',
+      done_date:      document.getElementById(tid+'_done')?.value            || '',
+      sub_activities: sub_activities,
+      photos:         []  // filled below after upload
     };
   });
 
@@ -2416,10 +2533,17 @@ async function submitMonthlyReport(){
   const overallStatus = activities.some(a=>a.status==='Complete') ? '100' :
                         activities.some(a=>a.status==='In progress') ? '60' : '0';
 
-  // Collect all per-task photos for total count
+  // Collect all per-task + per-sub-activity photos for upload
   const allTaskPhotos = activities.flatMap(a => {
     const tid = 'task_' + (a.task_id || a.task_name).toString().replace(/[^a-z0-9]/gi,'_');
-    return (taskPhotos[tid] || []).map(f => ({ file: f, tid, task_name: a.task_name }));
+    // Photos on the task itself
+    const taskP = (taskPhotos[tid] || []).map(f => ({ file: f, tid, task_name: a.task_name }));
+    // Photos on sub-activities
+    const subP  = a.sub_activities.flatMap((sa, si) => {
+      const sid = `${tid}_sub${si}`;
+      return (taskPhotos[sid] || []).map(f => ({ file: f, tid: sid, task_name: `${a.task_name} › ${sa.name}` }));
+    });
+    return [...taskP, ...subP];
   });
 
   const report = {
@@ -2665,9 +2789,9 @@ function downloadAllNGOsSummary(){
 
   rows.push([]);
 
-  // ── Section 2: Task-wise Status Summary ───────────────
-  rows.push(['SECTION 2 — TASK-WISE STATUS SUMMARY (LATEST MONTH)']);
-  rows.push(['S.No','Organisation','Component','Task Name','Status','Activity Detail','Done Date']);
+  // ── Section 2: Task-wise / Sub-activity Status Summary ───────────────
+  rows.push(['SECTION 2 — ACTIVITY STATUS SUMMARY (LATEST MONTH)']);
+  rows.push(['S.No','Organisation','Component','Activity','Sub Activity','Start Date','End Date','Monthly Update','Status','Completion Date']);
 
   let tsno = 1;
   SAMPLE_NGOS.forEach(ngo => {
@@ -2678,17 +2802,45 @@ function downloadAllNGOsSummary(){
     let lastActs = [];
     try { lastActs = JSON.parse(lastRep.tasks_json || lastRep.tasks || '[]'); } catch(e){}
 
-    projs.forEach((t, ti) => {
+    let isFirst = true;
+    projs.forEach(t => {
       const act = lastActs.find(a => a.task_name === t.task_name) || {};
-      rows.push([
-        ti === 0 ? tsno : '',
-        ti === 0 ? ngo.name : '',
-        t.component||'—',
-        t.task_name,
-        act.status || 'Not started',
-        act.activity || '—',
-        act.done_date || ''
-      ]);
+      let subActs = [];
+      try { subActs = JSON.parse(t.sub_activities||'[]'); } catch(e){}
+      const savedSubs = act.sub_activities || [];
+
+      if(subActs.length){
+        subActs.forEach((sa, si) => {
+          const saved = savedSubs[si] || {};
+          rows.push([
+            isFirst ? tsno : '',
+            isFirst ? ngo.name : '',
+            t.component||'—',
+            t.task_name,
+            `${si+1}. ${sa.name}`,
+            sa.start_date || t.start_date || '',
+            sa.end_date   || t.end_date   || '',
+            saved.update  || '',
+            saved.status  || 'Not started',
+            saved.done_date || ''
+          ]);
+          isFirst = false;
+        });
+      } else {
+        rows.push([
+          isFirst ? tsno : '',
+          isFirst ? ngo.name : '',
+          t.component||'—',
+          t.task_name,
+          '—',
+          t.start_date || '',
+          t.end_date   || '',
+          act.activity || act.update || '',
+          act.status   || 'Not started',
+          act.done_date || ''
+        ]);
+        isFirst = false;
+      }
     });
     rows.push([]);
     tsno++;
@@ -2875,53 +3027,91 @@ function buildOfficialReport(n, selMonth){
     { indicator:'Key Milestone Indicator (KMI)',    update: r.kmi      || '',                        status: r.kmi      ?'Completed':'Not started' },
   ];
 
-  // ── Section A Part 2: Task rows (from NGO's projects) ──
+  // ── Section A Part 2: Task rows (3-level: Component → Activity → Sub Activity) ──
   const myProjs = PROJECTS.filter(p => p.ngo === n.name);
-  const taskRows = myProjs.map(t => {
-    const act = taskActs.find(a => a.task_name === t.task_name) || {};
-    return {
-      component:  t.component || '—',
-      indicator:  t.task_name,
-      activity:   act.activity || '',
-      startDate:  t.start_date || '',
-      endDate:    t.end_date   || '',
-      doneDate:   act.done_date || '',
-      status:     act.status   || 'Not started',
-      update:     act.activity || ''
-    };
-  });
 
   let sno = 1;
   const kpiRowsHtml = KPI_ROWS.map(k=>`<tr>
     <td class="sno">${sno++}</td>
-    <td colspan="2">${k.indicator}</td>
+    <td colspan="3">${k.indicator}</td>
     <td></td><td></td><td></td>
     <td class="${statusClass(k.status)}">${k.status}</td>
     <td>${k.update}</td>
     <td></td>
   </tr>`).join('');
 
-  // Group task rows by component
+  // Group tasks by component
   const compGroups = {};
-  taskRows.forEach(t=>{ if(!compGroups[t.component]) compGroups[t.component]=[]; compGroups[t.component].push(t); });
+  myProjs.forEach(t=>{
+    const c = t.component || 'Other';
+    if(!compGroups[c]) compGroups[c]=[];
+    compGroups[c].push(t);
+  });
 
-  const taskRowsHtml = Object.entries(compGroups).map(([comp, tasks])=>`
-    <tr style="background:#eef2fb">
-      <td class="sno"></td>
-      <td colspan="8" style="font-weight:700;font-size:11px;color:var(--blue);padding:5px 8px">▸ ${comp}</td>
-    </tr>
-    ${tasks.map(t=>`<tr>
-      <td class="sno">${sno++}</td>
-      <td style="font-size:11px;color:var(--muted)"></td>
-      <td style="font-size:12px">${t.indicator}</td>
-      <td style="font-size:11px">${t.startDate}</td>
-      <td style="font-size:11px">${t.endDate}</td>
-      <td style="font-size:11px">${t.doneDate}</td>
-      <td class="${statusClass(t.status)}">${statusLabel(t.status)}</td>
-      <td style="font-size:11px">${t.activity}</td>
-      <td></td>
-    </tr>`).join('')}
-  `).join('');
+  const taskRowsHtml = Object.entries(compGroups).map(([comp, tasks])=>{
+    // Count total rows for this component (for rowspan)
+    const compRows = tasks.reduce((acc, t)=>{
+      let subActs = [];
+      try { subActs = JSON.parse(t.sub_activities||'[]'); } catch(e){}
+      return acc + Math.max(subActs.length, 1);
+    }, 0);
+
+    let compHeaderDone = false;
+    return tasks.map((t, ti)=>{
+      const act = taskActs.find(a => a.task_name === t.task_name) || {};
+      let subActs = [];
+      try { subActs = JSON.parse(t.sub_activities||'[]'); } catch(e){}
+      const savedSubs = act.sub_activities || [];
+
+      const actRowCount = Math.max(subActs.length, 1);
+
+      if(subActs.length){
+        // Expand into sub-activity rows
+        return subActs.map((sa, si)=>{
+          const saved = savedSubs[si] || {};
+          const rowSno = sno++;
+          const isFirstSub = si === 0;
+          const isFirstTask = ti === 0 && !compHeaderDone;
+          if(isFirstTask && isFirstSub) compHeaderDone = true;
+          return `<tr>
+            <td class="sno">${rowSno}</td>
+            ${isFirstTask && isFirstSub
+              ? `<td style="font-weight:700;font-size:11px;color:var(--blue);background:#eef2fb" rowspan="${compRows}">${comp}</td>`
+              : (isFirstSub && ti>0 ? '' : '')}
+            ${isFirstSub
+              ? `<td style="font-size:12px;font-weight:600" rowspan="${actRowCount}">${t.task_name}</td>`
+              : ''}
+            <td style="font-size:11px">${si+1}. ${sa.name}</td>
+            <td style="font-size:11px">${sa.start_date||t.start_date||''}</td>
+            <td style="font-size:11px">${sa.end_date||t.end_date||''}</td>
+            <td style="font-size:11px">${saved.done_date||''}</td>
+            <td class="${statusClass(saved.status||'Not started')}">${statusLabel(saved.status||'Not started')}</td>
+            <td style="font-size:11px">${saved.update||''}</td>
+            <td></td>
+          </tr>`;
+        }).join('');
+      } else {
+        // No sub-activities — single row
+        const rowSno = sno++;
+        const isFirstTask = ti === 0 && !compHeaderDone;
+        if(isFirstTask) compHeaderDone = true;
+        return `<tr>
+          <td class="sno">${rowSno}</td>
+          ${isFirstTask
+            ? `<td style="font-weight:700;font-size:11px;color:var(--blue);background:#eef2fb" rowspan="${compRows}">${comp}</td>`
+            : ''}
+          <td style="font-size:12px;font-weight:600">${t.task_name}</td>
+          <td style="font-size:11px;color:var(--muted)">—</td>
+          <td style="font-size:11px">${t.start_date||''}</td>
+          <td style="font-size:11px">${t.end_date||''}</td>
+          <td style="font-size:11px">${act.done_date||''}</td>
+          <td class="${statusClass(act.status||'Not started')}">${statusLabel(act.status||'Not started')}</td>
+          <td style="font-size:11px">${act.activity||act.update||''}</td>
+          <td></td>
+        </tr>`;
+      }
+    }).join('');
+  }).join('');
 
   const reportMonth = fmtMonth(r.month || (selMonth !== 'all' ? selMonth : ''));
 
@@ -2950,13 +3140,14 @@ function buildOfficialReport(n, selMonth){
         <tr>
           <th class="sno">S.No</th>
           <th style="width:10%">Component</th>
-          <th style="width:18%">KPI Indicator / Task Name</th>
+          <th style="width:16%">Activity</th>
+          <th style="width:16%">Sub Activity</th>
           <th style="width:7%">Start Date</th>
           <th style="width:7%">End Date</th>
-          <th style="width:8%">Actual Completion</th>
-          <th style="width:8%">Status</th>
-          <th style="width:22%">Activity Details (this month)</th>
-          <th style="width:6%">Photo</th>
+          <th style="width:7%">Completion Date</th>
+          <th style="width:7%">Status</th>
+          <th style="width:20%">Monthly Update</th>
+          <th style="width:5%">Photo</th>
         </tr>
       </thead>
       <tbody>
