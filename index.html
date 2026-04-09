@@ -336,7 +336,6 @@ tr:hover td{background:#FAFBFF}
         <div class="wform-group"><label>Major Component <span>*</span></label>
           <select id="pf-component">
             <option value="">-- Component chunein --</option>
-            ${MAJOR_COMPONENTS.map(c=>`<option value="${c}">${c}</option>`).join('')}
           </select>
         </div>
         <div class="wform-group"><label>Project / Task naam <span>*</span></label>
@@ -703,6 +702,17 @@ tr:hover td{background:#FAFBFF}
   </div>
 </div>
 
+<!-- PROFILE COMPLETION PROMPT (shown after first-time password change) -->
+<div id="profile-prompt-overlay" style="display:none;position:fixed;inset:0;background:rgba(26,60,110,0.75);z-index:400;align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:16px;padding:36px 32px;max-width:420px;width:90%;text-align:center;box-shadow:0 8px 40px rgba(0,0,0,0.25)">
+    <div style="width:60px;height:60px;border-radius:50%;background:#E1F5EE;display:flex;align-items:center;justify-content:center;font-size:28px;margin:0 auto 16px">✅</div>
+    <h2 style="font-size:20px;font-weight:700;color:var(--blue);margin-bottom:8px">Password set ho gaya!</h2>
+    <p style="color:var(--muted);font-size:13px;line-height:1.6;margin-bottom:24px">Ab apna NGO profile complete karein — district, block, school select karein aur apna major component chunein. Yeh data PMU dashboard par dikhega aur monthly reports mein kaam aayega.</p>
+    <button onclick="closeProfilePromptAndSetup()" style="width:100%;padding:12px;background:var(--blue);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;margin-bottom:8px">📋 Profile Complete Karein →</button>
+    <button onclick="skipProfileSetup()" style="background:none;border:none;color:var(--muted);font-size:12px;cursor:pointer;text-decoration:underline;padding:4px">Abhi nahin, baad mein karunga</button>
+  </div>
+</div>
+
 <!-- LOADER OVERLAY -->
 <div id="loader-overlay" style="display:none;position:fixed;inset:0;background:rgba(26,60,110,0.55);z-index:9999;align-items:center;justify-content:center;flex-direction:column;gap:14px">
   <div style="width:44px;height:44px;border:4px solid rgba(255,255,255,0.3);border-top-color:#fff;border-radius:50%;animation:spin 0.8s linear infinite"></div>
@@ -833,14 +843,30 @@ async function doChangePassword(){
     alert('Server se connect nahi ho saka. Internet check karein.');
     return;
   }
-  // Step 2: Update session and start app (separate from API try-catch)
+  // Step 2: Update session and show profile prompt (separate from API try-catch)
   currentUser.password = np;
   currentUser.firstLogin = false;
+  currentUser.profileDone = false; // First time — profile wizard must be completed
   localStorage.setItem('ngo_session', JSON.stringify(currentUser));
   document.getElementById('pwd-change-screen').style.display = 'none';
   try { await loadSheetData(); } catch(e){ console.warn(e); }
   hideLoader();
-  startApp();
+  // Show "Complete your profile" prompt before entering the app
+  const promptOverlay = document.getElementById('profile-prompt-overlay');
+  if(promptOverlay) promptOverlay.style.display = 'flex';
+}
+
+function closeProfilePromptAndSetup(){
+  const overlay = document.getElementById('profile-prompt-overlay');
+  if(overlay) overlay.style.display = 'none';
+  showProfileScreen();
+}
+
+function skipProfileSetup(){
+  document.getElementById('profile-prompt-overlay').style.display = 'none';
+  currentUser.profileDone = true;
+  localStorage.setItem('ngo_session', JSON.stringify(currentUser));
+  initApp();
 }
 
 function doLogout(){
@@ -848,6 +874,8 @@ function doLogout(){
   localStorage.removeItem('ngo_session');
   document.getElementById('main-screen').style.display='none';
   document.getElementById('pwd-change-screen').style.display='none';
+  document.getElementById('profile-screen').style.display='none';
+  document.getElementById('profile-prompt-overlay').style.display='none';
   document.getElementById('auth-screen').style.display='flex';
 }
 
@@ -861,10 +889,38 @@ function startApp(){
 // PROFILE SETUP
 // ════════════════════════════════════
 function showProfileScreen(){
+  document.getElementById('auth-screen').style.display='none';
   document.getElementById('profile-screen').style.display='block';
-  document.getElementById('pf-org').value = currentUser.org||'';
+  // Pre-fill read-only fields
+  const orgEl = document.getElementById('pf-org');
+  if(orgEl) orgEl.value = currentUser.org||'';
+  const emailEl = document.getElementById('pf-email');
+  if(emailEl){ emailEl.value = currentUser.email||''; emailEl.readOnly = true; emailEl.style.background='#f0f4fa'; }
+  const personEl = document.getElementById('pf-person');
+  if(personEl && !personEl.value) personEl.value = currentUser.name||'';
+  // Build district checkboxes
   if(document.getElementById('dist-checks')) buildDistChecks('dist-checks');
   if(document.getElementById('theme-checks')) buildThemeChecks('theme-checks');
+  // Build major component dropdown (template literal in HTML doesn't execute)
+  const compSel = document.getElementById('pf-component');
+  if(compSel && compSel.options.length < 2){
+    MAJOR_COMPONENTS.forEach(c => {
+      const opt = document.createElement('option');
+      opt.value = c; opt.textContent = c;
+      compSel.appendChild(opt);
+    });
+  }
+  // Reset wizard to step 1
+  for(let i=1;i<=4;i++){
+    const pg = document.getElementById(`profile-p${i}`);
+    if(pg) pg.style.display = i===1 ? 'block' : 'none';
+    const dot = document.getElementById(`psi${i}`);
+    if(dot){ dot.classList.remove('active','done'); if(i===1) dot.classList.add('active'); }
+  }
+  for(let i=1;i<=3;i++){
+    const line = document.getElementById(`psl${i}`);
+    if(line) line.classList.remove('done');
+  }
 }
 
 function buildDistChecks(containerId){
@@ -1158,6 +1214,8 @@ function hideLoader(){
 // INIT APP
 // ════════════════════════════════════
 function initApp(){
+  document.getElementById('profile-screen').style.display='none';
+  document.getElementById('profile-prompt-overlay').style.display='none';
   document.getElementById('main-screen').style.display='block';
   document.getElementById('sb-name').textContent = currentUser.name;
   document.getElementById('sb-role').textContent = currentUser.role==='admin'?'PMU Administrator':'NGO Partner';
