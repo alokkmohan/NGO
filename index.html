@@ -326,29 +326,13 @@ tr:hover td{background:#FAFBFF}
       </div>
     </div>
 
-    <!-- Step 3: Component & Project Setup -->
+    <!-- Step 3: Multi-Component & Multi-Task Setup -->
     <div class="card" id="profile-p3" style="display:none">
-      <div class="card-title">🎯 Apna project / kaam define karein</div>
-      <div style="background:#f0f6ff;border:1px solid var(--blue)30;border-radius:8px;padding:10px 14px;font-size:12px;color:var(--blue);margin-bottom:14px">
-        Pehli baar mein apna ek project define karein. Baad mein aur projects add kar sakte hain.
+      <div class="card-title">🎯 Components aur Tasks define karein</div>
+      <div style="background:#f0f6ff;border:1px solid #2E6DB430;border-radius:8px;padding:10px 14px;font-size:12px;color:var(--blue);margin-bottom:14px">
+        Jin-jin components mein aap kaam karte hain wo chunein — har component ke andar apne tasks likhein. Ek se zyada component aur task add kar sakte hain.
       </div>
-      <div class="wform-row">
-        <div class="wform-group"><label>Major Component <span>*</span></label>
-          <select id="pf-component">
-            <option value="">-- Component chunein --</option>
-          </select>
-        </div>
-        <div class="wform-group"><label>Project / Task naam <span>*</span></label>
-          <input id="pf-task-name" placeholder="e.g. Girls Dropout Prevention Drive">
-        </div>
-      </div>
-      <div class="wform-group"><label>Kaam ka vivran (description) <span>*</span></label>
-        <textarea id="pf-desc" placeholder="Is project mein aap kya karenge — 2-3 lines mein..."></textarea>
-      </div>
-      <div class="wform-row">
-        <div class="wform-group"><label>Start date</label><input id="pf-start" type="date"></div>
-        <div class="wform-group"><label>Expected end date</label><input id="pf-end" type="date"></div>
-      </div>
+      <div id="comp-task-builder"></div>
       <div class="wizard-nav">
         <button class="btn-sec" onclick="profileBack(3)">← Back</button>
         <button class="btn-blu" onclick="profileNext(3)">Next →</button>
@@ -357,8 +341,12 @@ tr:hover td{background:#FAFBFF}
 
     <!-- Step 4: KPI Targets -->
     <div class="card" id="profile-p4" style="display:none">
-      <div class="card-title">📊 KPI targets (is project ke liye)</div>
-      <div style="font-size:12px;color:var(--muted);margin-bottom:14px">Poore project ki duration ke targets bharein — har mahine nahi, sirf ek baar.</div>
+      <div class="card-title">📊 Overall KPI targets</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:14px">Poore programme ki duration ke overall targets bharein — ye sabhi tasks par laagu honge.</div>
+      <div class="wform-row">
+        <div class="wform-group"><label>Programme start date</label><input id="pf-start" type="date"></div>
+        <div class="wform-group"><label>Expected end date</label><input id="pf-end" type="date"></div>
+      </div>
       <div class="wform-row3">
         <div class="wform-group"><label>Target schools</label><input id="pf-tschools" type="number" placeholder="0" min="0"></div>
         <div class="wform-group"><label>Target students</label><input id="pf-tstudents" type="number" placeholder="0" min="0"></div>
@@ -906,15 +894,8 @@ function showProfileScreen(){
   // Build district checkboxes
   if(document.getElementById('dist-checks')) buildDistChecks('dist-checks');
   if(document.getElementById('theme-checks')) buildThemeChecks('theme-checks');
-  // Build major component dropdown (template literal in HTML doesn't execute)
-  const compSel = document.getElementById('pf-component');
-  if(compSel && compSel.options.length < 2){
-    MAJOR_COMPONENTS.forEach(c => {
-      const opt = document.createElement('option');
-      opt.value = c; opt.textContent = c;
-      compSel.appendChild(opt);
-    });
-  }
+  // Build multi-component + multi-task builder
+  buildCompTaskBuilder();
   // Reset wizard to step 1
   for(let i=1;i<=4;i++){
     const pg = document.getElementById(`profile-p${i}`);
@@ -1045,6 +1026,45 @@ function buildThemeChecks(containerId){
     </label>`).join('');
 }
 
+function buildCompTaskBuilder(){
+  const container = document.getElementById('comp-task-builder');
+  if(!container) return;
+  container.innerHTML = MAJOR_COMPONENTS.map(c => {
+    const cid = 'ct_' + c.replace(/[^a-z0-9]/gi,'_').toLowerCase();
+    return `<div class="comp-block" style="margin-bottom:6px;border:1px solid var(--border);border-radius:8px;overflow:hidden">
+      <label style="display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;background:#fafafa;margin:0">
+        <input type="checkbox" class="comp-cb" value="${c}" onchange="toggleCompTasks(this)" style="width:15px;height:15px;flex-shrink:0">
+        <span style="font-weight:600;font-size:13px;color:var(--blue)">${c}</span>
+      </label>
+      <div class="comp-task-area" style="display:none;padding:10px 14px 12px;background:#fff;border-top:1px solid var(--border)">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:6px">Is component ke andar apne tasks likhein:</div>
+        <div class="task-rows" id="${cid}"></div>
+        <button type="button" onclick="addCompTask('${cid}')" style="margin-top:4px;padding:5px 14px;background:var(--blue);color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer">+ Task add karein</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function toggleCompTasks(cb){
+  const area = cb.closest('.comp-block').querySelector('.comp-task-area');
+  area.style.display = cb.checked ? 'block' : 'none';
+  if(cb.checked){
+    const taskRows = area.querySelector('.task-rows');
+    if(!taskRows.children.length) addCompTask(taskRows.id);
+  }
+}
+
+function addCompTask(containerId){
+  const taskRows = document.getElementById(containerId);
+  if(!taskRows) return;
+  const div = document.createElement('div');
+  div.style.cssText = 'display:flex;gap:6px;margin-bottom:6px';
+  div.innerHTML = `<input type="text" class="comp-task-input" placeholder="Task naam likhein... (e.g. Girls dropout prevention drive)" style="flex:1;padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;outline:none">
+    <button type="button" onclick="this.parentElement.remove()" title="Hatao" style="padding:4px 10px;background:#fff0f0;border:1px solid #f5c6c6;color:var(--red);border-radius:6px;font-size:16px;cursor:pointer;line-height:1">−</button>`;
+  taskRows.appendChild(div);
+  div.querySelector('input').focus();
+}
+
 function profileNext(step){
   // Validation
   if(step===1){
@@ -1060,8 +1080,15 @@ function profileNext(step){
     if(!checkedSchools.length){ alert('Kam se kam ek school chunein — school section mein block select karke schools chunein'); return; }
   }
   if(step===3){
-    if(!document.getElementById('pf-component').value){ alert('Major Component chunein'); return; }
-    if(!document.getElementById('pf-task-name').value.trim()){ alert('Project/Task naam zaroori hai'); return; }
+    const checkedComps = document.querySelectorAll('.comp-cb:checked');
+    if(!checkedComps.length){ alert('Kam se kam ek Major Component chunein'); return; }
+    let hasTask = false;
+    checkedComps.forEach(cb => {
+      cb.closest('.comp-block').querySelectorAll('.comp-task-input').forEach(inp => {
+        if(inp.value.trim()) hasTask = true;
+      });
+    });
+    if(!hasTask){ alert('Kam se kam ek task ka naam likhein'); return; }
   }
   document.getElementById(`profile-p${step}`).style.display='none';
   document.getElementById(`profile-p${step+1}`).style.display='block';
@@ -1084,8 +1111,10 @@ async function saveProfile(){
   const selDist   = [...document.querySelectorAll('#dist-checks input:checked')].map(c=>c.value).join(', ');
   const selBlocks = [...document.querySelectorAll('#block-checks input:checked')].map(c=>c.value.split('|')[1]).join(', ');
   const selSchools= [...document.querySelectorAll('#school-list input:checked')].map(c=>c.value).join(' | ');
-  const component = document.getElementById('pf-component')?.value || '';
-  const taskName  = document.getElementById('pf-task-name')?.value.trim() || '';
+
+  // Collect all checked components
+  const checkedComps = [...document.querySelectorAll('.comp-cb:checked')];
+  const allComponents = checkedComps.map(cb => cb.value).join(', ');
 
   showLoader('Profile save ho raha hai…');
   try {
@@ -1100,30 +1129,44 @@ async function saveProfile(){
       dist:       selDist,
       blocks:     selBlocks,
       schools:    selSchools,
-      theme:      component,
+      theme:      allComponents,
       phone:      document.getElementById('pf-phone')?.value  || '',
       desig:      document.getElementById('pf-desig')?.value  || '',
       org_type:   document.getElementById('pf-type')?.value   || '',
-      desc:       document.getElementById('pf-desc')?.value   || '',
       start_date: document.getElementById('pf-start')?.value  || ''
     });
-    // Save first project
-    if(taskName){
-      await apiFetch({
-        action:          'saveProject',
-        ngo:             currentUser.org,
-        component:       component,
-        task_name:       taskName,
-        description:     document.getElementById('pf-desc')?.value   || '',
-        target_schools:  document.getElementById('pf-tschools')?.value || 0,
-        target_students: document.getElementById('pf-tstudents')?.value || 0,
-        target_girls:    document.getElementById('pf-tgirls')?.value   || 0,
-        target_teachers: document.getElementById('pf-tteachers')?.value|| 0,
-        target_meetings: document.getElementById('pf-tmeetings')?.value|| 0,
-        target_events:   document.getElementById('pf-tevents')?.value  || 0,
-        start_date:      document.getElementById('pf-start')?.value    || '',
-        end_date:        document.getElementById('pf-end')?.value      || ''
-      });
+    // Save each task for each checked component
+    const startDate = document.getElementById('pf-start')?.value || '';
+    const endDate   = document.getElementById('pf-end')?.value   || '';
+    const tSchools  = document.getElementById('pf-tschools')?.value  || 0;
+    const tStudents = document.getElementById('pf-tstudents')?.value || 0;
+    const tGirls    = document.getElementById('pf-tgirls')?.value    || 0;
+    const tTeachers = document.getElementById('pf-tteachers')?.value || 0;
+    const tMeetings = document.getElementById('pf-tmeetings')?.value || 0;
+    const tEvents   = document.getElementById('pf-tevents')?.value   || 0;
+    for(const cb of checkedComps){
+      const comp = cb.value;
+      const taskInputs = cb.closest('.comp-block').querySelectorAll('.comp-task-input');
+      for(const inp of taskInputs){
+        const taskName = inp.value.trim();
+        if(taskName){
+          await apiFetch({
+            action:          'saveProject',
+            ngo:             currentUser.org,
+            component:       comp,
+            task_name:       taskName,
+            description:     '',
+            target_schools:  tSchools,
+            target_students: tStudents,
+            target_girls:    tGirls,
+            target_teachers: tTeachers,
+            target_meetings: tMeetings,
+            target_events:   tEvents,
+            start_date:      startDate,
+            end_date:        endDate
+          });
+        }
+      }
     }
     currentUser.profileDone = true;
     localStorage.setItem('ngo_session', JSON.stringify(currentUser));
