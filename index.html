@@ -428,6 +428,18 @@ tr:hover td{background:#FAFBFF}
         <div class="stat-card mini"><div class="stat-val" id="s-students">—</div><div class="stat-label">Students benefited</div><div class="stat-sub" id="s-girls-sub"></div></div>
       </div>
 
+      <!-- ── NGO PERSONAL DASHBOARD (only for NGO role) ── -->
+      <div id="ngo-dashboard" style="display:none;margin-bottom:14px">
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:12px">
+          <div class="stat-card mini" style="border-left:4px solid var(--blue)"><div class="stat-val" id="nd-schools">0</div><div class="stat-label">Schools covered</div><div class="stat-sub">Cumulative total</div></div>
+          <div class="stat-card mini" style="border-left:4px solid var(--green)"><div class="stat-val" id="nd-students">0</div><div class="stat-label">Students benefited</div><div class="stat-sub" id="nd-girls"></div></div>
+          <div class="stat-card mini" style="border-left:4px solid var(--gold)"><div class="stat-val" id="nd-teachers">0</div><div class="stat-label">Teachers trained</div><div class="stat-sub" id="nd-meetings"></div></div>
+          <div class="stat-card mini" style="border-left:4px solid var(--purple)"><div class="stat-val" id="nd-reports">0</div><div class="stat-label">Reports submitted</div><div class="stat-sub" id="nd-last-month"></div></div>
+        </div>
+        <div id="ngo-projects-status" class="card" style="margin-bottom:12px;padding:14px 16px"></div>
+        <div id="ngo-inKind-card" class="card" style="margin-bottom:12px;padding:14px 16px;display:none"></div>
+      </div>
+
       <!-- ── ADMIN ANALYTICS (only shown for admin role) ── -->
       <div id="admin-charts" style="display:none">
 
@@ -596,9 +608,39 @@ tr:hover td{background:#FAFBFF}
         </div>
       </div>
 
-      <!-- SECTION D: Narrative -->
+      <!-- SECTION E: In-kind / Material Support -->
       <div class="card" style="margin-bottom:12px">
-        <div class="card-title">📋 Section D — Narrative Report</div>
+        <div class="card-title">🎁 Section D — In-kind / Material / Donation Support</div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:10px">Agar is mahine koi equipment, material, training kit, machine ya donation diya ho to yahan darj karein.</div>
+        <div class="wform-row">
+          <div class="wform-group">
+            <label>Equipment / Material diya</label>
+            <input id="r-equipment" placeholder="E.g: 50 schools ko sports kit, 200 chhatron ko cycle">
+          </div>
+          <div class="wform-group">
+            <label>Training material / kits</label>
+            <input id="r-training" placeholder="E.g: 30 teachers ko activity kit, 5 schools ko library books">
+          </div>
+        </div>
+        <div class="wform-row">
+          <div class="wform-group">
+            <label>Machine / Infrastructure</label>
+            <input id="r-machine" placeholder="E.g: 3 schools ko computer, 2 schools ko projector">
+          </div>
+          <div class="wform-group">
+            <label>Cash / Monetary donation (agar koi)</label>
+            <input id="r-donation" placeholder="E.g: ₹50,000 — school renovation ke liye">
+          </div>
+        </div>
+        <div class="wform-group">
+          <label>Koi aur support / in-kind contribution</label>
+          <input id="r-other-support" placeholder="E.g: Uniform, stationery, school bag, food kit...">
+        </div>
+      </div>
+
+      <!-- SECTION D (was E): Narrative -->
+      <div class="card" style="margin-bottom:12px">
+        <div class="card-title">📋 Section E — Narrative Report</div>
         <div class="wform-group">
           <label>KMI — Is mahine ka sabse bada parinam (ek line mein) <span style="color:var(--red)">*</span></label>
           <input id="r-kmi" placeholder="E.g: 420 dropout girls re-enrolled in 3 districts of Agra">
@@ -1343,59 +1385,117 @@ function initApp(){
 }
 
 function updateDashboardStats(){
-  // Show zeros if no data yet
-  const total = SAMPLE_NGOS.length;
+  const isAdmin = currentUser?.role === 'admin';
 
-  // Active partners
-  document.getElementById('s-partners').textContent = total || '0';
-  const subReported = REPORTS.length;
-  document.getElementById('s-partners-sub').textContent =
-    total ? `${subReported} report${subReported!==1?'s':''} submitted` : 'No NGO data yet';
+  // ─── NGO personal dashboard ───────────────────────
+  if(!isAdmin){
+    document.getElementById('ngo-dashboard').style.display = 'block';
+    const myNGO  = SAMPLE_NGOS.find(n=>n.name===currentUser.org)||{};
+    const myReps = REPORTS.filter(r=>r.ngo===currentUser.org).sort((a,b)=>(+a.id||0)-(+b.id||0));
+    const myProjs= PROJECTS.filter(p=>p.ngo===currentUser.org);
 
-  // Unique districts
-  const distSet = new Set();
-  SAMPLE_NGOS.forEach(n => (n.dist||'').split(',').forEach(d => { if(d.trim()) distSet.add(d.trim()); }));
-  document.getElementById('s-districts').textContent = distSet.size || '0';
+    let cumS=0,cumSt=0,cumG=0,cumT=0,cumM=0,cumE=0,cumEqp=[],cumDon=[];
+    myReps.forEach(r=>{
+      cumS+=+r.schools||0; cumSt+=+r.students||0; cumG+=+r.girls||0;
+      cumT+=+r.teachers||0; cumM+=+r.meetings||0; cumE+=+r.events||0;
+      if(r.equipment) cumEqp.push(r.equipment);
+      if(r.machine)   cumEqp.push(r.machine);
+      if(r.donation)  cumDon.push(r.donation);
+      if(r.other_support) cumDon.push(r.other_support);
+    });
+    const lastRep = myReps[myReps.length-1];
 
-  // Total schools
-  const totalSchools = SAMPLE_NGOS.reduce((a,n) => a + (+n.schools||0), 0);
-  document.getElementById('s-schools').textContent = totalSchools ? totalSchools.toLocaleString('en-IN') : '0';
-  const latestMonth = SAMPLE_NGOS.map(n=>n.month).filter(Boolean).sort().reverse()[0] || '';
-  document.getElementById('s-schools-sub').textContent = latestMonth ? 'Last report: ' + latestMonth : '';
+    // Top stat cards — NGO own data
+    document.getElementById('s-partners').textContent = (myNGO.dist||'').split(',').filter(s=>s.trim()).length || '—';
+    document.getElementById('s-partners-sub').textContent = 'Districts';
+    const distLabel = document.getElementById('s-partners').closest('.stat-card').querySelector('.stat-label');
+    if(distLabel) distLabel.textContent = 'Districts covered';
+    document.getElementById('s-districts').textContent = (myNGO.blocks||'').split(',').filter(s=>s.trim()).length || '—';
+    document.getElementById('s-districts').closest('.stat-card').querySelector('.stat-label').textContent = 'Blocks covered';
+    document.getElementById('s-districts').closest('.stat-card').querySelector('.stat-sub').textContent = '';
+    document.getElementById('s-schools').textContent = cumS || myNGO.schools || '—';
+    document.getElementById('s-schools-sub').textContent = lastRep ? 'Last: '+lastRep.month : '';
+    document.getElementById('s-students').textContent = cumSt ? (cumSt>=100000?(cumSt/100000).toFixed(1)+'L':cumSt) : myNGO.students||'—';
+    document.getElementById('s-girls-sub').textContent = cumG ? 'Girls: '+cumG : '';
 
-  // Total students & girls
-  const totalStudents = SAMPLE_NGOS.reduce((a,n) => a + (+n.students||0), 0);
-  const totalGirls    = SAMPLE_NGOS.reduce((a,n) => a + (+n.girls||0), 0);
-  document.getElementById('s-students').textContent = totalStudents
-    ? (totalStudents >= 100000 ? (totalStudents/100000).toFixed(1)+'L+' : totalStudents.toLocaleString('en-IN'))
-    : '0';
-  document.getElementById('s-girls-sub').textContent = totalGirls
-    ? 'Girls: ' + (totalGirls >= 100000 ? (totalGirls/100000).toFixed(1)+'L' : totalGirls.toLocaleString('en-IN'))
-    : '';
+    // NGO KPI cards
+    document.getElementById('nd-schools').textContent = cumS||myNGO.schools||0;
+    document.getElementById('nd-students').textContent = cumSt?(cumSt>=100000?(cumSt/100000).toFixed(1)+'L':cumSt):myNGO.students||0;
+    document.getElementById('nd-girls').textContent = cumG?'Girls: '+cumG:'';
+    document.getElementById('nd-teachers').textContent = cumT;
+    document.getElementById('nd-meetings').textContent = cumM+' meetings · '+cumE+' events';
+    document.getElementById('nd-reports').textContent = myReps.length;
+    document.getElementById('nd-last-month').textContent = lastRep?'Last: '+lastRep.month:'Koi report nahi';
 
-  // Build theme filter buttons from real data
-  const themes = [...new Set(SAMPLE_NGOS.map(n=>n.theme).filter(Boolean))];
-  const bar = document.getElementById('theme-filter-bar');
-  // Remove old theme buttons (keep only "All NGOs")
-  [...bar.querySelectorAll('.fbtn:not(.all-btn)')].forEach(b=>b.remove());
-  themes.forEach(t => {
-    const btn = document.createElement('button');
-    btn.className = 'fbtn';
-    btn.textContent = t;
-    btn.onclick = function(){ filterMap(t, this); };
-    bar.appendChild(btn);
-  });
+    // Projects status
+    const projCard = document.getElementById('ngo-projects-status');
+    if(myProjs.length){
+      const byComp={};
+      myProjs.forEach(p=>{const c=p.component||'Other';if(!byComp[c])byComp[c]=[];byComp[c].push(p);});
+      let html='<div class="card-title" style="margin-bottom:10px">🎯 Aapke Tasks ki Status</div>';
+      Object.entries(byComp).forEach(([comp,tasks])=>{
+        html+=`<div style="margin-bottom:8px"><div style="font-size:11px;font-weight:700;color:var(--blue);margin-bottom:4px;padding:3px 8px;background:var(--blue)10;border-radius:4px">▸ ${comp}</div>`;
+        tasks.forEach(t=>{
+          let latestStatus='Not started';
+          for(let i=myReps.length-1;i>=0;i--){
+            try{const acts=JSON.parse(myReps[i].tasks||'[]');const a=acts.find(x=>x.task_name===t.task_name);if(a){latestStatus=a.status;break;}}catch(e){}
+          }
+          const col=latestStatus==='Complete'?'var(--green)':latestStatus==='In progress'?'var(--gold)':'var(--muted)';
+          const icon=latestStatus==='Complete'?'🟢':latestStatus==='In progress'?'🟡':'⚪';
+          html+=`<div style="display:flex;align-items:center;justify-content:space-between;padding:5px 10px;background:#f8f9ff;border-radius:6px;margin-bottom:3px;font-size:12px">
+            <span>${t.task_name}</span><span style="color:${col};font-size:11px;font-weight:600">${icon} ${latestStatus}</span></div>`;
+        });
+        html+='</div>';
+      });
+      html+=`<div style="margin-top:10px"><button class="btn-blu" style="font-size:12px;padding:6px 16px" onclick="showPage('monthly-report')">📝 Is Mahine ki Report Bharo →</button></div>`;
+      projCard.innerHTML=html;
+    } else {
+      projCard.innerHTML=`<div style="color:var(--muted);font-size:12px;padding:8px">Tasks define nahi kiye. <a href="#" onclick="reopenProfileWizard();return false;" style="color:var(--blue2)">Profile mein add karein →</a></div>`;
+    }
 
-  // Build map legend from real themes
-  const legend = document.getElementById('map-legend');
-  if(legend){
-    legend.innerHTML = themes.map(t => {
-      const col = THEME_COLORS[t] || '#2E6DB4';
-      return `<div class="leg"><div class="leg-dot" style="background:${col}"></div>${t}</div>`;
-    }).join('');
+    // In-kind card
+    const ikCard=document.getElementById('ngo-inKind-card');
+    if(cumEqp.length||cumDon.length){
+      ikCard.style.display='block';
+      ikCard.innerHTML=`<div class="card-title" style="margin-bottom:8px">🎁 In-kind / Material Support Record</div>
+        ${cumEqp.length?`<div style="font-size:12px;margin-bottom:4px"><b>Equipment/Machine:</b> ${cumEqp.join(' | ')}</div>`:''}
+        ${cumDon.length?`<div style="font-size:12px"><b>Donation/Other:</b> ${cumDon.join(' | ')}</div>`:''}`;
+    } else { ikCard.style.display='none'; }
+
+    buildThemeFilterBar(); return;
   }
 
-  if(currentUser && currentUser.role === 'admin') renderAdminCharts();
+  // ─── ADMIN dashboard ──────────────────────────────
+  document.getElementById('ngo-dashboard').style.display='none';
+  const total=SAMPLE_NGOS.length;
+  document.getElementById('s-partners').textContent=total||'0';
+  document.getElementById('s-partners-sub').textContent=total?`${REPORTS.length} reports submitted`:'No data yet';
+  document.getElementById('s-partners').closest('.stat-card').querySelector('.stat-label').textContent='Active partners';
+  const distSet=new Set();
+  SAMPLE_NGOS.forEach(n=>(n.dist||'').split(',').forEach(d=>{if(d.trim())distSet.add(d.trim());}));
+  document.getElementById('s-districts').textContent=distSet.size||'0';
+  document.getElementById('s-districts').closest('.stat-card').querySelector('.stat-label').textContent='Districts covered';
+  document.getElementById('s-districts').closest('.stat-card').querySelector('.stat-sub').textContent='of 75 UP districts';
+  const totalSchools=SAMPLE_NGOS.reduce((a,n)=>a+(+n.schools||0),0);
+  document.getElementById('s-schools').textContent=totalSchools?totalSchools.toLocaleString('en-IN'):'0';
+  const latestMonth=SAMPLE_NGOS.map(n=>n.month).filter(Boolean).sort().reverse()[0]||'';
+  document.getElementById('s-schools-sub').textContent=latestMonth?'Last: '+latestMonth:'';
+  const totalStudents=SAMPLE_NGOS.reduce((a,n)=>a+(+n.students||0),0);
+  const totalGirls=SAMPLE_NGOS.reduce((a,n)=>a+(+n.girls||0),0);
+  document.getElementById('s-students').textContent=totalStudents?(totalStudents>=100000?(totalStudents/100000).toFixed(1)+'L+':totalStudents.toLocaleString('en-IN')):'0';
+  document.getElementById('s-girls-sub').textContent=totalGirls?'Girls: '+(totalGirls>=100000?(totalGirls/100000).toFixed(1)+'L':totalGirls.toLocaleString('en-IN')):'';
+
+  buildThemeFilterBar();
+  renderAdminCharts();
+}
+
+function buildThemeFilterBar(){
+  const themes=[...new Set(SAMPLE_NGOS.map(n=>n.theme).filter(Boolean))];
+  const bar=document.getElementById('theme-filter-bar');
+  [...bar.querySelectorAll('.fbtn:not(.all-btn)')].forEach(b=>b.remove());
+  themes.forEach(t=>{const btn=document.createElement('button');btn.className='fbtn';btn.textContent=t;btn.onclick=function(){filterMap(t,this);};bar.appendChild(btn);});
+  const legend=document.getElementById('map-legend');
+  if(legend) legend.innerHTML=themes.map(t=>`<div class="leg"><div class="leg-dot" style="background:${THEME_COLORS[t]||'#2E6DB4'}"></div>${t}</div>`).join('');
 }
 
 // ══════════════════════════════════════════════════════
@@ -2122,6 +2222,11 @@ async function submitMonthlyReport(){
     tasks:        JSON.stringify(activities),
     status:       overallStatus,
     kmi:          kmi,
+    equipment:    document.getElementById('r-equipment')?.value || '',
+    training:     document.getElementById('r-training')?.value  || '',
+    machine:      document.getElementById('r-machine')?.value   || '',
+    donation:     document.getElementById('r-donation')?.value  || '',
+    other_support:document.getElementById('r-other-support')?.value || '',
     achieve:      document.getElementById('r-achieve').value,
     challenges:   document.getElementById('r-challenges').value,
     support:      document.getElementById('r-support').value,
@@ -2227,11 +2332,11 @@ function downloadKPIReport(){
   rows.push([]);
   // Section B: Monthly numbers
   rows.push(['SECTION B — MONTHLY SUMMARY NUMBERS']);
-  rows.push(['Month','Schools','Students','Girls','Teachers','Meetings','Events','SC/ST/OBC','Divyang','Dropout','KMI']);
+  rows.push(['Month','Schools','Students','Girls','Teachers','Meetings','Events','SC/ST/OBC','Divyang','Dropout','Equipment/Material','Training Kit','Machine','Donation','Other Support','KMI']);
   let cumS=0,cumSt=0,cumG=0,cumT=0;
   myReps.forEach(rep => {
     cumS+=+rep.schools||0; cumSt+=+rep.students||0; cumG+=+rep.girls||0; cumT+=+rep.teachers||0;
-    rows.push([rep.month,rep.schools||0,rep.students||0,rep.girls||0,rep.teachers||0,rep.meetings||0,rep.events||0,rep.scst||0,rep.divyang||0,rep.dropout||0,rep.kmi||'']);
+    rows.push([rep.month,rep.schools||0,rep.students||0,rep.girls||0,rep.teachers||0,rep.meetings||0,rep.events||0,rep.scst||0,rep.divyang||0,rep.dropout||0,rep.equipment||'',rep.training||'',rep.machine||'',rep.donation||'',rep.other_support||'',rep.kmi||'']);
   });
   rows.push(['CUMULATIVE TOTAL','',cumS,cumSt,cumG,cumT,'','','','','']);
 
