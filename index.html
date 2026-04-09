@@ -843,17 +843,14 @@ async function doChangePassword(){
     alert('Server se connect nahi ho saka. Internet check karein.');
     return;
   }
-  // Step 2: Update session and show profile prompt (separate from API try-catch)
+  // Step 2: Update session and start app (separate from API try-catch)
   currentUser.password = np;
   currentUser.firstLogin = false;
-  currentUser.profileDone = false; // First time — profile wizard must be completed
   localStorage.setItem('ngo_session', JSON.stringify(currentUser));
   document.getElementById('pwd-change-screen').style.display = 'none';
   try { await loadSheetData(); } catch(e){ console.warn(e); }
   hideLoader();
-  // Show "Complete your profile" prompt before entering the app
-  const promptOverlay = document.getElementById('profile-prompt-overlay');
-  if(promptOverlay) promptOverlay.style.display = 'flex';
+  startApp(); // startApp checks localStorage — if profile not done, shows prompt
 }
 
 function closeProfilePromptAndSetup(){
@@ -863,9 +860,8 @@ function closeProfilePromptAndSetup(){
 }
 
 function skipProfileSetup(){
+  // Do NOT set profile_done key — prompt will show again on next login
   document.getElementById('profile-prompt-overlay').style.display = 'none';
-  currentUser.profileDone = true;
-  localStorage.setItem('ngo_session', JSON.stringify(currentUser));
   initApp();
 }
 
@@ -881,7 +877,16 @@ function doLogout(){
 
 function startApp(){
   document.getElementById('auth-screen').style.display='none';
-  if(!currentUser.profileDone){showProfileScreen();return;}
+  // NGO users: show profile prompt until they actually complete it
+  if(currentUser.role !== 'admin'){
+    const profileKey = 'profile_done_' + currentUser.email;
+    if(!localStorage.getItem(profileKey)){
+      // Show profile completion prompt
+      const overlay = document.getElementById('profile-prompt-overlay');
+      if(overlay) overlay.style.display = 'flex';
+      return;
+    }
+  }
   initApp();
 }
 
@@ -1118,6 +1123,7 @@ async function saveProfile(){
     }
     currentUser.profileDone = true;
     localStorage.setItem('ngo_session', JSON.stringify(currentUser));
+    localStorage.setItem('profile_done_' + currentUser.email, 'yes');
     await loadSheetData();
   } catch(e){ console.warn('Profile save error:', e.message); }
   hideLoader();
