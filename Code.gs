@@ -480,3 +480,13 @@ function forgotPassword(data) {
   }
   return { success: false, error: 'Email not found in system' };
 }
+
+// ── PERMISSION TEST — run this once manually to authorize MailApp ──
+function authorizeMailPermission() {
+  MailApp.sendEmail({
+    to: Session.getActiveUser().getEmail(),
+    subject: 'Samagra NGO Portal — Mail Permission Test',
+    body: 'Mail permission authorized successfully. You can delete this email.'
+  });
+  Logger.log('Mail sent OK to: ' + Session.getActiveUser().getEmail());
+}
