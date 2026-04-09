@@ -224,7 +224,7 @@ tr:hover td{background:#FAFBFF}
       <div class="form-group"><label>Email / Username</label><input type="email" id="login-email" placeholder="your@ngo.org"></div>
       <div class="form-group"><label>Password</label><input type="password" id="login-pass" placeholder="Password" onkeydown="if(event.key==='Enter')doLogin()"></div>
       <button class="btn-primary" onclick="doLogin()">Sign In</button>
-      <p class="auth-note" style="margin-top:14px;text-align:center">Login credentials PMU Admin se prapt karein.<br>
+      <p class="auth-note" style="margin-top:14px;text-align:center">Login credentials are provided by PMU Admin.<br>
         <span style="font-size:11px;color:var(--muted)">For access: contact PMU, Madhyamik Shiksha Vibhag, UP</span>
       </p>
     </div>
@@ -235,19 +235,19 @@ tr:hover td{background:#FAFBFF}
 <div id="pwd-change-screen" style="display:none;min-height:100vh;background:var(--bg);display:none;align-items:center;justify-content:center;padding:20px">
   <div class="auth-box">
     <div class="auth-logo">
-      <h1 style="font-size:18px">🔒 Password Set Karein</h1>
-      <p>Pehli baar login karne par naya password set karna zaroori hai</p>
+      <h1 style="font-size:18px">🔒 Set New Password</h1>
+      <p>A new password must be set on first login</p>
     </div>
     <div style="background:#fff3cd;border:1px solid #ffc107;border-radius:8px;padding:10px 14px;font-size:12px;color:#856404;margin-bottom:16px">
-      Admin dwara diya gaya temporary password badalna zaroori hai. Apna naya password choose karein.
+      The temporary password provided by Admin must be changed. Please choose your new password.
     </div>
-    <div class="form-group"><label>Naya Password <span style="color:var(--red)">*</span></label>
-      <input type="password" id="pwd-new" placeholder="Kam se kam 6 characters">
+    <div class="form-group"><label>New Password <span style="color:var(--red)">*</span></label>
+      <input type="password" id="pwd-new" placeholder="Minimum 6 characters">
     </div>
     <div class="form-group"><label>Confirm Password <span style="color:var(--red)">*</span></label>
-      <input type="password" id="pwd-confirm" placeholder="Dobara likhen">
+      <input type="password" id="pwd-confirm" placeholder="Re-enter password">
     </div>
-    <button class="btn-primary" onclick="doChangePassword()">Password Save Karein ✓</button>
+    <button class="btn-primary" onclick="doChangePassword()">Save Password ✓</button>
   </div>
 </div>
 
@@ -295,29 +295,29 @@ tr:hover td{background:#FAFBFF}
       <div class="card-title">📍 Geographic coverage</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
         <div class="wform-group">
-          <label>Jile chunein <span>*</span></label>
-          <input type="text" id="dist-search" placeholder="🔍 Jila dhundhein..." oninput="filterDistList()" style="width:100%;padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;margin-bottom:6px">
+          <label>Select districts <span>*</span></label>
+          <input type="text" id="dist-search" placeholder="🔍 Search district..." oninput="filterDistList()" style="width:100%;padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;margin-bottom:6px">
           <div style="max-height:200px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:8px" id="dist-checks"></div>
         </div>
         <div class="wform-group" id="block-section">
-          <label>Block chunein <span>*</span>
-            <span style="font-weight:400;font-size:11px;color:var(--muted)" id="block-label"> — pehle jila chunein</span>
+          <label>Select blocks <span>*</span>
+            <span style="font-weight:400;font-size:11px;color:var(--muted)" id="block-label"> — select district first</span>
           </label>
-          <input type="text" id="block-search" placeholder="🔍 Block dhundhein..." oninput="filterBlockList()" style="width:100%;padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;margin-bottom:6px">
-          <div style="max-height:200px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:8px" id="block-checks"><div style="color:var(--muted);font-size:12px;padding:4px">Pehle jila chunein</div></div>
+          <input type="text" id="block-search" placeholder="🔍 Search block..." oninput="filterBlockList()" style="width:100%;padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;margin-bottom:6px">
+          <div style="max-height:200px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:8px" id="block-checks"><div style="color:var(--muted);font-size:12px;padding:4px">Select a district first</div></div>
         </div>
       </div>
       <div class="wform-group" id="school-section" style="margin-top:12px;display:none">
         <label>Schools <span>*</span>
-          <span style="font-weight:400;font-size:11px;color:var(--muted);margin-left:6px">Jo schools mein aap kaam karte hain — block chunein to list aayegi</span>
+          <span style="font-weight:400;font-size:11px;color:var(--muted);margin-left:6px">Schools where you work — select a block to see the list</span>
         </label>
         <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px">
           <select id="school-block-sel" onchange="loadSchoolsForBlock()" style="flex:1;padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px">
-            <option value="">-- Block chunein --</option>
+            <option value="">-- Select block --</option>
           </select>
           <span id="school-loading" style="font-size:12px;color:var(--muted);display:none">Loading…</span>
         </div>
-        <div id="school-list" style="max-height:150px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:8px;font-size:12px;color:var(--muted)">Block select karne ke baad schools dikhenge</div>
+        <div id="school-list" style="max-height:150px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:8px;font-size:12px;color:var(--muted)">Schools will appear after selecting a block</div>
         <div id="selected-schools-display" style="margin-top:8px;display:flex;flex-wrap:wrap;gap:4px"></div>
       </div>
       <div class="wizard-nav">
@@ -328,9 +328,9 @@ tr:hover td{background:#FAFBFF}
 
     <!-- Step 3: Multi-Component & Multi-Task Setup -->
     <div class="card" id="profile-p3" style="display:none">
-      <div class="card-title">🎯 Components aur Tasks define karein</div>
+      <div class="card-title">🎯 Define your Components & Tasks</div>
       <div style="background:#f0f6ff;border:1px solid #2E6DB430;border-radius:8px;padding:10px 14px;font-size:12px;color:var(--blue);margin-bottom:14px">
-        Jin-jin components mein aap kaam karte hain wo chunein — har component ke andar apne tasks likhein. Ek se zyada component aur task add kar sakte hain.
+        Select the components you work in — add your tasks under each component. You can add multiple components and tasks.
       </div>
       <div id="comp-task-builder"></div>
       <div class="wizard-nav">
@@ -343,7 +343,7 @@ tr:hover td{background:#FAFBFF}
     <div class="card" id="profile-p4" style="display:none">
       <div class="card-title">📊 Overall KPI targets</div>
       <div id="step4-summary" style="margin-bottom:14px"></div>
-      <div style="font-size:12px;color:var(--muted);margin-bottom:14px">Poore programme ki duration ke overall targets bharein — ye sabhi tasks par laagu honge.</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:14px">Enter overall targets for the full programme duration — these will apply across all tasks.</div>
       <div class="wform-row">
         <div class="wform-group"><label>Programme start date</label><input id="pf-start" type="date"></div>
         <div class="wform-group"><label>Expected end date</label><input id="pf-end" type="date"></div>
@@ -358,7 +358,7 @@ tr:hover td{background:#FAFBFF}
       </div>
       <div class="wizard-nav">
         <button class="btn-sec" onclick="profileBack(4)">← Back</button>
-        <button class="btn-grn" onclick="saveProfile()">Profile Save Karein & Dashboard Kholen ✓</button>
+        <button class="btn-grn" onclick="saveProfile()">Save Profile & Open Dashboard ✓</button>
       </div>
     </div>
   </div>
@@ -559,21 +559,21 @@ tr:hover td{background:#FAFBFF}
       <!-- SECTION A: Task-wise KPI Progress -->
       <div class="card" style="margin-bottom:12px">
         <div class="card-title">📊 Section A — Task-wise KPI Progress</div>
-        <div style="font-size:12px;color:var(--muted);margin-bottom:12px">Har task ke liye is mahine ki activity, status aur update likhein.</div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:12px">Write this month's activity, status and update for each task.</div>
         <div id="r-task-cards">
           <div style="color:var(--muted);font-size:13px;padding:20px;text-align:center">
-            Loading tasks… (pehle profile mein tasks define karein)
+            Loading tasks… (please define tasks in My Profile first)
           </div>
         </div>
         <div style="margin-top:8px">
-          <a href="#" onclick="showPage('profile-view');return false;" style="font-size:12px;color:var(--blue2)">+ Naya task add karna ho to My Profile mein jayein</a>
+          <a href="#" onclick="showPage('profile-view');return false;" style="font-size:12px;color:var(--blue2)">+ To add a new task, go to My Profile</a>
         </div>
       </div>
 
       <!-- SECTION B: Monthly Summary Numbers -->
       <div class="card" style="margin-bottom:12px">
-        <div class="card-title">🔢 Section B — Is Mahine ke Numbers
-          <span style="font-size:11px;font-weight:400;color:var(--muted);margin-left:8px">Cumulative total neeche dikhega</span>
+        <div class="card-title">🔢 Section B — This Month's Numbers
+          <span style="font-size:11px;font-weight:400;color:var(--muted);margin-left:8px">Cumulative total shown below</span>
         </div>
         <div id="r-cumulative" style="display:none;background:#f0f6ff;border-radius:8px;padding:8px 12px;margin-bottom:10px;font-size:12px;color:var(--blue)"></div>
         <div class="wform-row3">
@@ -594,15 +594,15 @@ tr:hover td{background:#FAFBFF}
         <div class="card-title">📷 Section C — Photos / Documents</div>
         <div class="photo-upload-area" onclick="document.getElementById('photo-input').click()">
           <div style="font-size:28px;margin-bottom:6px">📷</div>
-          <div style="font-weight:600;color:var(--blue);font-size:13px">Click karke photos upload karein</div>
+          <div style="font-weight:600;color:var(--blue);font-size:13px">Click to upload photos</div>
           <div style="font-size:11px;color:var(--muted);margin-top:4px">JPG, PNG — max 5 MB each | Up to 10 photos</div>
         </div>
         <input type="file" id="photo-input" multiple accept="image/*" style="display:none" onchange="handlePhotos(this)">
         <div class="photo-preview-grid" id="photo-preview"></div>
-        <div style="font-size:11px;color:var(--muted);margin-top:8px" id="photo-count">Abhi koi photo upload nahi ki</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:8px" id="photo-count">No photos uploaded yet</div>
         <div style="margin-top:10px">
           <div class="wform-group" style="margin:0">
-            <label style="font-size:11px">Ya Google Drive folder link paste karein</label>
+            <label style="font-size:11px">Or paste a Google Drive folder link</label>
             <input id="r-drive" placeholder="https://drive.google.com/drive/folders/..." style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:7px;font-size:12px">
           </div>
         </div>
@@ -611,29 +611,29 @@ tr:hover td{background:#FAFBFF}
       <!-- SECTION E: In-kind / Material Support -->
       <div class="card" style="margin-bottom:12px">
         <div class="card-title">🎁 Section D — In-kind / Material / Donation Support</div>
-        <div style="font-size:12px;color:var(--muted);margin-bottom:10px">Agar is mahine koi equipment, material, training kit, machine ya donation diya ho to yahan darj karein.</div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:10px">Record any equipment, material, training kit, machine or donation provided this month.</div>
         <div class="wform-row">
           <div class="wform-group">
-            <label>Equipment / Material diya</label>
-            <input id="r-equipment" placeholder="E.g: 50 schools ko sports kit, 200 chhatron ko cycle">
+            <label>Equipment / Material provided</label>
+            <input id="r-equipment" placeholder="E.g: sports kit to 50 schools, cycles to 200 students">
           </div>
           <div class="wform-group">
             <label>Training material / kits</label>
-            <input id="r-training" placeholder="E.g: 30 teachers ko activity kit, 5 schools ko library books">
+            <input id="r-training" placeholder="E.g: activity kit to 30 teachers, library books to 5 schools">
           </div>
         </div>
         <div class="wform-row">
           <div class="wform-group">
             <label>Machine / Infrastructure</label>
-            <input id="r-machine" placeholder="E.g: 3 schools ko computer, 2 schools ko projector">
+            <input id="r-machine" placeholder="E.g: computers to 3 schools, projectors to 2 schools">
           </div>
           <div class="wform-group">
-            <label>Cash / Monetary donation (agar koi)</label>
-            <input id="r-donation" placeholder="E.g: ₹50,000 — school renovation ke liye">
+            <label>Cash / Monetary donation (if any)</label>
+            <input id="r-donation" placeholder="E.g: ₹50,000 — for school renovation">
           </div>
         </div>
         <div class="wform-group">
-          <label>Koi aur support / in-kind contribution</label>
+          <label>Any other support / in-kind contribution</label>
           <input id="r-other-support" placeholder="E.g: Uniform, stationery, school bag, food kit...">
         </div>
       </div>
@@ -642,42 +642,42 @@ tr:hover td{background:#FAFBFF}
       <div class="card" style="margin-bottom:12px">
         <div class="card-title">📋 Section E — Narrative Report</div>
         <div class="wform-group">
-          <label>KMI — Is mahine ka sabse bada parinam (ek line mein) <span style="color:var(--red)">*</span></label>
+          <label>KMI — Key Milestone Indicator (one line) <span style="color:var(--red)">*</span></label>
           <input id="r-kmi" placeholder="E.g: 420 dropout girls re-enrolled in 3 districts of Agra">
         </div>
         <div class="wform-group">
           <label>Key achievements this month</label>
-          <textarea id="r-achieve" placeholder="2-3 major achievements describe karein..."></textarea>
+          <textarea id="r-achieve" placeholder="Describe 2-3 major achievements..."></textarea>
         </div>
         <div class="wform-group">
           <label>Key challenges faced</label>
-          <textarea id="r-challenges" placeholder="Kya mushkilein aayi? Kya asar pada?"></textarea>
+          <textarea id="r-challenges" placeholder="What challenges were faced? What was the impact?"></textarea>
         </div>
         <div class="wform-group">
           <label>Support required from PMU / State</label>
-          <textarea id="r-support" placeholder="Koi specific support, coordination ya policy help chahiye?"></textarea>
+          <textarea id="r-support" placeholder="Any specific support, coordination or policy help needed?"></textarea>
         </div>
         <div class="wform-group">
           <label>Plans for next month</label>
-          <textarea id="r-plans" placeholder="Agle mahine ki key activities..."></textarea>
+          <textarea id="r-plans" placeholder="Key activities planned for next month..."></textarea>
         </div>
       </div>
 
       <!-- Submit -->
       <div id="r-submit-area" style="margin-bottom:24px">
-        <button class="btn-grn" style="width:100%;padding:14px;font-size:15px" onclick="submitMonthlyReport()">✅ Report Submit Karein</button>
-        <div style="font-size:11px;color:var(--muted);text-align:center;margin-top:6px">Submit karne ke baad PMU ko notification jayega. Month ke last working day se pehle submit karein.</div>
+        <button class="btn-grn" style="width:100%;padding:14px;font-size:15px" onclick="submitMonthlyReport()">✅ Submit Report</button>
+        <div style="font-size:11px;color:var(--muted);text-align:center;margin-top:6px">PMU will be notified after submission. Please submit before the last working day of the month.</div>
       </div>
 
       <!-- Success message -->
       <div id="r-success-msg" style="display:none" class="card">
         <div class="success-box">
           <div class="success-icon">✓</div>
-          <h3>Report submit ho gaya!</h3>
-          <p>Aapki monthly KPI report record ho gayi hai.<br>PMU review karega aur dashboard par dikhega.</p>
-          <button class="btn-blu" style="margin-top:16px;width:auto;padding:8px 20px" onclick="showPage('dashboard')">Dashboard par jayein</button>
-          <button class="btn-grn" style="margin-top:8px;width:auto;padding:8px 20px" onclick="downloadKPIReport()">⬇ Is mahine ki KPI Report Download karein</button>
-          <button class="btn-sec" style="margin-top:8px;width:auto;padding:8px 20px" onclick="resetMonthlyReport()">Nayi report bharo</button>
+          <h3>Report submitted successfully!</h3>
+          <p>Your monthly KPI report has been recorded.<br>PMU will review it and update the dashboard.</p>
+          <button class="btn-blu" style="margin-top:16px;width:auto;padding:8px 20px" onclick="showPage('dashboard')">Go to Dashboard</button>
+          <button class="btn-grn" style="margin-top:8px;width:auto;padding:8px 20px" onclick="downloadKPIReport()">⬇ Download this month's KPI Report</button>
+          <button class="btn-sec" style="margin-top:8px;width:auto;padding:8px 20px" onclick="resetMonthlyReport()">Submit new report</button>
         </div>
       </div>
 
@@ -719,10 +719,10 @@ tr:hover td{background:#FAFBFF}
 <div id="profile-prompt-overlay" style="display:none;position:fixed;inset:0;background:rgba(26,60,110,0.75);z-index:400;align-items:center;justify-content:center">
   <div style="background:#fff;border-radius:16px;padding:36px 32px;max-width:420px;width:90%;text-align:center;box-shadow:0 8px 40px rgba(0,0,0,0.25)">
     <div style="width:60px;height:60px;border-radius:50%;background:#E1F5EE;display:flex;align-items:center;justify-content:center;font-size:28px;margin:0 auto 16px">✅</div>
-    <h2 style="font-size:20px;font-weight:700;color:var(--blue);margin-bottom:8px">Password set ho gaya!</h2>
-    <p style="color:var(--muted);font-size:13px;line-height:1.6;margin-bottom:24px">Ab apna NGO profile complete karein — district, block, school select karein aur apna major component chunein. Yeh data PMU dashboard par dikhega aur monthly reports mein kaam aayega.</p>
-    <button onclick="closeProfilePromptAndSetup()" style="width:100%;padding:12px;background:var(--blue);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;margin-bottom:8px">📋 Profile Complete Karein →</button>
-    <button onclick="skipProfileSetup()" style="background:none;border:none;color:var(--muted);font-size:12px;cursor:pointer;text-decoration:underline;padding:4px">Abhi nahin, baad mein karunga</button>
+    <h2 style="font-size:20px;font-weight:700;color:var(--blue);margin-bottom:8px">Password set successfully!</h2>
+    <p style="color:var(--muted);font-size:13px;line-height:1.6;margin-bottom:24px">Now complete your NGO profile — select your district, block, school and choose your major components. This data will appear on the PMU dashboard and will be used in monthly reports.</p>
+    <button onclick="closeProfilePromptAndSetup()" style="width:100%;padding:12px;background:var(--blue);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;margin-bottom:8px">📋 Complete Profile →</button>
+    <button onclick="skipProfileSetup()" style="background:none;border:none;color:var(--muted);font-size:12px;cursor:pointer;text-decoration:underline;padding:4px">Not now, I'll do it later</button>
   </div>
 </div>
 
@@ -811,8 +811,8 @@ let activeFilter = 'all';
 async function doLogin(){
   const email = document.getElementById('login-email').value.trim();
   const pass  = document.getElementById('login-pass').value;
-  if(!email||!pass){alert('Email aur password dono bharen');return;}
-  showLoader('Sign in ho raha hai…');
+  if(!email||!pass){alert('Please enter both email and password');return;}
+  showLoader('Signing in…');
   try {
     const res = await apiFetch({action:'login', email, password:pass});
     if(res.success){
@@ -829,7 +829,7 @@ async function doLogin(){
         startApp();
       }
     } else {
-      alert(res.error || 'Email ya password galat hai');
+      alert(res.error || 'Invalid email or password');
     }
   } catch(e){
     alert('Connection error: ' + e.message);
@@ -840,20 +840,20 @@ async function doLogin(){
 async function doChangePassword(){
   const np = document.getElementById('pwd-new').value;
   const cp = document.getElementById('pwd-confirm').value;
-  if(!np || np.length < 6){ alert('Password kam se kam 6 characters ka hona chahiye'); return; }
-  if(np !== cp){ alert('Dono passwords match nahi kar rahe'); return; }
-  showLoader('Password save ho raha hai…');
+  if(!np || np.length < 6){ alert('Password must be at least 6 characters'); return; }
+  if(np !== cp){ alert('Passwords do not match'); return; }
+  showLoader('Saving password…');
   // Step 1: API call only
   try {
     const res = await apiFetch({action:'changePassword', email: currentUser.email, newPassword: np});
     if(!res.success){
       hideLoader();
-      alert('Password change nahi ho saka: ' + (res.error||''));
+      alert('Could not change password: ' + (res.error||''));
       return;
     }
   } catch(e){
     hideLoader();
-    alert('Server se connect nahi ho saka. Internet check karein.');
+    alert('Could not connect to server. Please check your internet connection.');
     return;
   }
   // Step 2: Update session and start app (separate from API try-catch)
@@ -957,8 +957,8 @@ function onDistrictChange(){
   if(!blockEl) return;
 
   if(!checked.length){
-    blockEl.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:4px">Pehle jila chunein</div>';
-    if(blockLabel) blockLabel.textContent = ' — pehle jila chunein';
+    blockEl.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:4px">Select a district first</div>';
+    if(blockLabel) blockLabel.textContent = ' — select district first';
     if(schoolSec) schoolSec.style.display = 'none';
     return;
   }
@@ -968,7 +968,7 @@ function onDistrictChange(){
   checked.forEach(d => { (DIST_BLOCKS[d]||[]).forEach(b => allBlocks.push({dist:d, block:b})); });
   allBlocks.sort((a,b) => a.block.localeCompare(b.block));
 
-  if(blockLabel) blockLabel.textContent = ` — ${checked.length} jila${checked.length>1?'n':''} chuna`;
+  if(blockLabel) blockLabel.textContent = ` — ${checked.length} district${checked.length>1?'s':''} selected`;
   blockEl.innerHTML = allBlocks.map(({dist,block}) =>
     `<label style="display:flex;align-items:center;gap:5px;font-size:11px;cursor:pointer">
       <input type="checkbox" value="${dist}|${block}" onchange="onBlockChange()" style="width:12px;height:12px">
@@ -991,7 +991,7 @@ function onBlockChange(){
 
   if(!checkedBlocks.length){ schoolSec.style.display='none'; return; }
   schoolSec.style.display = 'block';
-  schoolBlockSel.innerHTML = '<option value="">-- Block chunein --</option>' +
+  schoolBlockSel.innerHTML = '<option value="">-- Select block --</option>' +
     checkedBlocks.map(cb => {
       const [d,b] = cb.split('|');
       return `<option value="${cb}">${b} (${d})</option>`;
@@ -1014,7 +1014,7 @@ async function loadSchoolsForBlock(){
       const res = await fetch('https://raw.githubusercontent.com/alokkmohan/NGO/main/school_data.json');
       _schoolCache = await res.json();
     } catch(e){
-      schoolList.innerHTML = '<span style="color:var(--red)">School data load nahi ho saki. Internet check karein.</span>';
+      schoolList.innerHTML = '<span style="color:var(--red)">Could not load school data. Please check your internet connection.</span>';
       if(loadingEl) loadingEl.style.display = 'none';
       return;
     }
@@ -1024,7 +1024,7 @@ async function loadSchoolsForBlock(){
   const key = dist + '|' + block;
   const schools = _schoolCache[key] || [];
   if(!schools.length){
-    schoolList.innerHTML = '<span style="color:var(--muted)">Is block mein koi school nahi mila</span>';
+    schoolList.innerHTML = '<span style="color:var(--muted)">No schools found in this block</span>';
     return;
   }
   schoolList.innerHTML = schools.map(s =>
@@ -1062,9 +1062,9 @@ function buildCompTaskBuilder(){
         <span style="font-weight:600;font-size:13px;color:var(--blue)">${c}</span>
       </label>
       <div class="comp-task-area" style="display:none;padding:10px 14px 12px;background:#fff;border-top:1px solid var(--border)">
-        <div style="font-size:11px;color:var(--muted);margin-bottom:6px">Is component ke andar apne tasks likhein:</div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:6px">Write your tasks under this component:</div>
         <div class="task-rows" id="${cid}"></div>
-        <button type="button" onclick="addCompTask('${cid}')" style="margin-top:4px;padding:5px 14px;background:var(--blue);color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer">+ Task add karein</button>
+        <button type="button" onclick="addCompTask('${cid}')" style="margin-top:4px;padding:5px 14px;background:var(--blue);color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer">+ Add task</button>
       </div>
     </div>`;
   }).join('');
@@ -1084,8 +1084,8 @@ function addCompTask(containerId){
   if(!taskRows) return;
   const div = document.createElement('div');
   div.style.cssText = 'display:flex;gap:6px;margin-bottom:6px';
-  div.innerHTML = `<input type="text" class="comp-task-input" placeholder="Task naam likhein... (e.g. Girls dropout prevention drive)" style="flex:1;padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;outline:none">
-    <button type="button" onclick="this.parentElement.remove()" title="Hatao" style="padding:4px 10px;background:#fff0f0;border:1px solid #f5c6c6;color:var(--red);border-radius:6px;font-size:16px;cursor:pointer;line-height:1">−</button>`;
+  div.innerHTML = `<input type="text" class="comp-task-input" placeholder="Enter task name... (e.g. Girls dropout prevention drive)" style="flex:1;padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;outline:none">
+    <button type="button" onclick="this.parentElement.remove()" title="Remove" style="padding:4px 10px;background:#fff0f0;border:1px solid #f5c6c6;color:var(--red);border-radius:6px;font-size:16px;cursor:pointer;line-height:1">−</button>`;
   taskRows.appendChild(div);
   div.querySelector('input').focus();
 }
@@ -1093,27 +1093,27 @@ function addCompTask(containerId){
 function profileNext(step){
   // Validation
   if(step===1){
-    if(!document.getElementById('pf-person').value.trim()){ alert('Nodal person ka naam zaroori hai'); return; }
-    if(!document.getElementById('pf-phone').value.trim()){ alert('Contact number zaroori hai'); return; }
+    if(!document.getElementById('pf-person').value.trim()){ alert('Nodal person name is required'); return; }
+    if(!document.getElementById('pf-phone').value.trim()){ alert('Contact number is required'); return; }
   }
   if(step===2){
     const checkedDist = document.querySelectorAll('#dist-checks input:checked');
-    if(!checkedDist.length){ alert('Kam se kam ek district chunein'); return; }
+    if(!checkedDist.length){ alert('Please select at least one district'); return; }
     const checkedBlocks = document.querySelectorAll('#block-checks input:checked');
-    if(!checkedBlocks.length){ alert('Kam se kam ek block chunein'); return; }
+    if(!checkedBlocks.length){ alert('Please select at least one block'); return; }
     const checkedSchools = document.querySelectorAll('#school-list input:checked');
-    if(!checkedSchools.length){ alert('Kam se kam ek school chunein — school section mein block select karke schools chunein'); return; }
+    if(!checkedSchools.length){ alert('Please select at least one school — select a block in the school section to see schools'); return; }
   }
   if(step===3){
     const checkedComps = document.querySelectorAll('.comp-cb:checked');
-    if(!checkedComps.length){ alert('Kam se kam ek Major Component chunein'); return; }
+    if(!checkedComps.length){ alert('Please select at least one Major Component'); return; }
     let hasTask = false;
     checkedComps.forEach(cb => {
       cb.closest('.comp-block').querySelectorAll('.comp-task-input').forEach(inp => {
         if(inp.value.trim()) hasTask = true;
       });
     });
-    if(!hasTask){ alert('Kam se kam ek task ka naam likhein'); return; }
+    if(!hasTask){ alert('Please enter at least one task name'); return; }
   }
   document.getElementById(`profile-p${step}`).style.display='none';
   document.getElementById(`profile-p${step+1}`).style.display='block';
@@ -1149,7 +1149,7 @@ function buildStep4Summary(){
   if(!summary) return;
   summary.innerHTML = `
     <div style="background:#f0f6ff;border:1px solid #2E6DB430;border-radius:10px;padding:14px 16px;font-size:12px">
-      <div style="font-weight:700;color:var(--blue);margin-bottom:10px;font-size:13px">📋 Aapki selections ka summary — review karein</div>
+      <div style="font-weight:700;color:var(--blue);margin-bottom:10px;font-size:13px">📋 Summary of your selections — please review</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
         <div>
           <div style="color:var(--muted);font-size:11px;margin-bottom:3px">Districts (${dists.length})</div>
@@ -1157,19 +1157,19 @@ function buildStep4Summary(){
         </div>
         <div>
           <div style="color:var(--muted);font-size:11px;margin-bottom:3px">Blocks (${blocks.length})</div>
-          <div style="display:flex;flex-wrap:wrap;gap:3px">${blocks.slice(0,8).map(b=>`<span style="background:#e8f4ea;color:var(--green);border-radius:12px;padding:2px 7px;font-size:11px">${b}</span>`).join('')}${blocks.length>8?`<span style="font-size:11px;color:var(--muted)">+${blocks.length-8} aur</span>`:''}</div>
+          <div style="display:flex;flex-wrap:wrap;gap:3px">${blocks.slice(0,8).map(b=>`<span style="background:#e8f4ea;color:var(--green);border-radius:12px;padding:2px 7px;font-size:11px">${b}</span>`).join('')}${blocks.length>8?`<span style="font-size:11px;color:var(--muted)">+${blocks.length-8} more</span>`:''}</div>
         </div>
       </div>
       <div style="margin-bottom:10px">
         <div style="color:var(--muted);font-size:11px;margin-bottom:3px">Schools (${schools.length}) — <span style="color:var(--green);font-weight:600">Target Schools auto-fill: ${schools.length}</span></div>
-        <div style="display:flex;flex-wrap:wrap;gap:3px">${schools.slice(0,6).map(s=>`<span style="background:#fef9e7;color:var(--amber);border-radius:12px;padding:2px 7px;font-size:11px">${s}</span>`).join('')}${schools.length>6?`<span style="font-size:11px;color:var(--muted)">+${schools.length-6} aur</span>`:''}</div>
+        <div style="display:flex;flex-wrap:wrap;gap:3px">${schools.slice(0,6).map(s=>`<span style="background:#fef9e7;color:var(--amber);border-radius:12px;padding:2px 7px;font-size:11px">${s}</span>`).join('')}${schools.length>6?`<span style="font-size:11px;color:var(--muted)">+${schools.length-6} more</span>`:''}</div>
       </div>
       <div>
         <div style="color:var(--muted);font-size:11px;margin-bottom:4px">Components & Tasks</div>
         ${compTaskLines.map(l=>`<div style="margin-bottom:3px;line-height:1.5">${l}</div>`).join('')}
       </div>
       <div style="margin-top:10px;padding-top:8px;border-top:1px solid #2E6DB430;font-size:11px;color:var(--muted)">
-        Kuch galat lage to ← Back karke update kar sakte hain.
+        If anything looks wrong, use ← Back to update.
       </div>
     </div>`;
 }
@@ -1191,7 +1191,7 @@ async function saveProfile(){
   const checkedComps = [...document.querySelectorAll('.comp-cb:checked')];
   const allComponents = checkedComps.map(cb => cb.value).join(', ');
 
-  showLoader('Profile save ho raha hai…');
+  showLoader('Saving profile…');
   try {
     // Save NGO profile
     await apiFetch({
@@ -1425,14 +1425,14 @@ function updateDashboardStats(){
     document.getElementById('nd-teachers').textContent = cumT;
     document.getElementById('nd-meetings').textContent = cumM+' meetings · '+cumE+' events';
     document.getElementById('nd-reports').textContent = myReps.length;
-    document.getElementById('nd-last-month').textContent = lastRep?'Last: '+lastRep.month:'Koi report nahi';
+    document.getElementById('nd-last-month').textContent = lastRep?'Last: '+lastRep.month:'No reports yet';
 
     // Projects status
     const projCard = document.getElementById('ngo-projects-status');
     if(myProjs.length){
       const byComp={};
       myProjs.forEach(p=>{const c=p.component||'Other';if(!byComp[c])byComp[c]=[];byComp[c].push(p);});
-      let html='<div class="card-title" style="margin-bottom:10px">🎯 Aapke Tasks ki Status</div>';
+      let html='<div class="card-title" style="margin-bottom:10px">🎯 Your Tasks Status</div>';
       Object.entries(byComp).forEach(([comp,tasks])=>{
         html+=`<div style="margin-bottom:8px"><div style="font-size:11px;font-weight:700;color:var(--blue);margin-bottom:4px;padding:3px 8px;background:var(--blue)10;border-radius:4px">▸ ${comp}</div>`;
         tasks.forEach(t=>{
@@ -1447,10 +1447,10 @@ function updateDashboardStats(){
         });
         html+='</div>';
       });
-      html+=`<div style="margin-top:10px"><button class="btn-blu" style="font-size:12px;padding:6px 16px" onclick="showPage('monthly-report')">📝 Is Mahine ki Report Bharo →</button></div>`;
+      html+=`<div style="margin-top:10px"><button class="btn-blu" style="font-size:12px;padding:6px 16px" onclick="showPage('monthly-report')">📝 Submit This Month's Report →</button></div>`;
       projCard.innerHTML=html;
     } else {
-      projCard.innerHTML=`<div style="color:var(--muted);font-size:12px;padding:8px">Tasks define nahi kiye. <a href="#" onclick="reopenProfileWizard();return false;" style="color:var(--blue2)">Profile mein add karein →</a></div>`;
+      projCard.innerHTML=`<div style="color:var(--muted);font-size:12px;padding:8px">No tasks defined. <a href="#" onclick="reopenProfileWizard();return false;" style="color:var(--blue2)">Add them in your Profile →</a></div>`;
     }
 
     // In-kind card
@@ -1780,7 +1780,7 @@ function renderProfileView(){
         <div style="font-size:18px;font-weight:700;color:var(--blue)">${u.org||'—'}</div>
         <div style="font-size:12px;color:var(--muted);margin-top:2px">Samagra UP Secondary Education Programme | PMU</div>
       </div>
-      <button class="btn-blu" style="font-size:12px;padding:7px 16px" onclick="reopenProfileWizard()">✏ Profile Update Karein</button>
+      <button class="btn-blu" style="font-size:12px;padding:7px 16px" onclick="reopenProfileWizard()">✏ Update Profile</button>
     </div>
 
     <!-- Basic Info -->
@@ -1815,13 +1815,13 @@ function renderProfileView(){
         <div style="margin-bottom:10px">
           <div style="font-size:11px;color:var(--muted);margin-bottom:4px">Blocks (${blocks.length})</div>
           <div style="display:flex;flex-wrap:wrap;gap:4px">
-            ${blocks.length ? blocks.slice(0,12).map(b=>`<span style="background:#e8f4ea;color:var(--green);border:1px solid #a8d5b0;border-radius:20px;padding:3px 10px;font-size:12px">${b}</span>`).join('')+(blocks.length>12?`<span style="font-size:11px;color:var(--muted);padding:3px 6px">+${blocks.length-12} aur</span>`:'') : '<span style="color:var(--muted);font-size:12px">—</span>'}
+            ${blocks.length ? blocks.slice(0,12).map(b=>`<span style="background:#e8f4ea;color:var(--green);border:1px solid #a8d5b0;border-radius:20px;padding:3px 10px;font-size:12px">${b}</span>`).join('')+(blocks.length>12?`<span style="font-size:11px;color:var(--muted);padding:3px 6px">+${blocks.length-12} more</span>`:'') : '<span style="color:var(--muted);font-size:12px">—</span>'}
           </div>
         </div>
         <div>
           <div style="font-size:11px;color:var(--muted);margin-bottom:4px">Schools (${schools.length})</div>
           <div style="display:flex;flex-wrap:wrap;gap:4px">
-            ${schools.length ? schools.slice(0,10).map(s=>`<span style="background:#fef9e7;color:var(--amber);border:1px solid #f5d48a;border-radius:20px;padding:3px 10px;font-size:11px">${s}</span>`).join('')+(schools.length>10?`<span style="font-size:11px;color:var(--muted);padding:3px 6px">+${schools.length-10} aur</span>`:'') : '<span style="color:var(--muted);font-size:12px">—</span>'}
+            ${schools.length ? schools.slice(0,10).map(s=>`<span style="background:#fef9e7;color:var(--amber);border:1px solid #f5d48a;border-radius:20px;padding:3px 10px;font-size:11px">${s}</span>`).join('')+(schools.length>10?`<span style="font-size:11px;color:var(--muted);padding:3px 6px">+${schools.length-10} more</span>`:'') : '<span style="color:var(--muted);font-size:12px">—</span>'}
           </div>
         </div>
       </div>
@@ -1845,13 +1845,13 @@ function renderProfileView(){
                 ${t.target_teachers?`<span>👨‍🏫 Teachers: ${t.target_teachers}</span>`:''}
               </div>
             </div>`).join('')}
-          </div>`).join('') : '<div style="color:var(--muted);font-size:12px">Koi task define nahi kiya — Profile Update Karein.</div>'}
+          </div>`).join('') : '<div style="color:var(--muted);font-size:12px">No tasks defined. Click Update Profile to add tasks.</div>'}
       </div>
     </div>
 
     <!-- Actions -->
     <div style="display:flex;gap:8px;flex-wrap:wrap">
-      <button class="btn-sec" style="font-size:12px;padding:7px 16px" onclick="reopenProfileWizard()">✏ Profile Update Karein</button>
+      <button class="btn-sec" style="font-size:12px;padding:7px 16px" onclick="reopenProfileWizard()">✏ Update Profile</button>
     </div>
   `;
 }
@@ -1951,28 +1951,28 @@ function downloadReportTemplate(){
 
   const rows = [
     ['Field','Value','Instructions (do not change Column A)'],
-    ['Month', curMonth, 'April 2026 se March 2027 tak likho'],
-    ['Schools Covered','','Kitne vidyalayo mein kaam kiya'],
-    ['Students Benefited','','Kitne chhatro ko labh mila'],
-    ['Girls Benefited','','Kitni baliakon ko labh mila'],
-    ['Teachers Trained','','Kitne shikshak prashikshit hue'],
-    ['Community Meetings','','Samudayik baithkon ki sankhya'],
-    ['Events / Workshops','','Karyakramon ki sankhya'],
-    ['SC-ST-OBC Students','','SC/ST/OBC chhatro ki sankhya'],
-    ['Divyang Students','','Divyang chhatro ki sankhya'],
-    ['Dropouts Prevented','','Kitne bachon ka dropout roka'],
-    ['Tasks Completed','','Kaam ki soochi — alag alag kaam alag line mein'],
-    ['Status','100','100=Poora 85=Sahi disha 60=Aadha 35=Pichhe 0=Shuru nahi'],
-    ['KMI Headline Result','','Is mahine ka sabse bada parinam — ek line mein'],
-    ['Key Achievements','','2-3 mukhy uplabdhiyan'],
-    ['Key Challenges','','Samne aaye avarodhon ka varnan'],
-    ['Support Required','','PMU se kya sahyog chahiye'],
-    ['Plans for Next Month','','Agle mahine ki pramukh yojana'],
+    ['Month', curMonth, 'April 2026 to March 2027'],
+    ['Schools Covered','','Number of schools where work was done'],
+    ['Students Benefited','','Number of students benefited'],
+    ['Girls Benefited','','Number of girls benefited'],
+    ['Teachers Trained','','Number of teachers trained'],
+    ['Community Meetings','','Number of community meetings held'],
+    ['Events / Workshops','','Number of events / workshops conducted'],
+    ['SC-ST-OBC Students','','Number of SC/ST/OBC students covered'],
+    ['Divyang Students','','Number of students with disabilities covered'],
+    ['Dropouts Prevented','','Number of dropout cases prevented'],
+    ['Tasks Completed','','List of completed tasks — one task per line'],
+    ['Status','100','100=Complete 85=On track 60=Partial 35=Behind 0=Not started'],
+    ['KMI Headline Result','','Key milestone for this month — in one line'],
+    ['Key Achievements','','2-3 key achievements this month'],
+    ['Key Challenges','','Description of challenges faced'],
+    ['Support Required','','What support is needed from PMU'],
+    ['Plans for Next Month','','Key activities planned for next month'],
     ['','',''],
     ['--- Pre-filled info (do not edit below) ---','',''],
     ['NGO Name', currentUser.org,''],
     ['Reporting Person', currentUser.name,''],
-    ['Districts', dists,'Profile se — My Profile mein jakar badlein'],
+    ['Districts', dists,'From profile — update via My Profile'],
   ];
 
   const csv = rows.map(r => r.map(c=>`"${String(c||'').replace(/"/g,'""')}"`).join(',')).join('\r\n');
@@ -1991,7 +1991,7 @@ function handleReportCSV(input){
       const data = parseCSVtoMap(e.target.result);
       fillFormFromData(data);
       input.value=''; // reset so same file can be re-uploaded
-    } catch(err){ alert('CSV padhne mein error: '+err.message); }
+    } catch(err){ alert('Error reading CSV: '+err.message); }
   };
   reader.readAsText(file,'UTF-8');
 }
@@ -2046,7 +2046,7 @@ function fillFormFromData(data){
   // Show success banner
   const st=document.getElementById('csv-status');
   st.style.display='block';
-  st.textContent='✓ Data load ho gaya! Review karo, photos add karo, phir Submit karo.';
+  st.textContent='✓ Data loaded! Review, add photos, then Submit.';
 
   // Jump to step 0 to review
   reportStep=0; updateReportSteps();
@@ -2083,7 +2083,7 @@ function prefillReportForm(){
     const cumEl = document.getElementById('r-cumulative');
     if(cumEl){
       cumEl.style.display='block';
-      cumEl.innerHTML=`📊 <b>Cumulative totals (sab mahine milakar):</b> &nbsp;
+      cumEl.innerHTML=`📊 <b>Cumulative totals (all months combined):</b> &nbsp;
         Schools: <b>${cum.schools}</b> &nbsp;|&nbsp;
         Students: <b>${cum.students}</b> &nbsp;|&nbsp;
         Girls: <b>${cum.girls}</b> &nbsp;|&nbsp;
@@ -2104,7 +2104,7 @@ function buildReportTaskCards(){
   const myProjs = PROJECTS.filter(p => p.ngo === currentUser.org);
   if(!myProjs.length){
     container.innerHTML = `<div style="text-align:center;padding:20px;color:var(--muted)">
-      Koi task nahi mila. <a href="#" onclick="showPage('profile-view');return false;" style="color:var(--blue2)">My Profile</a> mein jakar tasks define karein.
+      No tasks found. Go to <a href="#" onclick="showPage('profile-view');return false;" style="color:var(--blue2)">My Profile</a> to define tasks.
     </div>`;
     return;
   }
@@ -2135,24 +2135,24 @@ function buildReportTaskCards(){
               <option value="Complete"${lastAct?.status==='Complete'?' selected':''}>🟢 Complete</option>
             </select>
           </div>
-          ${t.description?`<div style="padding:6px 12px;background:#fffbe6;font-size:11px;color:var(--amber);border-bottom:1px solid var(--border)">📌 Profile se: ${t.description}</div>`:''}
+          ${t.description?`<div style="padding:6px 12px;background:#fffbe6;font-size:11px;color:var(--amber);border-bottom:1px solid var(--border)">📌 From profile: ${t.description}</div>`:''}
           <div style="padding:10px 12px">
             <div class="wform-group" style="margin-bottom:8px">
-              <label style="font-size:11px">Activity Details — is mahine kya kiya <span style="color:var(--red)">*</span></label>
-              <textarea id="${tid}_activity" placeholder="Is task ke andar is mahine jo kiya uski detail likhein..." style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;height:64px;resize:vertical;outline:none"></textarea>
+              <label style="font-size:11px">Activity Details — what was done this month <span style="color:var(--red)">*</span></label>
+              <textarea id="${tid}_activity" placeholder="Describe in detail what was done for this task this month..." style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;height:64px;resize:vertical;outline:none"></textarea>
             </div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
               <div class="wform-group" style="margin:0">
                 <label style="font-size:11px">Monthly Update (brief, 1-2 line)</label>
-                <input id="${tid}_update" placeholder="E.g: 3 schools mein teacher training complete" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;outline:none">
+                <input id="${tid}_update" placeholder="E.g: Teacher training completed in 3 schools" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;outline:none">
               </div>
               <div class="wform-group" style="margin:0">
-                <label style="font-size:11px">Actual Completion Date (agar 100% complete hua)</label>
+                <label style="font-size:11px">Actual Completion Date (if 100% complete)</label>
                 <input type="date" id="${tid}_done" value="${lastAct?.done_date||''}" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;outline:none">
               </div>
             </div>
             <div class="wform-group" style="margin-top:8px;margin-bottom:0">
-              <label style="font-size:11px">Photo / Document link (Drive link paste karein)</label>
+              <label style="font-size:11px">Photo / Document link (paste Drive link)</label>
               <input id="${tid}_photo" placeholder="https://drive.google.com/..." value="${lastAct?.photo_link||''}" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;outline:none">
             </div>
           </div>
@@ -2185,7 +2185,7 @@ function removePhoto(i){
 async function submitMonthlyReport(){
   const months = document.getElementById('r-month').value;
   const kmi = document.getElementById('r-kmi').value.trim();
-  if(!kmi){ alert('KMI (sabse bada parinam) zaroori hai'); document.getElementById('r-kmi').focus(); return; }
+  if(!kmi){ alert('KMI (Key Milestone Indicator) is required'); document.getElementById('r-kmi').focus(); return; }
 
   // Collect task-wise data
   const myProjs = PROJECTS.filter(p => p.ngo === currentUser.org);
@@ -2235,11 +2235,11 @@ async function submitMonthlyReport(){
     photos_folder: document.getElementById('r-drive')?.value || ''
   };
 
-  showLoader('Photos upload ho rahi hain…');
+  showLoader('Uploading photos…');
   // Upload photos to Drive
   for(let i = 0; i < uploadedPhotos.length; i++){
     try {
-      showLoader(`Photo ${i+1} of ${uploadedPhotos.length} upload ho rahi hai…`);
+      showLoader(`Uploading photo ${i+1} of ${uploadedPhotos.length}…`);
       const b64 = await fileToBase64(uploadedPhotos[i]);
       const res = await apiPost({ action:'uploadPhoto', ngo:currentUser.org, month:months,
         base64:b64, mimeType:uploadedPhotos[i].type, filename:uploadedPhotos[i].name });
@@ -2247,7 +2247,7 @@ async function submitMonthlyReport(){
     } catch(e){ console.warn('Photo upload failed:', e.message); }
   }
 
-  showLoader('Report Google Sheets mein save ho raha hai…');
+  showLoader('Saving report to Google Sheets…');
   try {
     await apiFetch({action:'submitReport', report: JSON.stringify(report)});
   } catch(e){ console.warn('Sync error:', e.message); }
@@ -2274,7 +2274,7 @@ function resetMonthlyReport(){
   document.getElementById('r-support').value = '';
   document.getElementById('r-plans').value = '';
   document.getElementById('photo-preview').innerHTML = '';
-  document.getElementById('photo-count').textContent = 'Abhi koi photo upload nahi ki';
+  document.getElementById('photo-count').textContent = 'No photos uploaded yet';
   buildReportTaskCards();
   window.scrollTo({top:0,behavior:'smooth'});
 }
