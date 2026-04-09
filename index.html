@@ -348,8 +348,8 @@ tr:hover td{background:#FAFBFF}
         <div class="wform-group"><label>Designation <span>*</span></label><input id="pf-desig" placeholder="Programme Manager / District Coordinator"></div>
       </div>
       <div class="wform-row">
-        <div class="wform-group"><label>Contact number <span>*</span></label><input id="pf-phone" placeholder="10-digit mobile" maxlength="10"></div>
-        <div class="wform-group"><label>Email <span>*</span></label><input id="pf-email" placeholder="official@ngo.org"></div>
+        <div class="wform-group"><label>Contact number <span>*</span></label><input id="pf-phone" type="tel" placeholder="10-digit mobile" maxlength="10" pattern="\d{10}"></div>
+        <div class="wform-group"><label>Email <span>*</span></label><input id="pf-email" type="email" placeholder="official@ngo.org"></div>
       </div>
       <div class="wizard-nav"><span></span><button class="btn-blu" onclick="profileNext(1)">Next →</button></div>
     </div>
@@ -1207,8 +1207,14 @@ function addSubActivity(btn){
 function profileNext(step){
   // Validation
   if(step===1){
-    if(!document.getElementById('pf-person').value.trim()){ alert('Nodal person name is required'); return; }
-    if(!document.getElementById('pf-phone').value.trim()){ alert('Contact number is required'); return; }
+    const person = document.getElementById('pf-person').value.trim();
+    const desig  = document.getElementById('pf-desig').value.trim();
+    const phone  = document.getElementById('pf-phone').value.trim();
+    const email  = document.getElementById('pf-email').value.trim();
+    if(!person){ alert('Nodal person name is required'); document.getElementById('pf-person').focus(); return; }
+    if(!desig){  alert('Designation is required'); document.getElementById('pf-desig').focus(); return; }
+    if(!phone || !/^\d{10}$/.test(phone)){ alert('Valid 10-digit contact number is required'); document.getElementById('pf-phone').focus(); return; }
+    if(!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ alert('Valid email address is required (must contain @)'); document.getElementById('pf-email').focus(); return; }
   }
   if(step===2){
     const checkedDist = document.querySelectorAll('#dist-checks input:checked');
