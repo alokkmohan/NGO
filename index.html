@@ -308,8 +308,8 @@ tr:hover td{background:#FAFBFF}
         </div>
       </div>
       <div class="wform-group" id="school-section" style="margin-top:12px;display:none">
-        <label>Schools (optional)
-          <span style="font-weight:400;font-size:11px;color:var(--muted);margin-left:6px">Jo schools aap cover karte hain — block chunein to list aayegi</span>
+        <label>Schools <span>*</span>
+          <span style="font-weight:400;font-size:11px;color:var(--muted);margin-left:6px">Jo schools mein aap kaam karte hain — block chunein to list aayegi</span>
         </label>
         <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px">
           <select id="school-block-sel" onchange="loadSchoolsForBlock()" style="flex:1;padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px">
@@ -1052,8 +1052,12 @@ function profileNext(step){
     if(!document.getElementById('pf-phone').value.trim()){ alert('Contact number zaroori hai'); return; }
   }
   if(step===2){
-    const checked = document.querySelectorAll('#dist-checks input:checked');
-    if(!checked.length){ alert('Kam se kam ek district chunein'); return; }
+    const checkedDist = document.querySelectorAll('#dist-checks input:checked');
+    if(!checkedDist.length){ alert('Kam se kam ek district chunein'); return; }
+    const checkedBlocks = document.querySelectorAll('#block-checks input:checked');
+    if(!checkedBlocks.length){ alert('Kam se kam ek block chunein'); return; }
+    const checkedSchools = document.querySelectorAll('#school-list input:checked');
+    if(!checkedSchools.length){ alert('Kam se kam ek school chunein — school section mein block select karke schools chunein'); return; }
   }
   if(step===3){
     if(!document.getElementById('pf-component').value){ alert('Major Component chunein'); return; }
