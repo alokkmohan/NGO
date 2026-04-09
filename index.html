@@ -1288,11 +1288,14 @@ async function loadSheetData(){
     if(ngoRes.success && ngoRes.data.length){
       SAMPLE_NGOS.length = 0;
       ngoRes.data.forEach(n => SAMPLE_NGOS.push({
-        id:+n.id||0, name:n.name, theme:n.theme||'', person:n.person||'',
+        id:+n.id||0, name:n.name||'', theme:n.theme||'', person:n.person||'',
         dist:n.dist||'', x:+n.x||300, y:+n.y||300,
         schools:+n.schools||0, students:+n.students||0,
         girls:+n.girls||0, teachers:+n.teachers||0,
-        progress:+n.progress||0, month:n.month||'', kmi:n.kmi||''
+        progress:+n.progress||0, month:n.month||'', kmi:n.kmi||'',
+        // Extended profile fields
+        phone:String(n.phone||''), desig:n.desig||'', org_type:n.org_type||'',
+        start_date:n.start_date||'', blocks:n.blocks||'', schools_list:n.schools_list||''
       }));
     }
     if(repRes.success && repRes.data.length){
@@ -1677,7 +1680,7 @@ function renderProfileView(){
   const myNGO = SAMPLE_NGOS.find(n => n.name === u.org) || {};
   const dists  = (myNGO.dist||'').split(',').map(d=>d.trim()).filter(Boolean);
   const blocks = (myNGO.blocks||'').split(',').map(b=>b.trim()).filter(Boolean);
-  const schools= (myNGO.schools||'').split('|').map(s=>s.trim()).filter(Boolean);
+  const schools= (myNGO.schools_list||'').split('|').map(s=>s.trim()).filter(Boolean);
   const myProjects = PROJECTS.filter(p => p.ngo === u.org && p.status !== 'deleted');
 
   // Group projects by component
@@ -1747,11 +1750,18 @@ function renderProfileView(){
       <div style="background:var(--blue);color:#fff;padding:8px 14px;font-size:12px;font-weight:700">🎯 Major Components & Tasks</div>
       <div style="padding:12px 14px">
         ${Object.keys(byComp).length ? Object.entries(byComp).map(([comp, tasks])=>`
-          <div style="margin-bottom:10px">
-            <div style="font-weight:700;color:var(--blue);font-size:12px;margin-bottom:5px">▸ ${comp}</div>
-            ${tasks.map(t=>`<div style="display:flex;align-items:center;gap:6px;padding:4px 8px;background:#f8f9ff;border-radius:6px;margin-bottom:3px;font-size:12px">
-              <span style="color:var(--green)">✓</span> ${t.task_name||'—'}
-              ${t.target_schools?`<span style="margin-left:auto;font-size:10px;color:var(--muted)">Target: ${t.target_schools} schools</span>`:''}
+          <div style="margin-bottom:12px">
+            <div style="font-weight:700;color:var(--blue);font-size:12px;margin-bottom:5px;padding:5px 8px;background:var(--blue)10;border-radius:6px">▸ ${comp}</div>
+            ${tasks.map(t=>`<div style="padding:7px 10px;background:#f8f9ff;border-radius:6px;margin-bottom:4px;font-size:12px;border-left:3px solid var(--green)">
+              <div style="font-weight:600">${t.task_name||'—'}</div>
+              <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:4px;font-size:11px;color:var(--muted)">
+                ${t.start_date?`<span>📅 Start: ${t.start_date}</span>`:''}
+                ${t.end_date?`<span>🏁 End: ${t.end_date}</span>`:''}
+                ${t.target_schools?`<span>🏫 Target schools: ${t.target_schools}</span>`:''}
+                ${t.target_students?`<span>👥 Students: ${t.target_students}</span>`:''}
+                ${t.target_girls?`<span>👧 Girls: ${t.target_girls}</span>`:''}
+                ${t.target_teachers?`<span>👨‍🏫 Teachers: ${t.target_teachers}</span>`:''}
+              </div>
             </div>`).join('')}
           </div>`).join('') : '<div style="color:var(--muted);font-size:12px">Koi task define nahi kiya — Profile Update Karein.</div>'}
       </div>
@@ -1759,7 +1769,6 @@ function renderProfileView(){
 
     <!-- Actions -->
     <div style="display:flex;gap:8px;flex-wrap:wrap">
-      <button class="btn-blu" style="font-size:12px;padding:7px 16px" onclick="showPage('monthly-report')">📝 Monthly Report Submit Karein →</button>
       <button class="btn-sec" style="font-size:12px;padding:7px 16px" onclick="reopenProfileWizard()">✏ Profile Update Karein</button>
     </div>
   `;

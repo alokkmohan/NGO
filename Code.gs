@@ -269,12 +269,25 @@ function saveProfile(data) {
 
   // 2. Add / update NGO in NGOs sheet
   const nSheet = ss.getSheetByName('NGOs');
+  // Ensure extended columns have headers (col 15–24)
+  const hRow = nSheet.getRange(1, 1, 1, 24).getValues()[0];
+  const extHeaders = ['phone','desig','org_type','prog','desc','budget_target','start_date','created_on','blocks','schools_list'];
+  extHeaders.forEach((h, idx) => {
+    if (!hRow[14 + idx]) nSheet.getRange(1, 15 + idx).setValue(h);
+  });
+
   const nRows  = nSheet.getDataRange().getValues();
   for (let i = 1; i < nRows.length; i++) {
     if (nRows[i][1] === data.org) {
-      nSheet.getRange(i + 1, 3).setValue(data.theme  || '');
-      nSheet.getRange(i + 1, 4).setValue(data.person || data.name);
-      nSheet.getRange(i + 1, 5).setValue(data.dist   || '');
+      nSheet.getRange(i + 1, 3).setValue(data.theme      || '');
+      nSheet.getRange(i + 1, 4).setValue(data.person     || data.name);
+      nSheet.getRange(i + 1, 5).setValue(data.dist       || '');
+      nSheet.getRange(i + 1, 15).setValue(data.phone     || '');
+      nSheet.getRange(i + 1, 16).setValue(data.desig     || '');
+      nSheet.getRange(i + 1, 17).setValue(data.org_type  || '');
+      nSheet.getRange(i + 1, 21).setValue(data.start_date|| '');
+      nSheet.getRange(i + 1, 23).setValue(data.blocks    || '');
+      nSheet.getRange(i + 1, 24).setValue(data.schools   || '');
       return { success: true, action: 'updated' };
     }
   }
@@ -285,8 +298,9 @@ function saveProfile(data) {
     newId, data.org, data.theme || '', data.person || data.name,
     data.dist || '', 300, 300, 0, 0, 0, 0, 0, '', '',
     data.phone || '', data.desig || '', data.org_type || '',
-    data.prog || '', data.desc || '', data.budget_target || 0,
-    data.start_date || '', new Date().toLocaleDateString('en-IN')
+    data.prog || '', data.desc || '', 0,
+    data.start_date || '', new Date().toLocaleDateString('en-IN'),
+    data.blocks || '', data.schools || ''
   ]);
   return { success: true, action: 'created' };
 }
