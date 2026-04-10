@@ -937,7 +937,7 @@ async function doAdminLogin(){
     hideLoader();
     if(res.success){
       currentUser = res.user;
-      localStorage.setItem('ngo_session', JSON.stringify(currentUser));
+      sessionStorage.setItem('ngo_session', JSON.stringify(currentUser));
       await loadSheetData();
       startApp();
     } else {
@@ -955,7 +955,7 @@ async function doVerifyOTP(){
     const res = await apiFetch({action:'verifyOTP', email, otp});
     if(res.success){
       currentUser = res.user;
-      localStorage.setItem('ngo_session', JSON.stringify(currentUser));
+      sessionStorage.setItem('ngo_session', JSON.stringify(currentUser));
       hideLoader();
       await loadSheetData();
       startApp();
@@ -1022,7 +1022,7 @@ function skipProfileSetup(){
 
 function doLogout(){
   currentUser = null;
-  localStorage.removeItem('ngo_session');
+  sessionStorage.removeItem('ngo_session');
   document.getElementById('main-screen').style.display='none';
   document.getElementById('pwd-change-screen').style.display='none';
   document.getElementById('profile-screen').style.display='none';
@@ -4084,7 +4084,7 @@ function buildOfficialReport(n, selMonth){
 // INIT — restore session if available
 // ════════════════════════════════════
 (async function(){
-  const saved = localStorage.getItem('ngo_session');
+  const saved = sessionStorage.getItem('ngo_session');
   if(saved){
     try {
       const u = JSON.parse(saved);
@@ -4097,7 +4097,7 @@ function buildOfficialReport(n, selMonth){
         startApp();
         return;
       }
-    } catch(e){ localStorage.removeItem('ngo_session'); }
+    } catch(e){ sessionStorage.removeItem('ngo_session'); }
   }
   // No valid session — show login
   document.getElementById('auth-screen').style.display = 'flex';
