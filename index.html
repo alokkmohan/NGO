@@ -733,6 +733,7 @@ tr:hover td{background:#FAFBFF}
           <div class="success-icon">✓</div>
           <h3>Report submitted successfully!</h3>
           <p>Your monthly KPI report has been recorded.<br>PMU will review it and update the dashboard.</p>
+          <a id="r-drive-link" href="#" target="_blank" style="display:none;margin-top:12px;padding:8px 20px;background:#1D9E75;color:#fff;border-radius:8px;text-decoration:none;font-size:13px;font-weight:600">📁 View Report on Google Drive</a>
           <button class="btn-blu" style="margin-top:16px;width:auto;padding:8px 20px" onclick="showPage('dashboard')">Go to Dashboard</button>
           <button class="btn-grn" style="margin-top:8px;width:auto;padding:8px 20px" onclick="downloadKPIReport()">⬇ Download this month's KPI Report</button>
           <button class="btn-sec" style="margin-top:8px;width:auto;padding:8px 20px" onclick="resetMonthlyReport()">Submit new report</button>
@@ -3138,8 +3139,10 @@ async function submitMonthlyReport(){
   }
 
   showLoader('Saving report to Google Sheets…');
+  let driveDocUrl = '';
   try {
-    await apiFetch({action:'submitReport', report: JSON.stringify(report)});
+    const res = await apiFetch({action:'submitReport', report: JSON.stringify(report)});
+    if(res && res.docUrl) driveDocUrl = res.docUrl;
   } catch(e){ console.warn('Sync error:', e.message); }
 
   // Update local state
@@ -3151,6 +3154,17 @@ async function submitMonthlyReport(){
   hideLoader();
   uploadedPhotos = [];
   document.getElementById('r-submit-area').style.display = 'none';
+
+  // Show drive link in success box if available
+  const driveBtn = document.getElementById('r-drive-link');
+  if(driveBtn){
+    if(driveDocUrl){
+      driveBtn.href = driveDocUrl;
+      driveBtn.style.display = 'inline-block';
+    } else {
+      driveBtn.style.display = 'none';
+    }
+  }
   document.getElementById('r-success-msg').style.display = 'block';
   document.getElementById('r-success-msg').scrollIntoView({behavior:'smooth'});
 }
