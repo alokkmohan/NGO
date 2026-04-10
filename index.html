@@ -3139,7 +3139,7 @@ function buildReportTaskCards(){
               return `<div style="border:1px solid #e0e8f8;border-radius:7px;padding:10px 12px;margin-bottom:6px;background:#fff">
                 <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap">
                   <span style="font-size:12px;font-weight:600;color:var(--text);flex:1">${si+1}. ${sa.name}</span>
-                  ${sa.start_date?`<span style="font-size:10px;color:var(--muted)">${sa.start_date}${sa.end_date?' → '+sa.end_date:''}</span>`:''}
+                  ${sa.start_date?`<span style="font-size:10px;color:var(--muted)">${fmtDate(sa.start_date)}${sa.end_date?' → '+fmtDate(sa.end_date):''}</span>`:''}
                   <select id="${sid}_status"
                     onchange="document.getElementById('${sid}_done_wrap').style.display=this.value==='Complete'?'flex':'none'"
                     style="padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:#fff">
@@ -3464,6 +3464,7 @@ function downloadMonthReport(month){
       <td style="padding:6px 8px;font-size:11px;color:#555">${row.subActivity||'—'}</td>
       <td style="padding:6px 8px;font-size:11px;white-space:nowrap">${row.startDate}</td>
       <td style="padding:6px 8px;font-size:11px;white-space:nowrap">${row.endDate}</td>
+      <td style="padding:6px 8px;font-size:11px;line-height:1.5">${row.update||''}</td>
       <td style="padding:6px 8px;font-size:11px;font-weight:700;color:${sCol}">${row.status}</td>
       <td style="padding:6px 8px;font-size:11px;white-space:nowrap">${row.completionDate||''}</td>
     </tr>`;
@@ -3524,19 +3525,20 @@ function downloadMonthReport(month){
     ${rep.equipment||rep.training?`<div class="kpi-box"><div class="num" style="font-size:11px">${[rep.equipment,rep.training].filter(Boolean).join(', ')}</div><div class="lbl">Equipment / Training</div></div>`:''}
   </div>
 
-  ${rep.kmi?`<h3>Key Monthly Indicator (KMI)</h3><div class="narr"><div class="txt">${rep.kmi}</div></div>`:''}
-
   ${reportRows.length?`
   <h3>Section A — Activity-wise Progress</h3>
   <table>
     <thead><tr>
       <th>#</th><th>Component</th><th>Activity</th><th>Sub Activity</th>
-      <th>Start Date</th><th>End Date</th><th>Status</th><th>Actual Completion Date</th>
+      <th>Start Date</th><th>End Date</th><th>Monthly Update</th><th>Status</th><th>Actual Completion Date</th>
     </tr></thead>
     <tbody>${taskRows}</tbody>
   </table>`:''}
 
-  <h3>Section B — Narrative Report</h3>
+  <h3>Section B — Key Performance Indicators (Numbers)</h3>
+
+  <h3>Section C — Narrative Report</h3>
+  ${rep.kmi?`<div class="narr"><div class="lbl">Key Monthly Indicator (KMI)</div><div class="txt">${rep.kmi}</div></div>`:''}
   ${rep.achieve?`<div class="narr"><div class="lbl">Key Achievements</div><div class="txt">${rep.achieve}</div></div>`:''}
   ${rep.challenges?`<div class="narr"><div class="lbl">Challenges Faced</div><div class="txt">${rep.challenges}</div></div>`:''}
   ${rep.support?`<div class="narr"><div class="lbl">Support Required from PMU</div><div class="txt">${rep.support}</div></div>`:''}
@@ -3947,6 +3949,7 @@ function buildReportRows(ngoName, taskActs, myProjs){
           subActivity:    sa.name       || '',
           startDate:      fmtDate(sa.start_date),
           endDate:        fmtDate(sa.end_date),
+          update:         saved.update  || '',
           status:         status,
           completionDate: (status==='Complete'||status==='Completed') ? (saved.done_date||'') : ''
         });
@@ -3959,6 +3962,7 @@ function buildReportRows(ngoName, taskActs, myProjs){
         subActivity:    '',
         startDate:      fmtDate(t.start_date),
         endDate:        fmtDate(t.end_date),
+        update:         act.activity  || act.update || '',
         status:         status,
         completionDate: (status==='Complete'||status==='Completed') ? (act.done_date||'') : ''
       });
