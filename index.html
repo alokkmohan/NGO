@@ -4070,7 +4070,8 @@ function buildOfficialReport(n, selMonth){
     taskActs = typeof raw === 'string' ? JSON.parse(raw) : (Array.isArray(raw) ? raw : []);
   } catch(e){ console.warn('tasks parse error', e); }
 
-  const myProjs = PROJECTS.filter(p => p.ngo === n.name && isTaskLocked(p.locked));
+  // Show all active projects (same as CSV — do not filter by locked only)
+  const myProjs = PROJECTS.filter(p => p.ngo === n.name && p.status !== 'deleted');
   const rows    = buildReportRows(n.name, taskActs, myProjs);
 
   const period = r.report_from && r.report_to
