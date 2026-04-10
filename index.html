@@ -605,14 +605,17 @@ tr:hover td{background:#FAFBFF}
           </div>
         </div>
         <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
-          <div class="wform-group" style="margin:0;flex:1;min-width:160px">
-            <label style="font-size:11px">Reporting Month <span style="color:var(--red)">*</span></label>
-            <select id="r-month" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:7px;font-size:13px">
-              <option>April 2026</option><option>May 2026</option><option>June 2026</option>
-              <option>July 2026</option><option>August 2026</option><option>September 2026</option>
-              <option>October 2026</option><option>November 2026</option><option>December 2026</option>
-              <option>January 2027</option><option>February 2027</option><option>March 2027</option>
-            </select>
+          <div class="wform-group" style="margin:0;flex:1;min-width:140px">
+            <label style="font-size:11px">From Date <span style="color:var(--red)">*</span></label>
+            <input type="date" id="r-from-date" onchange="onReportDateChange()" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:7px;font-size:13px">
+          </div>
+          <div class="wform-group" style="margin:0;flex:1;min-width:140px">
+            <label style="font-size:11px">To Date <span style="color:var(--red)">*</span></label>
+            <input type="date" id="r-to-date" onchange="onReportDateChange()" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:7px;font-size:13px">
+          </div>
+          <div class="wform-group" style="margin:0;flex:1;min-width:140px">
+            <label style="font-size:11px">Reporting Period</label>
+            <div id="r-month-display" style="padding:7px 10px;border:1px solid var(--border);border-radius:7px;font-size:12px;background:#f0f4fa;color:var(--blue);font-weight:600;min-height:36px">Select dates above</div>
           </div>
           <div class="wform-group" style="margin:0;flex:1;min-width:160px">
             <label style="font-size:11px">Contact Number</label>
@@ -1103,6 +1106,19 @@ function onDistrictChange(){
     const searchEl = document.getElementById('school-search');
     if(searchEl) searchEl.style.display = 'none';
   }
+}
+
+function onReportDateChange(){
+  const from = document.getElementById('r-from-date')?.value;
+  const to   = document.getElementById('r-to-date')?.value;
+  const disp = document.getElementById('r-month-display');
+  if(!disp) return;
+  if(!from && !to){ disp.textContent = 'Select dates above'; return; }
+  const mNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  function fmt(d){ const dt=new Date(d); return dt.getDate()+' '+mNames[dt.getMonth()]+' '+dt.getFullYear(); }
+  if(from && to)  disp.textContent = fmt(from) + ' → ' + fmt(to);
+  else if(from)   disp.textContent = 'From: ' + fmt(from);
+  else            disp.textContent = 'To: ' + fmt(to);
 }
 
 function filterSchoolList(){
@@ -2500,59 +2516,110 @@ function renderMyReports(){
   card.style.display='block';
   count.textContent = myReports.length + ' report' + (myReports.length!==1?'s':'') + ' submitted';
 
-  // Format ISO date / month string to readable "April 2026"
-  function fmtMonth(val){
-    if(!val) return '—';
-    if(/^\d{4}-\d{2}-\d{2}/.test(String(val))){
-      const d = new Date(val);
+  // Format date "2026-04-01" → "1 Apr 2026"
+  function fmtD(v){
+    if(!v) return '—';
+    if(/^\d{4}-\d{2}-\d{2}/.test(String(v))){
+      const mn=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      const d=new Date(v); return d.getDate()+' '+mn[d.getMonth()]+' '+d.getFullYear();
+    }
+    return String(v);
+  }
+  // Format month string "April 2026" or derive from date
+  function fmtMonth(v){
+    if(!v) return '—';
+    if(/^\d{4}-\d{2}-\d{2}/.test(String(v))){
+      const d=new Date(v);
       return d.toLocaleDateString('en-IN',{month:'long',year:'numeric'});
     }
-    return String(val);
+    return String(v);
   }
+
+  // Group reports by month label
+  const grouped = {};
+  myReports.forEach(r=>{
+    const mo = fmtMonth(r.month);
+    if(!grouped[mo]) grouped[mo]=[];
+    grouped[mo].push(r);
+  });
+  const monthOrder = [...new Set(myReports.map(r=>fmtMonth(r.month)))];
+
+  const th = `<tr style="background:#f0f6ff;color:var(--blue)">
+    <th style="padding:8px 10px;text-align:left;border-bottom:2px solid #2E6DB430;white-space:nowrap">#</th>
+    <th style="padding:8px 10px;text-align:left;border-bottom:2px solid #2E6DB430;white-space:nowrap">Period</th>
+    <th style="padding:8px 10px;text-align:right;border-bottom:2px solid #2E6DB430;white-space:nowrap">Schools</th>
+    <th style="padding:8px 10px;text-align:right;border-bottom:2px solid #2E6DB430;white-space:nowrap">Students</th>
+    <th style="padding:8px 10px;text-align:right;border-bottom:2px solid #2E6DB430;white-space:nowrap">Girls</th>
+    <th style="padding:8px 10px;text-align:right;border-bottom:2px solid #2E6DB430;white-space:nowrap">Teachers</th>
+    <th style="padding:8px 10px;text-align:right;border-bottom:2px solid #2E6DB430;white-space:nowrap">Meetings</th>
+    <th style="padding:8px 10px;text-align:right;border-bottom:2px solid #2E6DB430;white-space:nowrap">Events</th>
+    <th style="padding:8px 10px;text-align:center;border-bottom:2px solid #2E6DB430;white-space:nowrap">Progress</th>
+    <th style="padding:8px 10px;text-align:left;border-bottom:2px solid #2E6DB430;white-space:nowrap">Submitted</th>
+    <th style="padding:8px 10px;text-align:center;border-bottom:2px solid #2E6DB430">Download</th>
+  </tr>`;
+
+  let sno = 0;
+  const bodyRows = monthOrder.map(mo=>{
+    const reps = grouped[mo];
+    const moRows = reps.map((r,ri)=>{
+      sno++;
+      const pct = +r.status||0;
+      const col = pct>=75?'var(--green)':pct>=50?'var(--amber)':'var(--red)';
+      const period = r.report_from && r.report_to
+        ? fmtD(r.report_from)+' → '+fmtD(r.report_to)
+        : mo;
+      const rid = r.report_from || r.month;
+      return `<tr style="border-bottom:1px solid var(--border)">
+        <td style="padding:8px 10px;color:var(--muted)">${sno}</td>
+        <td style="padding:8px 10px;font-size:11px;white-space:nowrap">${period}</td>
+        <td style="padding:8px 10px;text-align:right">${(+r.schools||0).toLocaleString('en-IN')}</td>
+        <td style="padding:8px 10px;text-align:right">${(+r.students||0).toLocaleString('en-IN')}</td>
+        <td style="padding:8px 10px;text-align:right">${(+r.girls||0).toLocaleString('en-IN')}</td>
+        <td style="padding:8px 10px;text-align:right">${(+r.teachers||0).toLocaleString('en-IN')}</td>
+        <td style="padding:8px 10px;text-align:right">${(+r.meetings||0).toLocaleString('en-IN')}</td>
+        <td style="padding:8px 10px;text-align:right">${(+r.events||0).toLocaleString('en-IN')}</td>
+        <td style="padding:8px 10px;text-align:center;font-weight:700;color:${col}">${pct}%</td>
+        <td style="padding:8px 10px;font-size:11px;color:var(--muted);white-space:nowrap">${r.submitted||'—'}</td>
+        <td style="padding:8px 10px;text-align:center">
+          <button onclick="downloadMonthReport('${rid}')"
+            style="padding:4px 12px;background:var(--blue);color:#fff;border:none;border-radius:6px;font-size:11px;cursor:pointer;white-space:nowrap">
+            ⬇ PDF
+          </button>
+        </td>
+      </tr>`;
+    }).join('');
+
+    // Month subtotal row
+    const mS=reps.reduce((a,r)=>a+(+r.schools||0),0);
+    const mSt=reps.reduce((a,r)=>a+(+r.students||0),0);
+    const mG=reps.reduce((a,r)=>a+(+r.girls||0),0);
+    const mT=reps.reduce((a,r)=>a+(+r.teachers||0),0);
+    const mM=reps.reduce((a,r)=>a+(+r.meetings||0),0);
+    const mEv=reps.reduce((a,r)=>a+(+r.events||0),0);
+    const monthHeader = `<tr style="background:#e8f0fb">
+      <td colspan="11" style="padding:6px 10px;font-weight:700;font-size:12px;color:var(--blue)">
+        📅 ${mo} &nbsp;<span style="font-weight:400;font-size:11px;color:var(--muted)">(${reps.length} submission${reps.length>1?'s':''})</span>
+      </td>
+    </tr>`;
+    const subtotal = reps.length>1 ? `<tr style="background:#f0f6ff;font-size:11px;color:var(--muted)">
+      <td colspan="2" style="padding:5px 10px;font-style:italic">↳ ${mo} total</td>
+      <td style="padding:5px 10px;text-align:right">${mS.toLocaleString('en-IN')}</td>
+      <td style="padding:5px 10px;text-align:right">${mSt.toLocaleString('en-IN')}</td>
+      <td style="padding:5px 10px;text-align:right">${mG.toLocaleString('en-IN')}</td>
+      <td style="padding:5px 10px;text-align:right">${mT.toLocaleString('en-IN')}</td>
+      <td style="padding:5px 10px;text-align:right">${mM.toLocaleString('en-IN')}</td>
+      <td style="padding:5px 10px;text-align:right">${mEv.toLocaleString('en-IN')}</td>
+      <td colspan="3"></td>
+    </tr>` : '';
+
+    return monthHeader + moRows + subtotal;
+  }).join('');
 
   list.innerHTML = `
     <div style="overflow-x:auto">
       <table style="width:100%;border-collapse:collapse;font-size:12px">
-        <thead>
-          <tr style="background:#f0f6ff;color:var(--blue)">
-            <th style="padding:8px 10px;text-align:left;border-bottom:2px solid #2E6DB430;white-space:nowrap">#</th>
-            <th style="padding:8px 10px;text-align:left;border-bottom:2px solid #2E6DB430;white-space:nowrap">Month</th>
-            <th style="padding:8px 10px;text-align:right;border-bottom:2px solid #2E6DB430;white-space:nowrap">Schools</th>
-            <th style="padding:8px 10px;text-align:right;border-bottom:2px solid #2E6DB430;white-space:nowrap">Students</th>
-            <th style="padding:8px 10px;text-align:right;border-bottom:2px solid #2E6DB430;white-space:nowrap">Girls</th>
-            <th style="padding:8px 10px;text-align:right;border-bottom:2px solid #2E6DB430;white-space:nowrap">Teachers</th>
-            <th style="padding:8px 10px;text-align:right;border-bottom:2px solid #2E6DB430;white-space:nowrap">Meetings</th>
-            <th style="padding:8px 10px;text-align:right;border-bottom:2px solid #2E6DB430;white-space:nowrap">Events</th>
-            <th style="padding:8px 10px;text-align:center;border-bottom:2px solid #2E6DB430;white-space:nowrap">Progress</th>
-            <th style="padding:8px 10px;text-align:left;border-bottom:2px solid #2E6DB430;white-space:nowrap">Submitted</th>
-            <th style="padding:8px 10px;text-align:center;border-bottom:2px solid #2E6DB430">Download</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${myReports.map((r,i)=>{
-            const pct = +r.status||0;
-            const col = pct>=75?'var(--green)':pct>=50?'var(--amber)':'var(--red)';
-            const mo  = fmtMonth(r.month);
-            return `<tr style="border-bottom:1px solid var(--border)">
-              <td style="padding:8px 10px;color:var(--muted)">${myReports.length - i}</td>
-              <td style="padding:8px 10px;font-weight:600;white-space:nowrap">${mo}</td>
-              <td style="padding:8px 10px;text-align:right">${(+r.schools||0).toLocaleString('en-IN')}</td>
-              <td style="padding:8px 10px;text-align:right">${(+r.students||0).toLocaleString('en-IN')}</td>
-              <td style="padding:8px 10px;text-align:right">${(+r.girls||0).toLocaleString('en-IN')}</td>
-              <td style="padding:8px 10px;text-align:right">${(+r.teachers||0).toLocaleString('en-IN')}</td>
-              <td style="padding:8px 10px;text-align:right">${(+r.meetings||0).toLocaleString('en-IN')}</td>
-              <td style="padding:8px 10px;text-align:right">${(+r.events||0).toLocaleString('en-IN')}</td>
-              <td style="padding:8px 10px;text-align:center;font-weight:700;color:${col}">${pct}%</td>
-              <td style="padding:8px 10px;font-size:11px;color:var(--muted);white-space:nowrap">${r.submitted||'—'}</td>
-              <td style="padding:8px 10px;text-align:center">
-                <button onclick="downloadMonthReport('${r.month}')"
-                  style="padding:4px 12px;background:var(--blue);color:#fff;border:none;border-radius:6px;font-size:11px;cursor:pointer;white-space:nowrap">
-                  ⬇ PDF
-                </button>
-              </td>
-            </tr>`;
-          }).join('')}
-        </tbody>
+        <thead>${th}</thead>
+        <tbody>${bodyRows}</tbody>
         <tfoot>
           <tr style="background:#f8f8f8;font-weight:700;border-top:2px solid #2E6DB430">
             <td colspan="2" style="padding:8px 10px;color:var(--blue)">Cumulative Total</td>
@@ -2791,10 +2858,10 @@ function parseCSVLine(line){
 function fillFormFromData(data){
   const set=(id,key)=>{ const el=document.getElementById(id); const v=data[key]; if(el&&v!==undefined&&v!=='') el.value=v; };
 
-  // Month
-  const mSel=document.getElementById('r-month');
-  const mv=data['month'];
-  if(mv){ for(let i=0;i<mSel.options.length;i++){ if(mSel.options[i].text.toLowerCase()===mv.toLowerCase()){mSel.selectedIndex=i;break;} } }
+  // Date range from CSV (optional fields)
+  if(data['report_from']) { const el=document.getElementById('r-from-date'); if(el) el.value=data['report_from']; }
+  if(data['report_to'])   { const el=document.getElementById('r-to-date');   if(el) el.value=data['report_to'];   }
+  onReportDateChange();
 
   set('r-schools','schools covered');
   set('r-students','students benefited');
@@ -2834,13 +2901,14 @@ function prefillReportForm(){
   set('rh-phone', myNGO.phone);
   set('rh-email', currentUser.email);
 
-  // Auto-select current month
+  // Auto-set today's date in from/to
   const now = new Date();
-  const mNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-  const yr = now.getMonth() <= 2 ? 2027 : 2026;
-  const curMonthStr = mNames[now.getMonth()] + ' ' + yr;
-  const mSel = document.getElementById('r-month');
-  if(mSel){ for(let i=0;i<mSel.options.length;i++){ if(mSel.options[i].text===curMonthStr){ mSel.selectedIndex=i; break; } } }
+  const todayStr = now.toISOString().slice(0,10);
+  const fromEl = document.getElementById('r-from-date');
+  const toEl   = document.getElementById('r-to-date');
+  if(fromEl && !fromEl.value) fromEl.value = todayStr;
+  if(toEl   && !toEl.value)   toEl.value   = todayStr;
+  onReportDateChange();
 
   // Build task cards
   buildReportTaskCards();
@@ -3025,14 +3093,32 @@ function handlePhotos(input){}
 function removePhoto(i){}
 
 async function submitMonthlyReport(){
-  const months = document.getElementById('r-month').value;
-  const kmi = document.getElementById('r-kmi').value.trim();
+  const fromDate = document.getElementById('r-from-date').value;
+  const toDate   = document.getElementById('r-to-date').value;
+  const kmi      = document.getElementById('r-kmi').value.trim();
 
-  // Duplicate check — same NGO + same month
-  const already = REPORTS.find(r => r.ngo === currentUser.org && r.month === months);
-  if(already){
-    const ok = confirm(`⚠️ You have already submitted a report for "${months}".\n\nSubmitting again will add a duplicate entry.\n\nClick OK to submit anyway, or Cancel to go back.`);
-    if(!ok) return;
+  // Validate dates
+  if(!fromDate){ alert('Please select From Date'); document.getElementById('r-from-date').focus(); return; }
+  if(!toDate){   alert('Please select To Date');   document.getElementById('r-to-date').focus();   return; }
+  if(toDate < fromDate){ alert('To Date cannot be before From Date'); return; }
+
+  // Derive month label from fromDate (e.g. "April 2026")
+  const mNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const fd = new Date(fromDate);
+  const months = mNames[fd.getMonth()] + ' ' + fd.getFullYear();
+
+  // Overlap check — block if any existing report's date range overlaps
+  const myReps = REPORTS.filter(r => r.ngo === currentUser.org);
+  const overlap = myReps.find(r => {
+    const ef = r.report_from || '';
+    const et = r.report_to   || '';
+    if(!ef || !et) return false; // old reports without date range — skip overlap check
+    return fromDate <= et && toDate >= ef; // overlap condition
+  });
+  if(overlap){
+    const ef = overlap.report_from, et = overlap.report_to;
+    alert(`⚠️ Date range overlap!\n\nAapki ${ef} se ${et} tak ki report already submit ho chuki hai.\n\nKoi correction chahiye to PMU Admin se sampark karein.`);
+    return;
   }
 
   // Validate at least some KPI numbers filled
@@ -3106,6 +3192,8 @@ async function submitMonthlyReport(){
   const report = {
     ngo:          currentUser.org,
     month:        months,
+    report_from:  fromDate,
+    report_to:    toDate,
     schools:      +document.getElementById('r-schools').value  || 0,
     students:     +document.getElementById('r-students').value || 0,
     girls:        +document.getElementById('r-girls').value    || 0,
@@ -3138,7 +3226,7 @@ async function submitMonthlyReport(){
     try {
       showLoader(`Uploading photo ${i+1} of ${allTaskPhotos.length} — ${task_name}…`);
       const b64 = await fileToBase64(file);
-      const res = await apiPost({ action:'uploadPhoto', ngo:currentUser.org, month:months,
+      const res = await apiPost({ action:'uploadPhoto', ngo:currentUser.org, month:fromDate.slice(0,7),
         base64:b64, mimeType:file.type, filename:file.name });
       if(res.success && res.folderId) report.photos_folder = 'https://drive.google.com/drive/folders/' + res.folderId;
       else photoFailCount++;
@@ -3199,7 +3287,7 @@ function submitReport(){ submitMonthlyReport(); } // legacy alias
 function downloadMonthReport(month){
   const myNGO  = SAMPLE_NGOS.find(n=>n.name===currentUser.org)||{};
   const myProjs= PROJECTS.filter(p=>p.ngo===currentUser.org);
-  const rep    = REPORTS.find(r=>r.ngo===currentUser.org && r.month===month);
+  const rep    = REPORTS.find(r=>r.ngo===currentUser.org && (r.report_from===month||r.month===month));
   if(!rep){ alert('Report not found for '+month); return; }
 
   // Parse tasks

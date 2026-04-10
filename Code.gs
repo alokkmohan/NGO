@@ -302,6 +302,11 @@ function submitReport(data) {
 
   const readableText = tasksToReadable(r.tasks);
 
+  // Ensure report_from / report_to columns exist
+  const hRow2 = rSheet.getRange(1, 1, 1, rSheet.getLastColumn()).getValues()[0];
+  if (!hRow2.includes('report_from')) rSheet.getRange(1, hRow2.length + 1).setValue('report_from');
+  if (!hRow2.includes('report_to'))   rSheet.getRange(1, hRow2.length + 2).setValue('report_to');
+
   rSheet.appendRow([
     new Date().getTime(),
     r.ngo, r.month,
@@ -317,7 +322,8 @@ function submitReport(data) {
     r.photos_folder || '',
     new Date().toLocaleDateString('en-IN'),
     r.equipment || '', r.training || '', r.machine || '',
-    r.donation  || '', r.other_support || ''
+    r.donation  || '', r.other_support || '',
+    r.report_from || '', r.report_to || ''
   ]);
 
   // Update latest values in NGOs sheet
