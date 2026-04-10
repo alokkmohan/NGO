@@ -1485,14 +1485,24 @@ function apiFetch(params){
   });
 }
 
-async function apiPost(body){
+async function apiPost(body, timeoutMs=60000){
   const ctrl  = new AbortController();
-  const timer = setTimeout(()=>ctrl.abort(), 30000);
-  const res   = await fetch(SCRIPT_URL, {
-    method:'POST', body:JSON.stringify(body), signal:ctrl.signal
-  });
-  clearTimeout(timer);
-  return res.json();
+  const timer = setTimeout(()=>ctrl.abort(), timeoutMs);
+  try {
+    const res = await fetch(SCRIPT_URL, {
+      method:'POST',
+      redirect:'follow',
+      body:JSON.stringify(body),
+      signal:ctrl.signal
+    });
+    clearTimeout(timer);
+    const text = await res.text();
+    try { return JSON.parse(text); }
+    catch(e){ console.warn('apiPost non-JSON response:', text.slice(0,200)); throw new Error('Server returned invalid response'); }
+  } catch(e){
+    clearTimeout(timer);
+    throw e;
+  }
 }
 
 async function loadSheetData(){
@@ -3388,7 +3398,7 @@ async function submitMonthlyReport(){
       showLoader(`Uploading photo ${i+1} of ${allTaskPhotos.length} — ${task_name}…`);
       const b64 = await fileToBase64(file);
       const res = await apiPost({ action:'uploadPhoto', ngo:currentUser.org, month:fromDate.slice(0,7),
-        base64:b64, mimeType:file.type, filename:file.name });
+        base64:b64, mimeType:file.type, filename:file.name }, 90000); // 90s timeout for photos
       if(res.success && res.folderId) report.photos_folder = 'https://drive.google.com/drive/folders/' + res.folderId;
       else photoFailCount++;
     } catch(e){ photoFailCount++; console.warn('Photo upload failed:', e.message); }
