@@ -1221,8 +1221,6 @@ function addCompTask(containerId){
       <span style="font-size:11px;font-weight:700;color:var(--blue);white-space:nowrap">Activity ${taskIdx}:</span>
       <input type="text" class="comp-task-input" placeholder="Activity name (e.g. KGBV - Type I, Free Textbooks)"
         style="flex:1;padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;outline:none">
-      <button type="button" class="lock-task-btn" onclick="lockTask(this)" title="Lock this activity (cannot be edited/deleted after locking)"
-        style="padding:4px 10px;background:#fff8e1;border:1px solid #ffe082;color:#b8860b;border-radius:6px;font-size:12px;cursor:pointer;white-space:nowrap">🔒 Lock</button>
       <button type="button" onclick="this.closest('.task-block').remove()" title="Remove Activity"
         style="padding:4px 10px;background:#fff0f0;border:1px solid #f5c6c6;color:var(--red);border-radius:6px;font-size:16px;cursor:pointer;line-height:1">−</button>
     </div>
@@ -1250,8 +1248,10 @@ function addSubActivity(btn){
     <input type="text" class="sub-act-name" placeholder="Sub activity (e.g. Food/Lodging per child per month)"
       style="flex:1;padding:6px 9px;border:1px solid var(--border);border-radius:6px;font-size:12px;outline:none">
     <input type="date" class="sub-act-start" title="Start Date"
+      onchange="validateSubDates(this)"
       style="padding:5px 7px;border:1px solid var(--border);border-radius:6px;font-size:11px;outline:none">
     <input type="date" class="sub-act-end" title="End Date"
+      onchange="validateSubDates(this)"
       style="padding:5px 7px;border:1px solid var(--border);border-radius:6px;font-size:11px;outline:none">
     <button type="button" onclick="this.parentElement.remove()"
       style="padding:2px 8px;background:#fff0f0;border:1px solid #f5c6c6;color:var(--red);border-radius:5px;font-size:14px;cursor:pointer;line-height:1">−</button>`;
@@ -2238,11 +2238,12 @@ function renderProfileView(){
         </div>
         <div id="pve-comp-task-builder"></div>
         <div id="pv-sec3-save-msg" style="display:none;background:#e8f5e9;border:1px solid #a5d6a7;border-radius:8px;padding:10px 14px;margin-top:8px;font-size:12px;color:#2e7d32;font-weight:600">
-          ✅ Tasks saved! Ab jo activity report mein include karni ho us par <b>🔒 Lock</b> dabao — lock ke baad wo delete nahi hogi.
+          ✅ Activities saved! Ab <b>🔒 Lock Activities</b> dabao jo monthly report mein include karni hain.
         </div>
-        <div style="display:flex;gap:8px;margin-top:8px">
-          <button onclick="pvSave(3)" style="padding:6px 20px;background:var(--green);color:#fff;border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer">💾 Save</button>
-          <button onclick="pvCancel(3);renderProfileView();renderMyReports();" style="padding:6px 16px;background:#f1f1f1;border:1px solid var(--border);border-radius:7px;font-size:12px;cursor:pointer">✕ Close</button>
+        <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+          <button onclick="pvSave(3)" style="padding:7px 22px;background:var(--green);color:#fff;border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer">💾 Save</button>
+          <button onclick="lockAllSaved()" style="padding:7px 18px;background:#fff8e1;border:1px solid #ffe082;color:#b8860b;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer">🔒 Lock Activities</button>
+          <button onclick="pvCancel(3);renderProfileView();renderMyReports();" style="padding:7px 16px;background:#f1f1f1;border:1px solid var(--border);border-radius:7px;font-size:12px;cursor:pointer">✕ Close</button>
         </div>
       </div>
     </div>
@@ -2411,8 +2412,7 @@ function pvInitTasks(){
 // Visually freeze a task block so it cannot be edited or deleted
 function lockTaskBlock(block){
   block.querySelectorAll('input,textarea,select').forEach(el=>el.disabled=true);
-  // Remove action buttons
-  block.querySelector('.lock-task-btn')?.remove();
+  // Remove delete button only (no per-task lock button anymore)
   block.querySelector('button[title="Remove Activity"]')?.remove();
   block.querySelectorAll('button[onclick*="addSubActivity"]').forEach(b=>b.remove());
   block.querySelectorAll('.sub-act-rows button').forEach(b=>b.remove());
@@ -2458,6 +2458,55 @@ async function lockTask(btn){
     block.appendChild(msgEl);
     await loadSheetData();
     hideLoader();
+  }catch(e){ hideLoader(); alert('Lock failed: '+e.message); }
+}
+
+// Validate end date >= start date on sub-activity rows
+function validateSubDates(changedInput){
+  const row=changedInput.closest('div');
+  const startEl=row.querySelector('.sub-act-start');
+  const endEl  =row.querySelector('.sub-act-end');
+  if(!startEl||!endEl) return;
+  const s=startEl.value, e=endEl.value;
+  if(s && e && e < s){
+    endEl.style.borderColor='var(--red)';
+    endEl.title='End date cannot be before start date';
+    endEl.value='';
+    alert('End date, start date se pehle nahi ho sakti');
+  } else {
+    endEl.style.borderColor='';
+    endEl.title='End Date';
+    // Set start date minimum dynamically
+    if(s) endEl.min=s;
+  }
+}
+
+// Lock all saved (unlocked) task blocks at once
+async function lockAllSaved(){
+  const blocks=[...document.querySelectorAll('#pve-comp-task-builder .task-block')].filter(b=>b.dataset.projectId && b.dataset.locked!=='true');
+  if(!blocks.length){
+    alert('Koi unlocked saved activity nahi mili.\nPehle Save karo, fir Lock karo.');
+    return;
+  }
+  const names=blocks.map(b=>b.querySelector('.comp-task-input')?.value||'').filter(Boolean);
+  if(!confirm('Ye activities lock ho jaayengi:\n\n'+names.map(n=>'• '+n).join('\n')+'\n\nLock hone ke baad edit ya delete nahi hongi.\nMonthly Report mein include ho jaayengi.')) return;
+  showLoader('Locking…');
+  try{
+    for(const block of blocks){
+      await apiFetch({action:'lockProject', project_id:block.dataset.projectId});
+      block.dataset.locked='true';
+      lockTaskBlock(block);
+    }
+    await loadSheetData();
+    hideLoader();
+    // Show confirmation banner
+    const banner=document.getElementById('pv-sec3-save-msg');
+    if(banner){
+      banner.style.background='#e8f5e9';
+      banner.style.borderColor='#a5d6a7';
+      banner.innerHTML='🔒 <b>Activities locked!</b> Ab ye Monthly Report mein dikhti hain. Delete nahi hongi.';
+      banner.style.display='block';
+    }
   }catch(e){ hideLoader(); alert('Lock failed: '+e.message); }
 }
 
