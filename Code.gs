@@ -28,8 +28,10 @@ function doGet(e) {
     else if (action === 'sendOTP')    result = sendOTP(p);
     else if (action === 'verifyOTP')  result = verifyOTP(p);
     else if (action === 'saveProfile')   result = saveProfile(p);
-    else if (action === 'saveProject')   result = saveProject(p);
-    else if (action === 'getProjects')   result = getProjects(p);
+    else if (action === 'saveProject')          result = saveProject(p);
+    else if (action === 'getProjects')          result = getProjects(p);
+    else if (action === 'deleteUnlockedProjects') result = deleteUnlockedProjects(p);
+    else if (action === 'lockProject')          result = lockProject(p);
     else if (action === 'submitReport')  result = submitReport({ report: JSON.parse(p.report) });
     // legacy — kept for backward compat
     else if (action === 'login')          result = login(p);
@@ -526,6 +528,46 @@ function getProjects(data) {
   // Filter by NGO if requested (non-admin)
   if (data.ngo) projects = projects.filter(p => p.ngo === data.ngo);
   return { success: true, data: projects };
+}
+
+// Mark all UNLOCKED projects for an NGO as deleted (called before re-saving tasks)
+function deleteUnlockedProjects(data) {
+  const sheet = getSS().getSheetByName('Projects');
+  if (!sheet) return { success: true };
+  const rows = sheet.getDataRange().getValues();
+  const h = rows[0];
+  const ngoIdx    = h.indexOf('ngo');
+  const statusIdx = h.indexOf('status');
+  const lockedIdx = h.indexOf('locked');
+  for (let i = 1; i < rows.length; i++) {
+    if (rows[i][ngoIdx] !== data.ngo) continue;
+    if (rows[i][statusIdx] === 'deleted') continue;
+    const isLocked = lockedIdx >= 0 && String(rows[i][lockedIdx]) === 'true';
+    if (!isLocked) sheet.getRange(i + 1, statusIdx + 1).setValue('deleted');
+  }
+  return { success: true };
+}
+
+// Lock a project so it can never be edited or deleted via the UI
+function lockProject(data) {
+  const sheet = getSS().getSheetByName('Projects');
+  if (!sheet) return { success: false, error: 'No Projects sheet' };
+  const rows = sheet.getDataRange().getValues();
+  const h = rows[0];
+  const pidIdx = h.indexOf('project_id');
+  // Ensure 'locked' column exists
+  let lockedIdx = h.indexOf('locked');
+  if (lockedIdx < 0) {
+    lockedIdx = h.length;
+    sheet.getRange(1, lockedIdx + 1).setValue('locked');
+  }
+  for (let i = 1; i < rows.length; i++) {
+    if (String(rows[i][pidIdx]) === String(data.project_id)) {
+      sheet.getRange(i + 1, lockedIdx + 1).setValue('true');
+      return { success: true };
+    }
+  }
+  return { success: false, error: 'Project not found' };
 }
 
 // ── SAVE NEW NGO PROFILE ─────────────────────────────────────

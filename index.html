@@ -1221,6 +1221,8 @@ function addCompTask(containerId){
       <span style="font-size:11px;font-weight:700;color:var(--blue);white-space:nowrap">Activity ${taskIdx}:</span>
       <input type="text" class="comp-task-input" placeholder="Activity name (e.g. KGBV - Type I, Free Textbooks)"
         style="flex:1;padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;outline:none">
+      <button type="button" class="lock-task-btn" onclick="lockTask(this)" title="Lock this activity (cannot be edited/deleted after locking)"
+        style="padding:4px 10px;background:#fff8e1;border:1px solid #ffe082;color:#b8860b;border-radius:6px;font-size:12px;cursor:pointer;white-space:nowrap">🔒 Lock</button>
       <button type="button" onclick="this.closest('.task-block').remove()" title="Remove Activity"
         style="padding:4px 10px;background:#fff0f0;border:1px solid #f5c6c6;color:var(--red);border-radius:6px;font-size:16px;cursor:pointer;line-height:1">−</button>
     </div>
@@ -2369,6 +2371,8 @@ function pvInitTasks(){
       const taskRows=document.getElementById(cid);
       const lastBlock=taskRows.lastElementChild;
       if(!lastBlock) return;
+      lastBlock.dataset.projectId=proj.project_id||'';
+      lastBlock.dataset.locked=(String(proj.locked)==='true')?'true':'';
       lastBlock.querySelector('.comp-task-input').value=proj.task_name||'';
       // Pre-fill sub-activities
       let subs=[];
@@ -2391,8 +2395,51 @@ function pvInitTasks(){
         const addBtn=lastBlock.querySelector('button[onclick*="addSubActivity"]');
         addSubActivity(addBtn);
       }
+      // If locked, freeze the block
+      if(lastBlock.dataset.locked==='true') lockTaskBlock(lastBlock);
     });
   });
+}
+
+// Visually freeze a task block so it cannot be edited or deleted
+function lockTaskBlock(block){
+  block.querySelectorAll('input,textarea,select').forEach(el=>el.disabled=true);
+  // Remove action buttons
+  block.querySelector('.lock-task-btn')?.remove();
+  block.querySelector('button[title="Remove Activity"]')?.remove();
+  block.querySelectorAll('button[onclick*="addSubActivity"]').forEach(b=>b.remove());
+  block.querySelectorAll('.sub-act-rows button').forEach(b=>b.remove());
+  // Show locked badge next to task name
+  const nameRow=block.querySelector('.comp-task-input')?.parentElement;
+  if(nameRow && !nameRow.querySelector('.locked-badge')){
+    const badge=document.createElement('span');
+    badge.className='locked-badge';
+    badge.innerHTML='🔒 Locked';
+    badge.style.cssText='font-size:11px;color:#2e7d32;font-weight:700;background:#e8f5e9;border:1px solid #a5d6a7;border-radius:12px;padding:2px 10px;white-space:nowrap';
+    nameRow.appendChild(badge);
+  }
+  block.style.background='#f1f8e9';
+  block.style.borderColor='#a5d6a7';
+}
+
+// Lock a task via API then freeze the UI block
+async function lockTask(btn){
+  const block=btn.closest('.task-block');
+  if(!block.dataset.projectId){
+    alert('Please save your activities first, then lock.');
+    return;
+  }
+  const taskName=block.querySelector('.comp-task-input')?.value||'this activity';
+  if(!confirm('Lock "'+taskName+'"?\n\nOnce locked it cannot be edited or deleted. Lock only after you have submitted at least one report using it.')) return;
+  showLoader('Locking…');
+  try{
+    await apiFetch({action:'lockProject', project_id:block.dataset.projectId});
+    block.dataset.locked='true';
+    lockTaskBlock(block);
+    // Refresh local PROJECTS cache
+    await loadSheetData();
+    hideLoader();
+  }catch(e){ hideLoader(); alert('Lock failed: '+e.message); }
 }
 
 function pveToggleComp(cb){
@@ -2458,8 +2505,11 @@ async function pvSave(sec){
     if(sec===3){
       const checkedComps=[...document.querySelectorAll('.pve-comp-cb:checked')];
       if(!checkedComps.length){ hideLoader(); alert('Please select at least one component'); return; }
-      // Mark old tasks as deleted first (by sending deleteProjects action if exists, else just re-save)
-      // Re-save all tasks from form
+
+      // Step 1: delete all UNLOCKED tasks for this NGO before re-saving
+      await apiFetch({action:'deleteUnlockedProjects', ngo:currentUser.org});
+
+      // Step 2: save each task block (skip locked blocks — they are already in DB)
       const tSchools =myNGO.target_schools ||0;
       const tStudents=myNGO.target_students||0;
       const tGirls   =myNGO.target_girls   ||0;
@@ -2470,6 +2520,7 @@ async function pvSave(sec){
         const comp=cb.value;
         const blocks=cb.closest('.comp-block').querySelectorAll('.task-block');
         for(const block of blocks){
+          if(block.dataset.locked==='true') continue; // locked → already safe in DB
           const taskName=block.querySelector('.comp-task-input')?.value.trim();
           if(!taskName) continue;
           const subActs=[...block.querySelectorAll('.sub-act-rows > div')].map(row=>({
@@ -2479,7 +2530,7 @@ async function pvSave(sec){
           })).filter(s=>s.name);
           const subStarts=subActs.map(s=>s.start_date).filter(Boolean);
           const subEnds  =subActs.map(s=>s.end_date).filter(Boolean);
-          await apiFetch({
+          const res=await apiFetch({
             action:'saveProject', ngo:currentUser.org, component:comp, task_name:taskName,
             description:'', sub_activities:JSON.stringify(subActs),
             target_schools:tSchools,target_students:tStudents,target_girls:tGirls,
@@ -2487,6 +2538,8 @@ async function pvSave(sec){
             start_date:subStarts.length?subStarts.sort()[0]:'',
             end_date:  subEnds.length?subEnds.sort().at(-1):''
           });
+          // Store new project_id on block so it can be locked right away
+          if(res?.project_id) block.dataset.projectId=String(res.project_id);
         }
       }
       await loadSheetData();
