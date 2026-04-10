@@ -3923,32 +3923,6 @@ function fillAdminNGOSelect(){
     o.textContent = n.name; sel.appendChild(o);
   });
 
-  // Fill month dropdown from actual submitted reports
-  const monthSel = document.getElementById('rep-month');
-  if(monthSel){
-    const months = [...new Set(REPORTS.map(r=>r.month).filter(Boolean))].sort((a,b)=>{
-      const mo=['January','February','March','April','May','June','July','August','September','October','November','December'];
-      const [ma,ya]=(a||'').split(' '); const [mb,yb]=(b||'').split(' ');
-      return (+ya||0)-(+yb||0) || mo.indexOf(ma)-mo.indexOf(mb);
-    });
-    monthSel.innerHTML = '<option value="all">All months</option>';
-    months.forEach(m => {
-      const o = document.createElement('option');
-      o.textContent = m; monthSel.appendChild(o);
-    });
-    // Also fill dl-month in master download if present
-    const dlSel = document.getElementById('dl-month');
-    if(dlSel){
-      const cur = dlSel.value;
-      dlSel.innerHTML = '<option value="all">All months</option>';
-      months.forEach(m => {
-        const o = document.createElement('option');
-        o.textContent = m; dlSel.appendChild(o);
-      });
-      dlSel.value = cur || 'all';
-    }
-  }
-
   // Fill theme dropdown from real data (if element exists)
   const themeSel = document.getElementById('rep-theme');
   if(themeSel){
