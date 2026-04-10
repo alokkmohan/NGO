@@ -757,10 +757,14 @@ tr:hover td{background:#FAFBFF}
         <div class="report-controls">
           <select id="rep-type">
             <option value="official">Official KPI Report (per NGO)</option>
-            <option value="summary">Summary Report (all NGOs)</option>
+            <option value="summary">Summary Table (all NGOs)</option>
           </select>
           <select id="rep-ngo"><option value="all">All NGOs</option></select>
-          <select id="rep-month"><option value="all">All months</option><option>April 2026</option><option>May 2026</option><option>March 2026</option><option>February 2026</option></select>
+          <select id="rep-month">
+            <option value="all">All months</option>
+            <option>April 2026</option><option>May 2026</option><option>June 2026</option>
+            <option>March 2026</option><option>February 2026</option><option>January 2026</option>
+          </select>
           <button class="btn-report" onclick="generateReport()">⬇ Generate Report</button>
           <button class="btn-report" style="background:var(--green)" onclick="window.print()">🖨 Print / PDF</button>
         </div>
@@ -1020,21 +1024,8 @@ function skipProfileSetup(){
 }
 
 function doLogout(){
-  currentUser = null;
   sessionStorage.removeItem('ngo_session');
-  document.getElementById('main-screen').style.display='none';
-  document.getElementById('pwd-change-screen').style.display='none';
-  document.getElementById('profile-screen').style.display='none';
-  document.getElementById('profile-prompt-overlay').style.display='none';
-  // Reset login form
-  document.getElementById('login-step1').style.display='block';
-  document.getElementById('login-step2').style.display='none';
-  document.getElementById('login-otp').value='';
-  document.getElementById('admin-pass-wrap').style.display='none';
-  document.getElementById('admin-pass').value='';
-  document.getElementById('login-main-btn').textContent='Send OTP →';
-  document.getElementById('login-main-btn').onclick=doSendOTP;
-  document.getElementById('auth-screen').style.display='flex';
+  location.reload();
 }
 
 function startApp(){
@@ -2015,6 +2006,11 @@ const UP_DIST_COORDS = {
 // Normalised district coord lookup (handles both "Agra" and "AGRA" keys)
 const _distCoordsNorm = {};
 Object.entries(UP_DIST_COORDS).forEach(([k,v]) => { _distCoordsNorm[k.toUpperCase()] = v; });
+// Aliases: DIST_BLOCKS key → UP_DIST_COORDS name (for districts stored differently in NGO profile)
+_distCoordsNorm['KHERI']       = _distCoordsNorm['LAKHIMPUR KHERI'];  // stored as KHERI
+_distCoordsNorm['BARA BANKI']  = _distCoordsNorm['BARABANKI'];        // stored as BARA BANKI
+_distCoordsNorm['MAHRAJGANJ']  = _distCoordsNorm['MAHARAJGANJ'];      // stored as MAHRAJGANJ
+_distCoordsNorm['SHRAWASTI']   = _distCoordsNorm['SHRAVASTI'];        // stored as SHRAWASTI
 function getDistCoords(dist){ return _distCoordsNorm[(dist||'').trim().toUpperCase()]; }
 
 // Normalised DIST_BLOCKS lookup
@@ -3927,6 +3923,32 @@ function fillAdminNGOSelect(){
     o.textContent = n.name; sel.appendChild(o);
   });
 
+  // Fill month dropdown from actual submitted reports
+  const monthSel = document.getElementById('rep-month');
+  if(monthSel){
+    const months = [...new Set(REPORTS.map(r=>r.month).filter(Boolean))].sort((a,b)=>{
+      const mo=['January','February','March','April','May','June','July','August','September','October','November','December'];
+      const [ma,ya]=(a||'').split(' '); const [mb,yb]=(b||'').split(' ');
+      return (+ya||0)-(+yb||0) || mo.indexOf(ma)-mo.indexOf(mb);
+    });
+    monthSel.innerHTML = '<option value="all">All months</option>';
+    months.forEach(m => {
+      const o = document.createElement('option');
+      o.textContent = m; monthSel.appendChild(o);
+    });
+    // Also fill dl-month in master download if present
+    const dlSel = document.getElementById('dl-month');
+    if(dlSel){
+      const cur = dlSel.value;
+      dlSel.innerHTML = '<option value="all">All months</option>';
+      months.forEach(m => {
+        const o = document.createElement('option');
+        o.textContent = m; dlSel.appendChild(o);
+      });
+      dlSel.value = cur || 'all';
+    }
+  }
+
   // Fill theme dropdown from real data (if element exists)
   const themeSel = document.getElementById('rep-theme');
   if(themeSel){
@@ -4085,6 +4107,7 @@ function buildOfficialReport(n, selMonth){
     <td style="font-size:11px;color:#555">${row.subActivity||'—'}</td>
     <td style="font-size:11px;white-space:nowrap">${fmtDate(row.startDate)}</td>
     <td style="font-size:11px;white-space:nowrap">${fmtDate(row.endDate)}</td>
+    <td style="font-size:11px;color:#374151">${row.update||'—'}</td>
     <td class="${statusClass(row.status)}">${statusLabel(row.status)}</td>
     <td style="font-size:11px;white-space:nowrap">${row.completionDate ? fmtDate(row.completionDate) : ''}</td>
   </tr>`).join('');
@@ -4112,15 +4135,16 @@ function buildOfficialReport(n, selMonth){
     <table class="or-kpi">
       <thead><tr>
         <th class="sno">S.No</th>
-        <th style="width:15%">Component</th>
-        <th style="width:20%">Activity</th>
-        <th style="width:20%">Sub Activity</th>
-        <th style="width:8%">Start Date</th>
-        <th style="width:8%">End Date</th>
-        <th style="width:10%">Status</th>
-        <th style="width:10%">Actual Completion Date</th>
+        <th style="width:12%">Component</th>
+        <th style="width:16%">Activity</th>
+        <th style="width:14%">Sub Activity</th>
+        <th style="width:7%">Start Date</th>
+        <th style="width:7%">End Date</th>
+        <th style="width:18%">Monthly Update</th>
+        <th style="width:9%">Status</th>
+        <th style="width:9%">Actual Completion Date</th>
       </tr></thead>
-      <tbody>${tableRows||'<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:16px">No activities defined</td></tr>'}</tbody>
+      <tbody>${tableRows||'<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:16px">No activities defined</td></tr>'}</tbody>
     </table>
 
     <div class="or-section">Section B — KPI Summary</div>
@@ -4137,9 +4161,8 @@ function buildOfficialReport(n, selMonth){
       </tr></tbody>
     </table>
 
-    ${r.kmi?`<div class="or-narrative"><label>Key Milestone Indicator (KMI):</label>${r.kmi}</div>`:''}
-
     <div class="or-section">Section C — Narrative Report</div>
+    <div class="or-narrative"><label>Key Milestone Indicator (KMI):</label>${r.kmi||''}</div>
     <div class="or-narrative"><label>Key Achievements:</label>${r.achieve||''}</div>
     <div class="or-narrative"><label>Challenges faced:</label>${r.challenges||''}</div>
     <div class="or-narrative"><label>Plans for next month:</label>${r.plans||''}</div>
