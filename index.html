@@ -574,8 +574,14 @@ tr:hover td{background:#FAFBFF}
         <div id="profile-display"></div>
       </div>
       <div class="card" id="my-reports-card" style="margin-top:14px;display:none">
-        <div class="card-title">📋 My submitted reports
-          <span id="my-reports-count" style="font-size:12px;font-weight:400;color:var(--muted);margin-left:8px"></span>
+        <div class="card-title" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+          <span>📋 My submitted reports
+            <span id="my-reports-count" style="font-size:12px;font-weight:400;color:var(--muted);margin-left:8px"></span>
+          </span>
+          <div style="display:flex;gap:8px">
+            <button onclick="downloadMyReportsCSV()" style="padding:5px 14px;background:var(--green);color:#fff;border:none;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer">⬇ CSV</button>
+            <button onclick="downloadMyReportsPDF()" style="padding:5px 14px;background:var(--blue);color:#fff;border:none;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer">🖨 PDF</button>
+          </div>
         </div>
         <div id="my-reports-list"></div>
       </div>
@@ -2492,32 +2498,161 @@ function renderMyReports(){
   if(currentUser.role === 'admin') return;
   const myReports = REPORTS.filter(r => r.ngo === currentUser.org)
     .sort((a,b) => (+b.id||0) - (+a.id||0));
-  const card = document.getElementById('my-reports-card');
-  const list = document.getElementById('my-reports-list');
+  const card  = document.getElementById('my-reports-card');
+  const list  = document.getElementById('my-reports-list');
   const count = document.getElementById('my-reports-count');
   if(!myReports.length){ card.style.display='none'; return; }
   card.style.display='block';
   count.textContent = myReports.length + ' report' + (myReports.length!==1?'s':'') + ' submitted';
-  list.innerHTML = myReports.map(r => {
-    const pct = +r.status||0;
-    const col = pct>=75?'var(--green)':pct>=50?'var(--amber)':'var(--red)';
-    const label = pct>=75?'On track':pct>=50?'Partial':'Behind';
-    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:6px">
-      <div>
-        <div style="font-weight:600;font-size:13px">${r.month||'—'}</div>
-        <div style="font-size:11px;color:var(--muted);margin-top:2px">
-          ${r.schools?r.schools+' schools · ':''}${r.students?r.students+' students · ':''}${r.girls?r.girls+' girls':''}
-        </div>
-        ${r.kmi?`<div style="font-size:11px;color:var(--blue);margin-top:3px;font-style:italic">"${r.kmi}"</div>`:''}
-      </div>
-      <div style="display:flex;align-items:center;gap:8px">
-        <span style="background:${col}20;color:${col};border:1px solid ${col}50;border-radius:20px;padding:3px 10px;font-size:11px;font-weight:600">${label}</span>
-        <span style="font-size:10px;color:var(--muted)">${r.submitted||''}</span>
-      </div>
+
+  list.innerHTML = `
+    <div style="overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead>
+          <tr style="background:#f0f6ff;color:var(--blue)">
+            <th style="padding:8px 10px;text-align:left;border-bottom:2px solid #2E6DB430;white-space:nowrap">#</th>
+            <th style="padding:8px 10px;text-align:left;border-bottom:2px solid #2E6DB430;white-space:nowrap">Month</th>
+            <th style="padding:8px 10px;text-align:right;border-bottom:2px solid #2E6DB430;white-space:nowrap">Schools</th>
+            <th style="padding:8px 10px;text-align:right;border-bottom:2px solid #2E6DB430;white-space:nowrap">Students</th>
+            <th style="padding:8px 10px;text-align:right;border-bottom:2px solid #2E6DB430;white-space:nowrap">Girls</th>
+            <th style="padding:8px 10px;text-align:right;border-bottom:2px solid #2E6DB430;white-space:nowrap">Teachers</th>
+            <th style="padding:8px 10px;text-align:right;border-bottom:2px solid #2E6DB430;white-space:nowrap">Meetings</th>
+            <th style="padding:8px 10px;text-align:right;border-bottom:2px solid #2E6DB430;white-space:nowrap">Events</th>
+            <th style="padding:8px 10px;text-align:center;border-bottom:2px solid #2E6DB430;white-space:nowrap">Progress</th>
+            <th style="padding:8px 10px;text-align:left;border-bottom:2px solid #2E6DB430;white-space:nowrap">Submitted</th>
+            <th style="padding:8px 10px;text-align:left;border-bottom:2px solid #2E6DB430">Key Achievement</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${myReports.map((r,i)=>{
+            const pct = +r.status||0;
+            const col = pct>=75?'var(--green)':pct>=50?'var(--amber)':'var(--red)';
+            return `<tr style="border-bottom:1px solid var(--border)">
+              <td style="padding:8px 10px;color:var(--muted)">${myReports.length - i}</td>
+              <td style="padding:8px 10px;font-weight:600">${r.month||'—'}</td>
+              <td style="padding:8px 10px;text-align:right">${(+r.schools||0).toLocaleString('en-IN')}</td>
+              <td style="padding:8px 10px;text-align:right">${(+r.students||0).toLocaleString('en-IN')}</td>
+              <td style="padding:8px 10px;text-align:right">${(+r.girls||0).toLocaleString('en-IN')}</td>
+              <td style="padding:8px 10px;text-align:right">${(+r.teachers||0).toLocaleString('en-IN')}</td>
+              <td style="padding:8px 10px;text-align:right">${(+r.meetings||0).toLocaleString('en-IN')}</td>
+              <td style="padding:8px 10px;text-align:right">${(+r.events||0).toLocaleString('en-IN')}</td>
+              <td style="padding:8px 10px;text-align:center;font-weight:700;color:${col}">${pct}%</td>
+              <td style="padding:8px 10px;font-size:11px;color:var(--muted);white-space:nowrap">${r.submitted||'—'}</td>
+              <td style="padding:8px 10px;font-size:11px;color:var(--blue);font-style:italic;max-width:220px">${r.kmi||'—'}</td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+        <tfoot>
+          <tr style="background:#f8f8f8;font-weight:700;border-top:2px solid #2E6DB430">
+            <td colspan="2" style="padding:8px 10px;color:var(--blue)">Cumulative Total</td>
+            <td style="padding:8px 10px;text-align:right">${myReports.reduce((a,r)=>a+(+r.schools||0),0).toLocaleString('en-IN')}</td>
+            <td style="padding:8px 10px;text-align:right">${myReports.reduce((a,r)=>a+(+r.students||0),0).toLocaleString('en-IN')}</td>
+            <td style="padding:8px 10px;text-align:right">${myReports.reduce((a,r)=>a+(+r.girls||0),0).toLocaleString('en-IN')}</td>
+            <td style="padding:8px 10px;text-align:right">${myReports.reduce((a,r)=>a+(+r.teachers||0),0).toLocaleString('en-IN')}</td>
+            <td style="padding:8px 10px;text-align:right">${myReports.reduce((a,r)=>a+(+r.meetings||0),0).toLocaleString('en-IN')}</td>
+            <td style="padding:8px 10px;text-align:right">${myReports.reduce((a,r)=>a+(+r.events||0),0).toLocaleString('en-IN')}</td>
+            <td colspan="3"></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+    <div style="padding-top:10px;font-size:11px;color:var(--muted)">
+      Reports are read-only once submitted. Contact PMU Admin for corrections.
     </div>`;
-  }).join('') + `<div style="padding-top:10px;font-size:11px;color:var(--muted)">
-    Reports are read-only once submitted. Contact PMU Admin for corrections.
-  </div>`;
+}
+
+function downloadMyReportsCSV(){
+  const myReports = REPORTS.filter(r => r.ngo === currentUser.org)
+    .sort((a,b) => (+a.id||0) - (+b.id||0));
+  if(!myReports.length){ alert('No reports to download.'); return; }
+  const org = currentUser.org || 'NGO';
+  const headers = ['S.No','Organisation','Month','Schools','Students','Girls','Teachers','Meetings','Events','Progress %','Submitted On','Key Achievement'];
+  const rows = myReports.map((r,i) => [
+    i+1, org, r.month||'', +r.schools||0, +r.students||0, +r.girls||0,
+    +r.teachers||0, +r.meetings||0, +r.events||0,
+    +r.status||0, r.submitted||'', `"${(r.kmi||'').replace(/"/g,'""')}"`
+  ]);
+  // Cumulative row
+  rows.push(['TOTAL', org, 'Cumulative',
+    myReports.reduce((a,r)=>a+(+r.schools||0),0),
+    myReports.reduce((a,r)=>a+(+r.students||0),0),
+    myReports.reduce((a,r)=>a+(+r.girls||0),0),
+    myReports.reduce((a,r)=>a+(+r.teachers||0),0),
+    myReports.reduce((a,r)=>a+(+r.meetings||0),0),
+    myReports.reduce((a,r)=>a+(+r.events||0),0),
+    '', '', ''
+  ]);
+  const csv = [headers, ...rows].map(r=>r.join(',')).join('\n');
+  const blob = new Blob(['\uFEFF'+csv], {type:'text/csv;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `Report_History_${org.replace(/[^a-zA-Z0-9]/g,'_')}.csv`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function downloadMyReportsPDF(){
+  const myReports = REPORTS.filter(r => r.ngo === currentUser.org)
+    .sort((a,b) => (+a.id||0) - (+b.id||0));
+  if(!myReports.length){ alert('No reports to download.'); return; }
+  const org = currentUser.org || 'NGO';
+  const today = new Date().toLocaleDateString('en-IN');
+  const cumRow = ['Schools','Students','Girls','Teachers','Meetings','Events'].map((l,i)=>{
+    const keys = ['schools','students','girls','teachers','meetings','events'];
+    return `<td style="text-align:right;font-weight:700">${myReports.reduce((a,r)=>a+(+r[keys[i]]||0),0).toLocaleString('en-IN')}</td>`;
+  }).join('');
+  const rows = myReports.map((r,i)=>{
+    const pct = +r.status||0;
+    const col = pct>=75?'#1D9E75':pct>=50?'#BA7517':'#E24B4A';
+    return `<tr style="border-bottom:1px solid #eee">
+      <td style="padding:6px 8px">${i+1}</td>
+      <td style="padding:6px 8px;font-weight:600">${r.month||'—'}</td>
+      <td style="padding:6px 8px;text-align:right">${(+r.schools||0).toLocaleString('en-IN')}</td>
+      <td style="padding:6px 8px;text-align:right">${(+r.students||0).toLocaleString('en-IN')}</td>
+      <td style="padding:6px 8px;text-align:right">${(+r.girls||0).toLocaleString('en-IN')}</td>
+      <td style="padding:6px 8px;text-align:right">${(+r.teachers||0).toLocaleString('en-IN')}</td>
+      <td style="padding:6px 8px;text-align:right">${(+r.meetings||0).toLocaleString('en-IN')}</td>
+      <td style="padding:6px 8px;text-align:right">${(+r.events||0).toLocaleString('en-IN')}</td>
+      <td style="padding:6px 8px;text-align:center;font-weight:700;color:${col}">${pct}%</td>
+      <td style="padding:6px 8px;font-size:10px;color:#555">${r.submitted||'—'}</td>
+      <td style="padding:6px 8px;font-size:10px;color:#1A3C6E;font-style:italic">${r.kmi||'—'}</td>
+    </tr>`;
+  }).join('');
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8">
+    <title>Report History — ${org}</title>
+    <style>
+      body{font-family:Arial,sans-serif;font-size:12px;color:#222;margin:0;padding:20px}
+      h2{color:#1A3C6E;margin:0 0 4px}
+      .sub{font-size:11px;color:#666;margin-bottom:16px}
+      table{width:100%;border-collapse:collapse;font-size:11px}
+      th{background:#1A3C6E;color:#fff;padding:7px 8px;text-align:left}
+      th.r,td.r{text-align:right}
+      tr:nth-child(even){background:#f5f8ff}
+      .foot td{background:#e8f0fb;font-weight:700;border-top:2px solid #1A3C6E}
+      @media print{body{padding:10px}}
+    </style></head><body>
+    <h2>Monthly KPI Report History</h2>
+    <div class="sub">${org} &nbsp;|&nbsp; Samagra Shiksha, Secondary, Uttar Pradesh &nbsp;|&nbsp; Generated: ${today}</div>
+    <table>
+      <thead><tr>
+        <th>#</th><th>Month</th><th class="r">Schools</th><th class="r">Students</th>
+        <th class="r">Girls</th><th class="r">Teachers</th><th class="r">Meetings</th>
+        <th class="r">Events</th><th class="r">Progress</th><th>Submitted</th><th>Key Achievement</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+      <tfoot><tr class="foot">
+        <td colspan="2" style="padding:6px 8px">Cumulative Total</td>
+        ${cumRow}<td colspan="3"></td>
+      </tr></tfoot>
+    </table>
+    <div style="margin-top:16px;font-size:10px;color:#999;text-align:right">
+      Generated by PMU Dashboard &nbsp;|&nbsp; ${today} &nbsp;|&nbsp; For official use only
+    </div>
+    <script>window.onload=()=>window.print();<\/script>
+  </body></html>`;
+  const w = window.open('','_blank');
+  w.document.write(html);
+  w.document.close();
 }
 
 function toggleDistrictEdit(){
