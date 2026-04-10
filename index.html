@@ -606,17 +606,12 @@ tr:hover td{background:#FAFBFF}
           </div>
         </div>
         <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
-          <div class="wform-group" style="margin:0;flex:1;min-width:140px">
-            <label style="font-size:11px">From Date <span style="color:var(--red)">*</span></label>
-            <input type="date" id="r-from-date" onchange="onReportDateChange()" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:7px;font-size:13px">
+          <div class="wform-group" style="margin:0;flex:1;min-width:180px">
+            <label style="font-size:11px">Reporting Month <span style="color:var(--red)">*</span></label>
+            <input type="month" id="r-month-pick" onchange="onReportMonthChange()" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:7px;font-size:13px">
           </div>
-          <div class="wform-group" style="margin:0;flex:1;min-width:140px">
-            <label style="font-size:11px">To Date <span style="color:var(--red)">*</span></label>
-            <input type="date" id="r-to-date" onchange="onReportDateChange()" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:7px;font-size:13px">
-          </div>
-          <div class="wform-group" style="margin:0;flex:1;min-width:140px">
-            <label style="font-size:11px">Reporting Period</label>
-            <div id="r-month-display" style="padding:7px 10px;border:1px solid var(--border);border-radius:7px;font-size:12px;background:#f0f4fa;color:var(--blue);font-weight:600;min-height:36px">Select dates above</div>
+          <div id="r-month-status-wrap" style="flex:1;min-width:200px;display:none">
+            <div id="r-month-status" style="padding:8px 12px;border-radius:7px;font-size:12px;font-weight:600"></div>
           </div>
           <div class="wform-group" style="margin:0;flex:1;min-width:160px">
             <label style="font-size:11px">Contact Number</label>
@@ -721,8 +716,12 @@ tr:hover td{background:#FAFBFF}
 
       <!-- Submit -->
       <div id="r-submit-area" style="margin-bottom:24px">
-        <button class="btn-grn" style="width:100%;padding:14px;font-size:15px" onclick="submitMonthlyReport()">✅ Submit Report</button>
-        <div style="font-size:11px;color:var(--muted);text-align:center;margin-top:6px">PMU will be notified after submission. Please submit before the last working day of the month.</div>
+        <button id="r-submit-btn" class="btn-grn" style="width:100%;padding:14px;font-size:15px" onclick="submitMonthlyReport()">✅ Save Report</button>
+        <div id="r-lock-wrap" style="display:none;margin-top:10px">
+          <button class="btn-blu" style="width:100%;padding:12px;font-size:13px;background:#fff8e1;color:#b8860b;border:2px solid #ffe082;border-radius:8px" onclick="lockMonthReport()">🔒 Lock Report — No more changes for this month</button>
+          <div style="font-size:11px;color:var(--muted);text-align:center;margin-top:4px">Lock only when all entries are final. Once locked, this month cannot be edited.</div>
+        </div>
+        <div style="font-size:11px;color:var(--muted);text-align:center;margin-top:6px">You can save multiple times. Lock when finalised.</div>
       </div>
 
       <!-- Success message -->
@@ -1115,17 +1114,73 @@ function onDistrictChange(){
   }
 }
 
-function onReportDateChange(){
-  const from = document.getElementById('r-from-date')?.value;
-  const to   = document.getElementById('r-to-date')?.value;
-  const disp = document.getElementById('r-month-display');
-  if(!disp) return;
-  if(!from && !to){ disp.textContent = 'Select dates above'; return; }
-  const mNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  function fmt(d){ const dt=new Date(d); return dt.getDate()+' '+mNames[dt.getMonth()]+' '+dt.getFullYear(); }
-  if(from && to)  disp.textContent = fmt(from) + ' → ' + fmt(to);
-  else if(from)   disp.textContent = 'From: ' + fmt(from);
-  else            disp.textContent = 'To: ' + fmt(to);
+function onReportDateChange(){ /* legacy — no-op */ }
+
+function onReportMonthChange(){
+  const pick = document.getElementById('r-month-pick');
+  if(!pick?.value) return;
+  const [yr, mo] = pick.value.split('-').map(Number);
+  const mNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const monthLabel = mNames[mo-1] + ' ' + yr;
+
+  // Check if already submitted for this month
+  const existing = REPORTS.find(r => r.ngo === currentUser.org && r.month === monthLabel);
+  const wrap  = document.getElementById('r-month-status-wrap');
+  const stEl  = document.getElementById('r-month-status');
+  const submitBtn = document.getElementById('r-submit-btn');
+  const lockWrap  = document.getElementById('r-lock-wrap');
+
+  if(existing){
+    const isLocked = String(existing.report_locked) === 'true';
+    wrap.style.display = 'block';
+    if(isLocked){
+      stEl.style.cssText = 'padding:8px 12px;border-radius:7px;font-size:12px;font-weight:600;background:#fce4ec;color:#c62828;border:1px solid #ef9a9a';
+      stEl.textContent = '🔒 This month is locked — no more changes allowed.';
+      submitBtn.disabled = true;
+      submitBtn.style.opacity = '0.5';
+      lockWrap.style.display = 'none';
+    } else {
+      stEl.style.cssText = 'padding:8px 12px;border-radius:7px;font-size:12px;font-weight:600;background:#e8f5e9;color:#2e7d32;border:1px solid #a5d6a7';
+      stEl.textContent = '✏ Draft saved — you can update and re-save, or lock when final.';
+      submitBtn.disabled = false;
+      submitBtn.style.opacity = '1';
+      submitBtn.textContent = '💾 Update Report';
+      lockWrap.style.display = 'block';
+      // Pre-fill form with saved data
+      prefillFromExisting(existing);
+    }
+  } else {
+    wrap.style.display = 'none';
+    submitBtn.disabled = false;
+    submitBtn.style.opacity = '1';
+    submitBtn.textContent = '✅ Save Report';
+    lockWrap.style.display = 'none';
+    buildReportTaskCards();
+  }
+}
+
+function prefillFromExisting(rep){
+  const set = (id, val) => { const el=document.getElementById(id); if(el) el.value=val||''; };
+  set('r-kmi',          rep.kmi);
+  set('r-schools',      rep.schools);
+  set('r-students',     rep.students);
+  set('r-girls',        rep.girls);
+  set('r-teachers',     rep.teachers);
+  set('r-meetings',     rep.meetings);
+  set('r-events',       rep.events);
+  set('r-scst',         rep.scst);
+  set('r-divyang',      rep.divyang);
+  set('r-dropout',      rep.dropout);
+  set('r-equipment',    rep.equipment);
+  set('r-training',     rep.training);
+  set('r-machine',      rep.machine);
+  set('r-donation',     rep.donation);
+  set('r-other-support',rep.other_support);
+  set('r-achieve',      rep.achieve);
+  set('r-challenges',   rep.challenges);
+  set('r-support',      rep.support);
+  set('r-plans',        rep.plans);
+  buildReportTaskCards(rep);
 }
 
 function filterSchoolList(){
@@ -2715,6 +2770,7 @@ function renderMyReports(){
     <th style="padding:8px 10px;text-align:right;border-bottom:2px solid #2E6DB430;white-space:nowrap">Events</th>
     <th style="padding:8px 10px;text-align:center;border-bottom:2px solid #2E6DB430;white-space:nowrap">Progress</th>
     <th style="padding:8px 10px;text-align:left;border-bottom:2px solid #2E6DB430;white-space:nowrap">Submitted</th>
+    <th style="padding:8px 10px;text-align:center;border-bottom:2px solid #2E6DB430">Status</th>
     <th style="padding:8px 10px;text-align:center;border-bottom:2px solid #2E6DB430">Download</th>
   </tr>`;
 
@@ -2740,6 +2796,11 @@ function renderMyReports(){
         <td style="padding:8px 10px;text-align:right">${(+r.events||0).toLocaleString('en-IN')}</td>
         <td style="padding:8px 10px;text-align:center;font-weight:700;color:${col}">${pct}%</td>
         <td style="padding:8px 10px;font-size:11px;color:var(--muted);white-space:nowrap">${r.submitted||'—'}</td>
+        <td style="padding:8px 10px;text-align:center;white-space:nowrap">
+          ${String(r.report_locked)==='true'
+            ? '<span style="font-size:10px;color:#2e7d32;background:#c8e6c9;border-radius:10px;padding:2px 8px">🔒 Locked</span>'
+            : `<span style="font-size:10px;color:#b8860b;background:#fff8e1;border-radius:10px;padding:2px 8px;cursor:pointer" onclick="showPage('monthly-report')">✏ Edit</span>`}
+        </td>
         <td style="padding:8px 10px;text-align:center">
           <button onclick="downloadMonthReport('${rid}')"
             style="padding:4px 12px;background:var(--blue);color:#fff;border:none;border-radius:6px;font-size:11px;cursor:pointer;white-space:nowrap">
@@ -3061,17 +3122,13 @@ function prefillReportForm(){
   set('rh-phone', myNGO.phone);
   set('rh-email', currentUser.email);
 
-  // Auto-set today's date in from/to
+  // Auto-set current month
   const now = new Date();
-  const todayStr = now.toISOString().slice(0,10);
-  const fromEl = document.getElementById('r-from-date');
-  const toEl   = document.getElementById('r-to-date');
-  if(fromEl && !fromEl.value) fromEl.value = todayStr;
-  if(toEl   && !toEl.value)   toEl.value   = todayStr;
-  onReportDateChange();
-
-  // Build task cards
-  buildReportTaskCards();
+  const monthPick = document.getElementById('r-month-pick');
+  if(monthPick && !monthPick.value){
+    monthPick.value = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0');
+  }
+  onReportMonthChange();
 
   // Show cumulative totals from past reports
   const myReps = REPORTS.filter(r=>r.ngo===currentUser.org);
@@ -3096,7 +3153,7 @@ function prefillReportForm(){
   document.getElementById('r-submit-area').style.display = 'block';
 }
 
-function buildReportTaskCards(){
+function buildReportTaskCards(existingRep){
   const container = document.getElementById('r-task-cards');
   if(!container) return;
   const myProjs = PROJECTS.filter(p => p.ngo === currentUser.org && isTaskLocked(p.locked));
@@ -3111,8 +3168,8 @@ function buildReportTaskCards(){
     return;
   }
 
-  // Last report for carry-over
-  const lastRep = REPORTS.filter(r=>r.ngo===currentUser.org).sort((a,b)=>(+b.id||0)-(+a.id||0))[0] || {};
+  // Use provided existing report data for pre-fill, else last report for carry-over
+  const lastRep = existingRep || REPORTS.filter(r=>r.ngo===currentUser.org).sort((a,b)=>(+b.id||0)-(+a.id||0))[0] || {};
   let lastTasks = [];
   try { lastTasks = JSON.parse(lastRep.tasks_json || lastRep.tasks || '[]'); } catch(e){}
 
@@ -3257,39 +3314,25 @@ function handlePhotos(input){}
 function removePhoto(i){}
 
 async function submitMonthlyReport(){
-  const fromDate = document.getElementById('r-from-date').value;
-  const toDate   = document.getElementById('r-to-date').value;
+  const monthPick = document.getElementById('r-month-pick');
+  if(!monthPick?.value){ alert('Please select a Reporting Month'); monthPick?.focus(); return; }
+
+  const [yr, mo] = monthPick.value.split('-').map(Number);
+  const mNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const months  = mNames[mo-1] + ' ' + yr;
+  // first and last day of selected month
+  const fromDate = monthPick.value + '-01';
+  const lastDay  = new Date(yr, mo, 0).getDate();
+  const toDate   = monthPick.value + '-' + String(lastDay).padStart(2,'0');
   const kmi      = document.getElementById('r-kmi').value.trim();
 
-  // Validate dates
-  if(!fromDate){ alert('Please select From Date'); document.getElementById('r-from-date').focus(); return; }
-  if(!toDate){   alert('Please select To Date');   document.getElementById('r-to-date').focus();   return; }
-  if(toDate < fromDate){ alert('To Date cannot be before From Date'); return; }
-
-  // Derive month label from fromDate (e.g. "April 2026")
-  const mNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-  const fd = new Date(fromDate);
-  const months = mNames[fd.getMonth()] + ' ' + fd.getFullYear();
-
-  // Overlap check — block if any existing report's date range overlaps
+  // Check if locked
   const myReps = REPORTS.filter(r => r.ngo === currentUser.org);
-  const overlap = myReps.find(r => {
-    const ef = r.report_from || '';
-    const et = r.report_to   || '';
-    if(!ef || !et) return false; // old reports without date range — skip overlap check
-    return fromDate <= et && toDate >= ef; // overlap condition
-  });
-  if(overlap){
-    const ef = overlap.report_from, et = overlap.report_to;
-    alert(`Date range overlap!\n\nA report for ${ef} to ${et} has already been submitted.\n\nFor corrections please contact the PMU Admin.`);
+  const existing = myReps.find(r => r.month === months);
+  if(existing && String(existing.report_locked) === 'true'){
+    alert('This month is locked and cannot be edited.');
     return;
   }
-
-  // Validate at least some KPI numbers filled
-  const schools  = +document.getElementById('r-schools').value  || 0;
-  const students = +document.getElementById('r-students').value || 0;
-  const achieve  = document.getElementById('r-achieve').value.trim();
-  // Section B is optional — KMI and numbers are not mandatory
 
   // Collect task-wise data — only locked tasks (these are the ones shown in the form)
   const myProjs = PROJECTS.filter(p => p.ngo === currentUser.org && isTaskLocked(p.locked));
@@ -3350,10 +3393,11 @@ async function submitMonthlyReport(){
   });
 
   const report = {
-    ngo:          currentUser.org,
-    month:        months,
-    report_from:  fromDate,
-    report_to:    toDate,
+    ngo:           currentUser.org,
+    month:         months,
+    report_from:   fromDate,
+    report_to:     toDate,
+    report_locked: 'false',
     schools:      +document.getElementById('r-schools').value  || 0,
     students:     +document.getElementById('r-students').value || 0,
     girls:        +document.getElementById('r-girls').value    || 0,
@@ -3386,7 +3430,7 @@ async function submitMonthlyReport(){
     try {
       showLoader(`Uploading photo ${i+1} of ${allTaskPhotos.length} — ${task_name}…`);
       const b64 = await fileToBase64(file);
-      const res = await apiPost({ action:'uploadPhoto', ngo:currentUser.org, month:fromDate.slice(0,7),
+      const res = await apiPost({ action:'uploadPhoto', ngo:currentUser.org, month:monthPick.value,
         base64:b64, mimeType:file.type, filename:file.name }, 90000); // 90s timeout for photos
       if(res.success && res.folderId) report.photos_folder = 'https://drive.google.com/drive/folders/' + res.folderId;
       else photoFailCount++;
@@ -3403,19 +3447,49 @@ async function submitMonthlyReport(){
     if(res && res.docUrl) driveDocUrl = res.docUrl;
   } catch(e){ console.warn('Sync error:', e.message); }
 
-  // Update local state
-  REPORTS.push(report);
+  // Update local state — replace existing or push new
+  const idx = REPORTS.findIndex(r => r.ngo === currentUser.org && r.month === months);
+  if(idx >= 0) REPORTS[idx] = report; else REPORTS.push(report);
   const ngo = SAMPLE_NGOS.find(n => n.name === currentUser.org);
   if(ngo){ ngo.schools=report.schools||ngo.schools; ngo.students=report.students||ngo.students; ngo.month=months; }
   renderPartnerTable(); renderMap(activeFilter);
 
   hideLoader();
   uploadedPhotos = [];
-  document.getElementById('r-submit-area').style.display = 'none';
 
-  // Drive link is for admin only — not shown to NGO users
-  document.getElementById('r-success-msg').style.display = 'block';
-  document.getElementById('r-success-msg').scrollIntoView({behavior:'smooth'});
+  // Show lock button — saved but not yet locked
+  document.getElementById('r-lock-wrap').style.display = 'block';
+  document.getElementById('r-submit-btn').textContent = '💾 Update Report';
+  const wrap = document.getElementById('r-month-status-wrap');
+  const stEl = document.getElementById('r-month-status');
+  wrap.style.display = 'block';
+  stEl.style.cssText = 'padding:8px 12px;border-radius:7px;font-size:12px;font-weight:600;background:#e8f5e9;color:#2e7d32;border:1px solid #a5d6a7';
+  stEl.textContent = '✅ Saved! You can update again or Lock to finalise.';
+  renderMyReports();
+  document.getElementById('r-submit-area').scrollIntoView({behavior:'smooth'});
+}
+
+async function lockMonthReport(){
+  const monthPick = document.getElementById('r-month-pick');
+  if(!monthPick?.value) return;
+  const [yr, mo] = monthPick.value.split('-').map(Number);
+  const mNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const months = mNames[mo-1] + ' ' + yr;
+  if(!confirm('Lock report for ' + months + '?\n\nOnce locked it cannot be edited. Lock only when all entries are final.')) return;
+  showLoader('Locking report…');
+  try {
+    await apiFetch({action:'lockReport', ngo:currentUser.org, month:months});
+    const rep = REPORTS.find(r => r.ngo===currentUser.org && r.month===months);
+    if(rep) rep.report_locked = 'true';
+    hideLoader();
+    document.getElementById('r-lock-wrap').style.display = 'none';
+    document.getElementById('r-submit-btn').disabled = true;
+    document.getElementById('r-submit-btn').style.opacity = '0.5';
+    const stEl = document.getElementById('r-month-status');
+    stEl.style.cssText = 'padding:8px 12px;border-radius:7px;font-size:12px;font-weight:600;background:#fce4ec;color:#c62828;border:1px solid #ef9a9a';
+    stEl.textContent = '🔒 Report locked for ' + months + ' — no more changes.';
+    renderMyReports();
+  } catch(e){ hideLoader(); alert('Lock failed: ' + e.message); }
 }
 
 function resetMonthlyReport(){
@@ -3592,7 +3666,12 @@ function downloadKPIReport(){
   myProjs.forEach((t, idx) => {
     const actCols = months.map(m => {
       const ma = monthActMap[m]?.acts?.find(a=>a.task_name===t.task_name);
-      return ma?.activity || '';
+      if(!ma) return '';
+      // Collect updates from sub-activities or activity field
+      if(ma.sub_activities?.length){
+        return ma.sub_activities.map(s=>s.name+(s.update?': '+s.update:'')).join(' | ');
+      }
+      return ma.activity || ma.update || '';
     });
     const statusCols = months.map(m => {
       const ma = monthActMap[m]?.acts?.find(a=>a.task_name===t.task_name);
@@ -3600,9 +3679,9 @@ function downloadKPIReport(){
     });
     const photoCols = months.map(m => {
       const ma = monthActMap[m]?.acts?.find(a=>a.task_name===t.task_name);
-      return ma?.photo_link || '';
+      return ma?.photo_link || monthActMap[m]?.rep?.photos_folder || '';
     });
-    rows.push([idx+1, t.component, t.task_name, t.start_date||'', t.end_date||'', ...actCols, ...statusCols, ...photoCols]);
+    rows.push([idx+1, t.component, t.task_name, fmtDate(t.start_date), fmtDate(t.end_date), ...actCols, ...statusCols, ...photoCols]);
   });
 
   rows.push([]);
@@ -3615,7 +3694,7 @@ function downloadKPIReport(){
     cumT +=+rep.teachers||0; cumM +=+rep.meetings||0; cumEv+=+rep.events||0;
     cumSc+=+rep.scst||0;     cumDv+=+rep.divyang||0;  cumDr+=+rep.dropout||0;
     const eqpt = [rep.equipment, rep.training].filter(Boolean).join(' | ');
-    rows.push([rep.month, rep.schools||0, rep.students||0, rep.girls||0, rep.teachers||0,
+    rows.push([rep.month||'', rep.schools||0, rep.students||0, rep.girls||0, rep.teachers||0,
       rep.meetings||0, rep.events||0, rep.scst||0, rep.divyang||0, rep.dropout||0,
       eqpt, rep.machine||'', rep.donation||'', rep.other_support||'', rep.kmi||'']);
   });
@@ -3625,7 +3704,7 @@ function downloadKPIReport(){
   // Section C: Narrative (last month)
   if(myReps.length){
     const last = myReps[myReps.length-1];
-    rows.push(['SECTION C — NARRATIVE REPORT (Latest Month: '+last.month+')']);
+    rows.push(['SECTION C — NARRATIVE REPORT (Latest Month: '+(last.month||'')+ ')']);
     rows.push(['Key Achievements:', last.achieve||'']);
     rows.push(['Key Challenges:', last.challenges||'']);
     rows.push(['Support Required:', last.support||'']);

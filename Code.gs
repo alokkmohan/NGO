@@ -32,6 +32,7 @@ function doGet(e) {
     else if (action === 'getProjects')          result = getProjects(p);
     else if (action === 'deleteUnlockedProjects') result = deleteUnlockedProjects(p);
     else if (action === 'lockProject')          result = lockProject(p);
+    else if (action === 'lockReport')           result = lockReport(p);
     else if (action === 'submitReport')  result = submitReport({ report: JSON.parse(p.report) });
     // legacy — kept for backward compat
     else if (action === 'login')          result = login(p);
@@ -339,14 +340,35 @@ function submitReport(data) {
   if (!hRow2.includes('report_from')) rSheet.getRange(1, hRow2.length + 1).setValue('report_from');
   if (!hRow2.includes('report_to'))   rSheet.getRange(1, hRow2.length + 2).setValue('report_to');
 
-  rSheet.appendRow([
-    new Date().getTime(),
+  // Ensure report_locked column exists
+  const hRow3 = rSheet.getRange(1, 1, 1, rSheet.getLastColumn()).getValues()[0];
+  if (!hRow3.includes('report_locked')) rSheet.getRange(1, hRow3.length + 1).setValue('report_locked');
+
+  // Check if report for this NGO+month already exists (update instead of insert)
+  const allRows = rSheet.getDataRange().getValues();
+  const hdr0 = allRows[0];
+  const ngoIdx0    = hdr0.indexOf('ngo');
+  const monthIdx0  = hdr0.indexOf('month');
+  const lockedIdx0 = hdr0.indexOf('report_locked');
+  let updateRow = -1;
+  for (let i = 1; i < allRows.length; i++) {
+    if (String(allRows[i][ngoIdx0]) === String(r.ngo) && String(allRows[i][monthIdx0]) === String(r.month)) {
+      if (lockedIdx0 >= 0 && String(allRows[i][lockedIdx0]).toLowerCase() === 'true') {
+        return { success: false, error: 'Report is locked and cannot be updated.' };
+      }
+      updateRow = i + 1; // 1-indexed sheet row
+      break;
+    }
+  }
+
+  const newRow = [
+    updateRow > 0 ? allRows[updateRow-1][0] : new Date().getTime(), // keep original id if update
     r.ngo, r.month,
     r.schools  || 0, r.students  || 0, r.girls   || 0, r.teachers || 0,
     r.meetings || 0, r.events    || 0, r.scst     || 0, r.divyang  || 0,
     0, r.dropout || 0,
-    readableText,      // tasks_readable — human friendly
-    r.tasks    || '',  // tasks_json    — raw JSON for app
+    readableText,
+    r.tasks    || '',
     r.status   || '',
     r.kmi      || '', r.achieve  || '', r.challenges || '',
     r.support  || '', r.plans    || '',
@@ -355,8 +377,15 @@ function submitReport(data) {
     new Date().toLocaleDateString('en-IN'),
     r.equipment || '', r.training || '', r.machine || '',
     r.donation  || '', r.other_support || '',
-    r.report_from || '', r.report_to || ''
-  ]);
+    r.report_from || '', r.report_to || '',
+    'false' // report_locked
+  ];
+
+  if (updateRow > 0) {
+    rSheet.getRange(updateRow, 1, 1, newRow.length).setValues([newRow]);
+  } else {
+    rSheet.appendRow(newRow);
+  }
 
   // Update latest values in NGOs sheet
   const nSheet = ss.getSheetByName('NGOs');
@@ -396,6 +425,27 @@ function submitReport(data) {
   }
 
   return { success: true, docUrl: docUrl };
+}
+
+function lockReport(data) {
+  const sheet = getSS().getSheetByName('Reports');
+  if (!sheet) return { success: false };
+  const rows = sheet.getDataRange().getValues();
+  const h = rows[0];
+  const ngoIdx    = h.indexOf('ngo');
+  const monthIdx  = h.indexOf('month');
+  let lockedIdx   = h.indexOf('report_locked');
+  if (lockedIdx < 0) {
+    lockedIdx = h.length;
+    sheet.getRange(1, lockedIdx + 1).setValue('report_locked');
+  }
+  for (let i = 1; i < rows.length; i++) {
+    if (String(rows[i][ngoIdx]) === String(data.ngo) && String(rows[i][monthIdx]) === String(data.month)) {
+      sheet.getRange(i + 1, lockedIdx + 1).setValue('true');
+      return { success: true };
+    }
+  }
+  return { success: false, error: 'Report not found' };
 }
 
 // ── DRIVE FOLDER HELPERS ─────────────────────────────────────
