@@ -378,15 +378,15 @@ tr:hover td{background:#FAFBFF}
       </div>
       <div class="wform-group" id="school-section" style="margin-top:12px;display:none">
         <label>Schools <span>*</span>
-          <span style="font-weight:400;font-size:11px;color:var(--muted);margin-left:6px">Schools where you work — select a block to see the list</span>
+          <span style="font-weight:400;font-size:11px;color:var(--muted);margin-left:6px">Schools where you work — select a district to see the list</span>
         </label>
         <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px">
-          <select id="school-block-sel" onchange="loadSchoolsForBlock()" style="flex:1;padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px">
-            <option value="">-- Select block --</option>
+          <select id="school-dist-sel" onchange="loadSchoolsForDist()" style="flex:1;padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px">
+            <option value="">-- Select district --</option>
           </select>
           <span id="school-loading" style="font-size:12px;color:var(--muted);display:none">Loading…</span>
         </div>
-        <div id="school-list" style="max-height:150px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:8px;font-size:12px;color:var(--muted)">Schools will appear after selecting a block</div>
+        <div id="school-list" style="max-height:150px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:8px;font-size:12px;color:var(--muted)">Schools will appear after selecting a district</div>
         <div id="selected-schools-display" style="margin-top:8px;display:flex;flex-wrap:wrap;gap:4px"></div>
       </div>
       <div class="wizard-nav">
@@ -1095,6 +1095,7 @@ function onDistrictChange(){
   const blockEl = document.getElementById('block-checks');
   const blockLabel = document.getElementById('block-label');
   const schoolSec = document.getElementById('school-section');
+  const schoolDistSel = document.getElementById('school-dist-sel');
   if(!blockEl) return;
 
   if(!checked.length){
@@ -1115,6 +1116,14 @@ function onDistrictChange(){
       <input type="checkbox" value="${dist}|${block}" onchange="onBlockChange()" style="width:12px;height:12px">
       <span style="color:var(--muted);font-size:10px">[${dist}]</span> ${block}
     </label>`).join('');
+
+  // Show school section with district selector
+  if(schoolSec && schoolDistSel){
+    schoolSec.style.display = 'block';
+    schoolDistSel.innerHTML = '<option value="">-- Select district --</option>' +
+      checked.map(d => `<option value="${d}">${d}</option>`).join('');
+    document.getElementById('school-list').innerHTML = '<span style="color:var(--muted)">Select a district above to see schools</span>';
+  }
 }
 
 function filterBlockList(){
@@ -1125,25 +1134,13 @@ function filterBlockList(){
 }
 
 function onBlockChange(){
-  const checkedBlocks = [...document.querySelectorAll('#block-checks input:checked')].map(c=>c.value);
-  const schoolSec = document.getElementById('school-section');
-  const schoolBlockSel = document.getElementById('school-block-sel');
-  if(!schoolSec || !schoolBlockSel) return;
-
-  if(!checkedBlocks.length){ schoolSec.style.display='none'; return; }
-  schoolSec.style.display = 'block';
-  schoolBlockSel.innerHTML = '<option value="">-- Select block --</option>' +
-    checkedBlocks.map(cb => {
-      const [d,b] = cb.split('|');
-      return `<option value="${cb}">${b} (${d})</option>`;
-    }).join('');
+  // Block selection is independent of school section (schools are district-based)
 }
 
 let _schoolCache = null;
-async function loadSchoolsForBlock(){
-  const val = document.getElementById('school-block-sel')?.value;
+async function loadSchoolsForDist(){
+  const val = document.getElementById('school-dist-sel')?.value;
   if(!val) return;
-  const [dist, block] = val.split('|');
   const schoolList = document.getElementById('school-list');
   const loadingEl = document.getElementById('school-loading');
 
@@ -1162,17 +1159,15 @@ async function loadSchoolsForBlock(){
   }
   if(loadingEl) loadingEl.style.display = 'none';
 
-  const key = dist + '|' + block;
-  const schools = _schoolCache[key] || [];
+  const schools = _schoolCache[val.toUpperCase()] || [];
   if(!schools.length){
-    schoolList.innerHTML = '<span style="color:var(--muted)">No schools found in this block</span>';
+    schoolList.innerHTML = '<span style="color:var(--muted)">No schools found in this district</span>';
     return;
   }
   schoolList.innerHTML = schools.map(s =>
     `<label style="display:flex;align-items:center;gap:5px;font-size:11px;cursor:pointer;padding:2px 0">
-      <input type="checkbox" value="${s.n}" data-udise="${s.u}" onchange="updateSelectedSchools()" style="width:12px;height:12px">
-      <span>${s.n}</span>
-      <span style="font-size:10px;color:var(--muted)">(${s.u})</span>
+      <input type="checkbox" value="${s}" onchange="updateSelectedSchools()" style="width:12px;height:12px">
+      <span>${s}</span>
     </label>`).join('');
 }
 
@@ -1286,7 +1281,7 @@ function profileNext(step){
     const checkedBlocks = document.querySelectorAll('#block-checks input:checked');
     if(!checkedBlocks.length){ alert('Please select at least one block'); return; }
     const checkedSchools = document.querySelectorAll('#school-list input:checked');
-    if(!checkedSchools.length){ alert('Please select at least one school — select a block in the school section to see schools'); return; }
+    if(!checkedSchools.length){ alert('Please select at least one school — select a district in the school section to see schools'); return; }
   }
   if(step===3){
     const checkedComps = document.querySelectorAll('.comp-cb:checked');
