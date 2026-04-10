@@ -1545,7 +1545,7 @@ async function loadSheetData(){
     const [ngoRes, repRes, projRes] = await Promise.all([
       apiFetch({action:'getNGOs'}),
       apiFetch({action:'getReports'}),
-      apiFetch({action:'getProjects', ngo: currentUser?.org||''})
+      apiFetch({action:'getProjects', ngo: currentUser?.role==='admin' ? 'all' : (currentUser?.org||'')})
     ]);
     if(ngoRes.success && ngoRes.data.length){
       SAMPLE_NGOS.length = 0;

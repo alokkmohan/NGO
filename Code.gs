@@ -625,8 +625,8 @@ function getProjects(data) {
     headers.forEach((h, i) => obj[h] = row[i]);
     return obj;
   });
-  // Filter by NGO if requested (non-admin)
-  if (data.ngo) projects = projects.filter(p => p.ngo === data.ngo);
+  // Filter by NGO if requested (non-admin); 'all' means return everything
+  if (data.ngo && data.ngo !== 'all') projects = projects.filter(p => p.ngo === data.ngo);
   return { success: true, data: projects };
 }
 
