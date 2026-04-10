@@ -368,17 +368,10 @@ tr:hover td{background:#FAFBFF}
           <input type="text" id="dist-search" placeholder="🔍 Search district..." oninput="filterDistList()" style="width:100%;padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;margin-bottom:6px">
           <div style="max-height:200px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:8px" id="dist-checks"></div>
         </div>
-        <div class="wform-group" id="block-section">
-          <label>Select blocks <span>*</span>
-            <span style="font-weight:400;font-size:11px;color:var(--muted)" id="block-label"> — select district first</span>
-          </label>
-          <input type="text" id="block-search" placeholder="🔍 Search block..." oninput="filterBlockList()" style="width:100%;padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;margin-bottom:6px">
-          <div style="max-height:200px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:8px" id="block-checks"><div style="color:var(--muted);font-size:12px;padding:4px">Select a district first</div></div>
-        </div>
       </div>
       <div class="wform-group" id="school-section" style="margin-top:12px;display:none">
         <label>Schools <span>*</span>
-          <span style="font-weight:400;font-size:11px;color:var(--muted);margin-left:6px">Schools where you work — select a district to see the list</span>
+          <span style="font-weight:400;font-size:11px;color:var(--muted);margin-left:6px">Schools where you work</span>
         </label>
         <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px">
           <select id="school-dist-sel" onchange="loadSchoolsForDist()" style="flex:1;padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px">
@@ -386,7 +379,8 @@ tr:hover td{background:#FAFBFF}
           </select>
           <span id="school-loading" style="font-size:12px;color:var(--muted);display:none">Loading…</span>
         </div>
-        <div id="school-list" style="max-height:150px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:8px;font-size:12px;color:var(--muted)">Schools will appear after selecting a district</div>
+        <input type="text" id="school-search" placeholder="🔍 Search by school name or UDISE..." oninput="filterSchoolList()" style="width:100%;padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;margin-bottom:6px;display:none">
+        <div id="school-list" style="max-height:180px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:8px;font-size:12px;color:var(--muted)">Schools will appear after selecting a district</div>
         <div id="selected-schools-display" style="margin-top:8px;display:flex;flex-wrap:wrap;gap:4px"></div>
       </div>
       <div class="wizard-nav">
@@ -1092,49 +1086,29 @@ function filterDistList(){
 
 function onDistrictChange(){
   const checked = [...document.querySelectorAll('#dist-checks input:checked')].map(c=>c.value);
-  const blockEl = document.getElementById('block-checks');
-  const blockLabel = document.getElementById('block-label');
   const schoolSec = document.getElementById('school-section');
   const schoolDistSel = document.getElementById('school-dist-sel');
-  if(!blockEl) return;
 
   if(!checked.length){
-    blockEl.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:4px">Select a district first</div>';
-    if(blockLabel) blockLabel.textContent = ' — select district first';
     if(schoolSec) schoolSec.style.display = 'none';
     return;
   }
 
-  // Gather all blocks for selected districts
-  const allBlocks = [];
-  checked.forEach(d => { (DIST_BLOCKS[d]||[]).forEach(b => allBlocks.push({dist:d, block:b})); });
-  allBlocks.sort((a,b) => a.block.localeCompare(b.block));
-
-  if(blockLabel) blockLabel.textContent = ` — ${checked.length} district${checked.length>1?'s':''} selected`;
-  blockEl.innerHTML = allBlocks.map(({dist,block}) =>
-    `<label style="display:flex;align-items:center;gap:5px;font-size:11px;cursor:pointer">
-      <input type="checkbox" value="${dist}|${block}" onchange="onBlockChange()" style="width:12px;height:12px">
-      <span style="color:var(--muted);font-size:10px">[${dist}]</span> ${block}
-    </label>`).join('');
-
-  // Show school section with district selector
   if(schoolSec && schoolDistSel){
     schoolSec.style.display = 'block';
     schoolDistSel.innerHTML = '<option value="">-- Select district --</option>' +
       checked.map(d => `<option value="${d}">${d}</option>`).join('');
     document.getElementById('school-list').innerHTML = '<span style="color:var(--muted)">Select a district above to see schools</span>';
+    const searchEl = document.getElementById('school-search');
+    if(searchEl) searchEl.style.display = 'none';
   }
 }
 
-function filterBlockList(){
-  const q = (document.getElementById('block-search')?.value||'').toLowerCase();
-  document.querySelectorAll('#block-checks label').forEach(lbl => {
+function filterSchoolList(){
+  const q = (document.getElementById('school-search')?.value||'').toLowerCase();
+  document.querySelectorAll('#school-list label').forEach(lbl => {
     lbl.style.display = lbl.textContent.toLowerCase().includes(q) ? '' : 'none';
   });
-}
-
-function onBlockChange(){
-  // Block selection is independent of school section (schools are district-based)
 }
 
 let _schoolCache = null;
@@ -1164,10 +1138,13 @@ async function loadSchoolsForDist(){
     schoolList.innerHTML = '<span style="color:var(--muted)">No schools found in this district</span>';
     return;
   }
+  const searchEl = document.getElementById('school-search');
+  if(searchEl){ searchEl.style.display = ''; searchEl.value = ''; }
   schoolList.innerHTML = schools.map(s =>
-    `<label style="display:flex;align-items:center;gap:5px;font-size:11px;cursor:pointer;padding:2px 0">
-      <input type="checkbox" value="${s}" onchange="updateSelectedSchools()" style="width:12px;height:12px">
-      <span>${s}</span>
+    `<label style="display:flex;align-items:center;gap:5px;font-size:11px;cursor:pointer;padding:3px 0;border-bottom:1px solid #f0f0f0">
+      <input type="checkbox" value="${s.n}" onchange="updateSelectedSchools()" style="width:12px;height:12px;flex-shrink:0">
+      <span style="flex:1">${s.n}</span>
+      <span style="font-size:10px;color:var(--muted);white-space:nowrap">${s.u}</span>
     </label>`).join('');
 }
 
@@ -1311,7 +1288,6 @@ function buildStep4Summary(){
 
   // Collect all selections
   const dists   = [...document.querySelectorAll('#dist-checks input:checked')].map(c=>c.value);
-  const blocks  = [...document.querySelectorAll('#block-checks input:checked')].map(c=>c.value.split('|')[1]);
   const schools = selectedSchools.map(c=>c.value);
 
   // Collect components + tasks
@@ -1327,15 +1303,9 @@ function buildStep4Summary(){
   summary.innerHTML = `
     <div style="background:#f0f6ff;border:1px solid #2E6DB430;border-radius:10px;padding:14px 16px;font-size:12px">
       <div style="font-weight:700;color:var(--blue);margin-bottom:10px;font-size:13px">📋 Summary of your selections — please review</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
-        <div>
-          <div style="color:var(--muted);font-size:11px;margin-bottom:3px">Districts (${dists.length})</div>
-          <div style="display:flex;flex-wrap:wrap;gap:3px">${dists.map(d=>`<span style="background:var(--blue)15;color:var(--blue);border-radius:12px;padding:2px 7px;font-size:11px">${d}</span>`).join('')}</div>
-        </div>
-        <div>
-          <div style="color:var(--muted);font-size:11px;margin-bottom:3px">Blocks (${blocks.length})</div>
-          <div style="display:flex;flex-wrap:wrap;gap:3px">${blocks.slice(0,8).map(b=>`<span style="background:#e8f4ea;color:var(--green);border-radius:12px;padding:2px 7px;font-size:11px">${b}</span>`).join('')}${blocks.length>8?`<span style="font-size:11px;color:var(--muted)">+${blocks.length-8} more</span>`:''}</div>
-        </div>
+      <div style="margin-bottom:10px">
+        <div style="color:var(--muted);font-size:11px;margin-bottom:3px">Districts (${dists.length})</div>
+        <div style="display:flex;flex-wrap:wrap;gap:3px">${dists.map(d=>`<span style="background:var(--blue)15;color:var(--blue);border-radius:12px;padding:2px 7px;font-size:11px">${d}</span>`).join('')}</div>
       </div>
       <div style="margin-bottom:10px">
         <div style="color:var(--muted);font-size:11px;margin-bottom:3px">Schools (${schools.length}) — <span style="color:var(--green);font-weight:600">Target Schools auto-fill: ${schools.length}</span></div>
@@ -1361,7 +1331,6 @@ function profileBack(step){
 
 async function saveProfile(){
   const selDist   = [...document.querySelectorAll('#dist-checks input:checked')].map(c=>c.value).join(', ');
-  const selBlocks = [...document.querySelectorAll('#block-checks input:checked')].map(c=>c.value.split('|')[1]).join(', ');
   const selSchools= [...document.querySelectorAll('#school-list input:checked')].map(c=>c.value).join(' | ');
 
   // Collect all checked components
@@ -1379,7 +1348,7 @@ async function saveProfile(){
       org:        currentUser.org,
       person:     document.getElementById('pf-person')?.value || currentUser.name,
       dist:       selDist,
-      blocks:     selBlocks,
+      blocks:     '',
       schools:    selSchools,
       theme:      allComponents,
       phone:      document.getElementById('pf-phone')?.value  || '',
@@ -2196,19 +2165,23 @@ function renderProfileView(){
         </div>
       </div>
       <div id="pv-sec2-form" style="display:none;padding:14px;border-top:1px solid var(--border);background:#fafcff">
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:12px">
-          <div>
-            <label style="font-size:11px;font-weight:600;display:block;margin-bottom:5px">Select districts</label>
-            <input type="text" id="pve-dist-search" placeholder="🔍 Search..." oninput="pveFilterDist()"
-              style="width:100%;padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;margin-bottom:5px">
-            <div id="pve-dist-checks" style="max-height:180px;overflow-y:auto;border:1px solid var(--border);border-radius:7px;padding:8px;font-size:11px"></div>
+        <div style="margin-bottom:12px">
+          <label style="font-size:11px;font-weight:600;display:block;margin-bottom:5px">Select districts</label>
+          <input type="text" id="pve-dist-search" placeholder="🔍 Search district..." oninput="pveFilterDist()"
+            style="width:100%;padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;margin-bottom:5px">
+          <div id="pve-dist-checks" style="max-height:180px;overflow-y:auto;border:1px solid var(--border);border-radius:7px;padding:8px;font-size:11px"></div>
+        </div>
+        <div style="margin-bottom:12px">
+          <label style="font-size:11px;font-weight:600;display:block;margin-bottom:5px">Schools</label>
+          <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px">
+            <select id="pve-school-dist-sel" onchange="pveLoadSchools()" style="flex:1;padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px">
+              <option value="">-- Select district to see schools --</option>
+            </select>
+            <span id="pve-school-loading" style="font-size:12px;color:var(--muted);display:none">Loading…</span>
           </div>
-          <div>
-            <label style="font-size:11px;font-weight:600;display:block;margin-bottom:5px">Select blocks</label>
-            <input type="text" id="pve-block-search" placeholder="🔍 Search..." oninput="pveFilterBlock()"
-              style="width:100%;padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;margin-bottom:5px">
-            <div id="pve-block-checks" style="max-height:180px;overflow-y:auto;border:1px solid var(--border);border-radius:7px;padding:8px;font-size:11px;color:var(--muted)">Select a district first</div>
-          </div>
+          <input type="text" id="pve-school-search" placeholder="🔍 Search by name or UDISE..." oninput="pveFilterSchools()" style="width:100%;padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;margin-bottom:6px;display:none">
+          <div id="pve-school-list" style="max-height:180px;overflow-y:auto;border:1px solid var(--border);border-radius:7px;padding:8px;font-size:11px;color:var(--muted)">Select a district above to see schools</div>
+          <div id="pve-selected-schools" style="margin-top:6px;display:flex;flex-wrap:wrap;gap:4px"></div>
         </div>
         <div style="display:flex;gap:8px">
           <button onclick="pvSave(2)" style="padding:6px 20px;background:var(--green);color:#fff;border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer">💾 Save</button>
@@ -2262,13 +2235,11 @@ function pvCancel(sec){
   document.getElementById('pv-sec'+sec+'-view').style.display='block';
 }
 
-// Section 2 — District/Block picker initialisation
+// Section 2 — District picker initialisation (no blocks)
 function pvInitGeo(){
   const myNGO = SAMPLE_NGOS.find(n=>n.name===currentUser.org)||{};
-  const savedDists  = (myNGO.dist||'').split(',').map(d=>d.trim().toUpperCase()).filter(Boolean);
-  const savedBlocks = (myNGO.blocks||'').split(',').map(b=>b.trim()).filter(Boolean);
+  const savedDists = (myNGO.dist||'').split(',').map(d=>d.trim().toUpperCase()).filter(Boolean);
 
-  // Build district checkboxes
   const dc = document.getElementById('pve-dist-checks');
   if(!dc) return;
   dc.innerHTML = UP_DISTRICTS.map(d=>`
@@ -2277,8 +2248,7 @@ function pvInitGeo(){
         ${savedDists.includes(d.toUpperCase())?'checked':''}
         style="width:12px;height:12px"> ${d}
     </label>`).join('');
-  // Trigger block list build for pre-selected districts
-  pveOnDistChange(savedBlocks);
+  pveOnDistChange();
 }
 
 function pveFilterDist(){
@@ -2287,29 +2257,65 @@ function pveFilterDist(){
     l.style.display=l.textContent.toLowerCase().includes(q)?'':'none';
   });
 }
-function pveFilterBlock(){
-  const q=(document.getElementById('pve-block-search')?.value||'').toLowerCase();
-  document.querySelectorAll('#pve-block-checks label').forEach(l=>{
+
+function pveOnDistChange(){
+  const checked=[...document.querySelectorAll('#pve-dist-checks input:checked')].map(c=>c.value);
+  const sel=document.getElementById('pve-school-dist-sel');
+  if(!sel) return;
+  sel.innerHTML='<option value="">-- Select district to see schools --</option>'+
+    checked.map(d=>`<option value="${d}">${d}</option>`).join('');
+  document.getElementById('pve-school-list').innerHTML='<span style="color:var(--muted)">Select a district above to see schools</span>';
+  const sr=document.getElementById('pve-school-search');
+  if(sr) sr.style.display='none';
+}
+
+async function pveLoadSchools(){
+  const val=document.getElementById('pve-school-dist-sel')?.value;
+  if(!val) return;
+  const list=document.getElementById('pve-school-list');
+  const loading=document.getElementById('pve-school-loading');
+  list.innerHTML='<span style="color:var(--muted)">Loading…</span>';
+  if(loading) loading.style.display='inline';
+  if(!_schoolCache){
+    try{
+      const res=await fetch('https://raw.githubusercontent.com/alokkmohan/NGO/main/school_data.json');
+      _schoolCache=await res.json();
+    }catch(e){
+      list.innerHTML='<span style="color:var(--red)">Could not load school data.</span>';
+      if(loading) loading.style.display='none';
+      return;
+    }
+  }
+  if(loading) loading.style.display='none';
+  const schools=_schoolCache[val.toUpperCase()]||[];
+  if(!schools.length){ list.innerHTML='<span style="color:var(--muted)">No schools found</span>'; return; }
+  // Pre-check schools that were already saved
+  const myNGO=SAMPLE_NGOS.find(n=>n.name===currentUser.org)||{};
+  const savedSchools=(myNGO.schools_list||'').split('|').map(s=>s.trim()).filter(Boolean);
+  const sr=document.getElementById('pve-school-search');
+  if(sr){ sr.style.display=''; sr.value=''; }
+  list.innerHTML=schools.map(s=>`
+    <label style="display:flex;align-items:center;gap:5px;font-size:11px;cursor:pointer;padding:3px 0;border-bottom:1px solid #f0f0f0">
+      <input type="checkbox" value="${s.n}" onchange="pveUpdateSelectedSchools()" style="width:12px;height:12px;flex-shrink:0"
+        ${savedSchools.includes(s.n)?'checked':''}>
+      <span style="flex:1">${s.n}</span>
+      <span style="font-size:10px;color:var(--muted);white-space:nowrap">${s.u}</span>
+    </label>`).join('');
+  pveUpdateSelectedSchools();
+}
+
+function pveFilterSchools(){
+  const q=(document.getElementById('pve-school-search')?.value||'').toLowerCase();
+  document.querySelectorAll('#pve-school-list label').forEach(l=>{
     l.style.display=l.textContent.toLowerCase().includes(q)?'':'none';
   });
 }
 
-function pveOnDistChange(preselBlocks){
-  const checked=[...document.querySelectorAll('#pve-dist-checks input:checked')].map(c=>c.value);
-  const bc=document.getElementById('pve-block-checks');
-  if(!bc) return;
-  if(!checked.length){ bc.innerHTML='<div style="color:var(--muted);font-size:12px">Select a district first</div>'; return; }
-  const allBlocks=[];
-  checked.forEach(d=>(DIST_BLOCKS[d]||[]).forEach(b=>allBlocks.push({dist:d,block:b})));
-  allBlocks.sort((a,b)=>a.block.localeCompare(b.block));
-  const presels = Array.isArray(preselBlocks) ? preselBlocks.map(b=>b.toUpperCase()) : [];
-  bc.innerHTML=allBlocks.map(({dist,block})=>`
-    <label style="display:flex;align-items:center;gap:5px;cursor:pointer;margin-bottom:2px">
-      <input type="checkbox" value="${dist}|${block}"
-        ${presels.includes(block.toUpperCase())?'checked':''}
-        style="width:12px;height:12px">
-      <span style="color:var(--muted);font-size:10px">[${dist}]</span> ${block}
-    </label>`).join('');
+function pveUpdateSelectedSchools(){
+  const checked=[...document.querySelectorAll('#pve-school-list input:checked')];
+  const disp=document.getElementById('pve-selected-schools');
+  if(!disp) return;
+  disp.innerHTML=checked.map(c=>`<span style="background:var(--amber)15;color:var(--amber);border:1px solid var(--amber)40;border-radius:20px;padding:2px 8px;font-size:11px">${c.value}</span>`).join('');
 }
 
 // Section 3 — Component/Task builder initialisation
@@ -2410,9 +2416,9 @@ async function pvSave(sec){
     }
 
     if(sec===2){
-      const selDists =[...document.querySelectorAll('#pve-dist-checks input:checked')].map(c=>c.value);
-      const selBlocks=[...document.querySelectorAll('#pve-block-checks input:checked')].map(c=>c.value.split('|')[1]);
+      const selDists=[...document.querySelectorAll('#pve-dist-checks input:checked')].map(c=>c.value);
       if(!selDists.length){ hideLoader(); alert('Please select at least one district'); return; }
+      const selSchools=[...document.querySelectorAll('#pve-school-list input:checked')].map(c=>c.value);
       const data={
         action:'saveProfile',
         email: currentUser.email,
@@ -2424,11 +2430,11 @@ async function pvSave(sec){
         org_type:myNGO.org_type||'',
         theme: myNGO.theme||'',
         dist:  selDists.join(', '),
-        blocks:selBlocks.join(', '),
-        schools:myNGO.schools_list||''
+        blocks:'',
+        schools:selSchools.join(' | ')
       };
       await apiFetch(data);
-      if(myNGO.name){ myNGO.dist=data.dist; myNGO.blocks=data.blocks; }
+      if(myNGO.name){ myNGO.dist=data.dist; myNGO.schools_list=data.schools; }
     }
 
     if(sec===3){
