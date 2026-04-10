@@ -863,6 +863,23 @@ const THEME_COLORS = {
 // ── APPS SCRIPT WEB APP URL ── replace after deploying Code.gs ──
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbztqTxY0tnNeimG_TImAPHdsrBRrf3lTl8uyUPnDSFBSQiMjw9F7pQGtiHmH353zEK0mg/exec';
 
+// Global date formatter — handles YYYY-MM-DD and ISO timestamps (2026-03-31T18:30:00.000Z)
+function fmtDate(v){
+  if(!v) return '—';
+  const s = String(v);
+  // Strip time part to avoid timezone shifting
+  const datePart = s.includes('T') ? s.split('T')[0] : s;
+  if(/^\d{4}-\d{2}-\d{2}$/.test(datePart)){
+    const [yr,mo,dy] = datePart.split('-').map(Number);
+    const mn=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    return dy+' '+mn[mo-1]+' '+yr;
+  }
+  return s;
+}
+
+// Robust locked check — handles boolean true, string 'true', or uppercase 'TRUE' from Sheets
+function isTaskLocked(v){ return v===true || String(v).toLowerCase()==='true'; }
+
 // Live data — populated from Google Sheets on login
 let SAMPLE_NGOS = [];
 let REPORTS     = [];
@@ -2222,7 +2239,7 @@ function renderProfileView(){
             <div style="font-weight:700;color:var(--blue);font-size:12px;margin-bottom:5px;padding:5px 8px;background:var(--blue)10;border-radius:6px">▸ ${comp}</div>
             ${tasks.map(t=>{
               let subs=[];try{subs=JSON.parse(t.sub_activities||'[]');}catch(e){}
-              const isLocked=String(t.locked)==='true';
+              const isLocked=isTaskLocked(t.locked);
               return `<div style="padding:7px 10px;background:${isLocked?'#f1f8e9':'#f8f9ff'};border-radius:6px;margin-bottom:4px;font-size:12px;border-left:3px solid ${isLocked?'#66bb6a':'var(--green)'}">
                 <div style="display:flex;align-items:center;gap:6px">
                   <span style="font-weight:600">${t.task_name||'—'}</span>
@@ -2381,7 +2398,7 @@ function pvInitTasks(){
       const lastBlock=taskRows.lastElementChild;
       if(!lastBlock) return;
       lastBlock.dataset.projectId=proj.project_id||'';
-      lastBlock.dataset.locked=(String(proj.locked)==='true')?'true':'';
+      lastBlock.dataset.locked=isTaskLocked(proj.locked)?'true':'';
       lastBlock.querySelector('.comp-task-input').value=proj.task_name||'';
       // Pre-fill sub-activities
       let subs=[];
@@ -2668,14 +2685,7 @@ function renderMyReports(){
   count.textContent = myReports.length + ' report' + (myReports.length!==1?'s':'') + ' submitted';
 
   // Format date "2026-04-01" → "1 Apr 2026"
-  function fmtD(v){
-    if(!v) return '—';
-    if(/^\d{4}-\d{2}-\d{2}/.test(String(v))){
-      const mn=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-      const d=new Date(v); return d.getDate()+' '+mn[d.getMonth()]+' '+d.getFullYear();
-    }
-    return String(v);
-  }
+  const fmtD = fmtDate; // use global — handles ISO timestamps correctly
   // Format month string "April 2026" or derive from date
   function fmtMonth(v){
     if(!v) return '—';
@@ -3090,7 +3100,7 @@ function prefillReportForm(){
 function buildReportTaskCards(){
   const container = document.getElementById('r-task-cards');
   if(!container) return;
-  const myProjs = PROJECTS.filter(p => p.ngo === currentUser.org && String(p.locked) === 'true');
+  const myProjs = PROJECTS.filter(p => p.ngo === currentUser.org && isTaskLocked(p.locked));
   if(!myProjs.length){
     const hasAny = PROJECTS.some(p => p.ngo === currentUser.org);
     container.innerHTML = `<div style="text-align:center;padding:24px 16px;color:var(--muted)">
@@ -3280,14 +3290,10 @@ async function submitMonthlyReport(){
   const schools  = +document.getElementById('r-schools').value  || 0;
   const students = +document.getElementById('r-students').value || 0;
   const achieve  = document.getElementById('r-achieve').value.trim();
-  if(!kmi){ alert('KMI (Key Milestone Indicator) is required'); document.getElementById('r-kmi').focus(); return; }
-  if(!schools && !students && !achieve){
-    alert('Please fill at least Schools covered or Students benefited or Key Achievements before submitting.');
-    return;
-  }
+  // Section B is optional — KMI and numbers are not mandatory
 
-  // Collect task-wise data
-  const myProjs = PROJECTS.filter(p => p.ngo === currentUser.org);
+  // Collect task-wise data — only locked tasks (these are the ones shown in the form)
+  const myProjs = PROJECTS.filter(p => p.ngo === currentUser.org && isTaskLocked(p.locked));
   const activities = myProjs.map(t => {
     const tid = 'task_' + (t.project_id || t.task_name).toString().replace(/[^a-z0-9]/gi,'_');
 
@@ -3432,7 +3438,7 @@ function submitReport(){ submitMonthlyReport(); } // legacy alias
 // ── Download full report for a single month (print-to-PDF) ──
 function downloadMonthReport(month){
   const myNGO  = SAMPLE_NGOS.find(n=>n.name===currentUser.org)||{};
-  const myProjs= PROJECTS.filter(p=>p.ngo===currentUser.org);
+  const myProjs= PROJECTS.filter(p=>p.ngo===currentUser.org && isTaskLocked(p.locked));
   const rep    = REPORTS.find(r=>r.ngo===currentUser.org && (r.report_from===month||r.month===month));
   if(!rep){ alert('Report not found for '+month); return; }
 
@@ -3440,15 +3446,10 @@ function downloadMonthReport(month){
   let acts = [];
   try { acts = JSON.parse(rep.tasks||rep.tasks_json||'[]'); } catch(e){}
 
-  // Format month
-  function fmtM(v){
-    if(!v) return '—';
-    if(/^\d{4}-\d{2}-\d{2}/.test(String(v))){
-      return new Date(v).toLocaleDateString('en-IN',{month:'long',year:'numeric'});
-    }
-    return String(v);
-  }
-  const monthLabel = fmtM(month);
+  // Month label from report_from/report_to range or stored month string
+  const monthLabel = rep.report_from && rep.report_to
+    ? fmtDate(rep.report_from) + ' – ' + fmtDate(rep.report_to)
+    : (rep.month || month || '—');
   const today = new Date().toLocaleDateString('en-IN');
   const pct   = +rep.status||0;
   const pctCol= pct>=75?'#1D9E75':pct>=50?'#BA7517':'#E24B4A';
@@ -3584,7 +3585,7 @@ function downloadKPIReport(){
 
   // Section A: Task-wise month columns
   rows.push(['SECTION A — TASK-WISE KPI PROGRESS']);
-  const hdr = ['S.No','Component','KPI Indicator / Task Name','Start Date','End Date',...months.map(m=>m+'\nActivity'),...months.map(m=>m+'\nStatus'),...months.map(m=>m+'\nPhoto Link')];
+  const hdr = ['S.No','Component','KPI Indicator / Task Name','Start Date','End Date',...months.map(m=>'Activity ('+m+')'),...months.map(m=>'Status ('+m+')'),...months.map(m=>'Photo Link ('+m+')')];
   rows.push(hdr);
 
   myProjs.forEach((t, idx) => {
@@ -3945,8 +3946,8 @@ function buildReportRows(ngoName, taskActs, myProjs){
           component:      t.component   || '',
           activity:       t.task_name   || '',
           subActivity:    sa.name       || '',
-          startDate:      sa.start_date || '',
-          endDate:        sa.end_date   || '',
+          startDate:      fmtDate(sa.start_date),
+          endDate:        fmtDate(sa.end_date),
           status:         status,
           completionDate: (status==='Complete'||status==='Completed') ? (saved.done_date||'') : ''
         });
@@ -3957,8 +3958,8 @@ function buildReportRows(ngoName, taskActs, myProjs){
         component:      t.component   || '',
         activity:       t.task_name   || '',
         subActivity:    '',
-        startDate:      t.start_date  || '',
-        endDate:        t.end_date    || '',
+        startDate:      fmtDate(t.start_date),
+        endDate:        fmtDate(t.end_date),
         status:         status,
         completionDate: (status==='Complete'||status==='Completed') ? (act.done_date||'') : ''
       });
@@ -3973,14 +3974,6 @@ function buildOfficialReport(n, selMonth){
     .sort((a,b)=>(+b.id||0)-(+a.id||0));
   const r = ngoReps[0] || {};
 
-  function fmtDate(v){
-    if(!v) return '';
-    if(/^\d{4}-\d{2}-\d{2}/.test(String(v))){
-      const mn=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-      const d=new Date(v); return d.getDate()+' '+mn[d.getMonth()]+' '+d.getFullYear();
-    }
-    return String(v);
-  }
   function fmtMonth(val){
     if(!val) return '—';
     if(/^\d{4}-\d{2}-\d{2}/.test(val)){
@@ -3996,7 +3989,7 @@ function buildOfficialReport(n, selMonth){
   let taskActs = [];
   try { taskActs = JSON.parse(r.tasks_json || r.tasks || '[]'); } catch(e){}
 
-  const myProjs = PROJECTS.filter(p => p.ngo === n.name);
+  const myProjs = PROJECTS.filter(p => p.ngo === n.name && isTaskLocked(p.locked));
   const rows    = buildReportRows(n.name, taskActs, myProjs);
 
   const period = r.report_from && r.report_to
