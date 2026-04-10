@@ -289,9 +289,10 @@ function getReports() {
   const data    = rows.slice(1).map(row => {
     const obj = {};
     headers.forEach((h, i) => obj[h] = row[i]);
-    // App reads 'tasks' — serve tasks_json if available, else tasks_readable
-    if (!obj['tasks'] && obj['tasks_json']) obj['tasks'] = obj['tasks_json'];
-    if (!obj['tasks'] && obj['tasks_readable']) obj['tasks'] = '[]'; // fallback
+    // Ensure tasks_json is always a string for JSON.parse on client
+    if (obj['tasks_json'] && typeof obj['tasks_json'] !== 'string') obj['tasks_json'] = JSON.stringify(obj['tasks_json']);
+    // App reads 'tasks' — serve tasks_json if available, else fallback
+    obj['tasks'] = obj['tasks_json'] || obj['tasks'] || '[]';
     return obj;
   });
   return { success: true, data };

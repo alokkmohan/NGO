@@ -4065,7 +4065,10 @@ function buildOfficialReport(n, selMonth){
   const statusLabel = s => s==='Complete'||s==='Completed'?'Completed':s==='In progress'?'In progress':'Not started';
 
   let taskActs = [];
-  try { taskActs = JSON.parse(r.tasks_json || r.tasks || '[]'); } catch(e){}
+  try {
+    const raw = r.tasks_json || r.tasks || '[]';
+    taskActs = typeof raw === 'string' ? JSON.parse(raw) : (Array.isArray(raw) ? raw : []);
+  } catch(e){ console.warn('tasks parse error', e); }
 
   const myProjs = PROJECTS.filter(p => p.ngo === n.name && isTaskLocked(p.locked));
   const rows    = buildReportRows(n.name, taskActs, myProjs);
