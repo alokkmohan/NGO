@@ -730,7 +730,7 @@ tr:hover td{background:#FAFBFF}
           <div class="success-icon">✓</div>
           <h3>Report submitted successfully!</h3>
           <p>Your monthly KPI report has been recorded.<br>PMU will review it and update the dashboard.</p>
-          <a id="r-drive-link" href="#" target="_blank" style="display:none;margin-top:12px;padding:8px 20px;background:#1D9E75;color:#fff;border-radius:8px;text-decoration:none;font-size:13px;font-weight:600">📁 View Report on Google Drive</a>
+          <!-- Drive link shown only to admin, not NGO -->
           <button class="btn-blu" style="margin-top:16px;width:auto;padding:8px 20px" onclick="showPage('dashboard')">Go to Dashboard</button>
           <button class="btn-grn" style="margin-top:8px;width:auto;padding:8px 20px" onclick="downloadKPIReport()">⬇ Download this month's KPI Report</button>
           <button class="btn-sec" style="margin-top:8px;width:auto;padding:8px 20px" onclick="resetMonthlyReport()">Submit new report</button>
@@ -3253,16 +3253,7 @@ async function submitMonthlyReport(){
   uploadedPhotos = [];
   document.getElementById('r-submit-area').style.display = 'none';
 
-  // Show drive link in success box if available
-  const driveBtn = document.getElementById('r-drive-link');
-  if(driveBtn){
-    if(driveDocUrl){
-      driveBtn.href = driveDocUrl;
-      driveBtn.style.display = 'inline-block';
-    } else {
-      driveBtn.style.display = 'none';
-    }
-  }
+  // Drive link is for admin only — not shown to NGO users
   document.getElementById('r-success-msg').style.display = 'block';
   document.getElementById('r-success-msg').scrollIntoView({behavior:'smooth'});
 }
@@ -3313,14 +3304,13 @@ function downloadMonthReport(month){
     const sCol = row.status==='Complete'||row.status==='Completed'?'#1D9E75':row.status==='In progress'?'#BA7517':'#888';
     return `<tr style="border-bottom:1px solid #eee">
       <td style="padding:6px 8px">${idx+1}</td>
-      <td style="padding:6px 8px;font-size:11px">${row.orgName}</td>
       <td style="padding:6px 8px;font-size:11px;color:#1A3C6E;font-weight:600">${row.component}</td>
-      <td style="padding:6px 8px;font-size:11px">${row.taskActivity}</td>
-      <td style="padding:6px 8px;font-size:11px">${row.update}</td>
+      <td style="padding:6px 8px;font-size:11px">${row.activity}</td>
+      <td style="padding:6px 8px;font-size:11px;color:#555">${row.subActivity||'—'}</td>
       <td style="padding:6px 8px;font-size:11px;white-space:nowrap">${row.startDate}</td>
       <td style="padding:6px 8px;font-size:11px;white-space:nowrap">${row.endDate}</td>
-      <td style="padding:6px 8px;font-size:11px;white-space:nowrap">${row.completionDate}</td>
       <td style="padding:6px 8px;font-size:11px;font-weight:700;color:${sCol}">${row.status}</td>
+      <td style="padding:6px 8px;font-size:11px;white-space:nowrap">${row.completionDate||''}</td>
     </tr>`;
   }).join('');
 
@@ -3382,16 +3372,16 @@ function downloadMonthReport(month){
   ${rep.kmi?`<h3>Key Monthly Indicator (KMI)</h3><div class="narr"><div class="txt">${rep.kmi}</div></div>`:''}
 
   ${reportRows.length?`
-  <h3>Activity-wise Progress</h3>
+  <h3>Section A — Activity-wise Progress</h3>
   <table>
     <thead><tr>
-      <th>#</th><th>Org Name</th><th>Component</th><th>Task / Activity</th>
-      <th>Update</th><th>Start Date</th><th>End Date</th><th>Actual Completion Date</th><th>Status</th>
+      <th>#</th><th>Component</th><th>Activity</th><th>Sub Activity</th>
+      <th>Start Date</th><th>End Date</th><th>Status</th><th>Actual Completion Date</th>
     </tr></thead>
     <tbody>${taskRows}</tbody>
   </table>`:''}
 
-  <h3>Narrative Report</h3>
+  <h3>Section B — Narrative Report</h3>
   ${rep.achieve?`<div class="narr"><div class="lbl">Key Achievements</div><div class="txt">${rep.achieve}</div></div>`:''}
   ${rep.challenges?`<div class="narr"><div class="lbl">Challenges Faced</div><div class="txt">${rep.challenges}</div></div>`:''}
   ${rep.support?`<div class="narr"><div class="lbl">Support Required from PMU</div><div class="txt">${rep.support}</div></div>`:''}
@@ -3775,40 +3765,47 @@ function generateReport(){
   }
 }
 
-// ── Shared helper: build activity rows for report table ──────
-// Returns array of row objects: {orgName, component, taskActivity, update, startDate, endDate, completionDate, status}
+// ── Shared helper: build flat activity rows for report table ──
+// Columns: component | activity | subActivity | startDate | endDate | status | completionDate
 function buildReportRows(ngoName, taskActs, myProjs){
   const rows = [];
   myProjs.forEach(t => {
-    const act = taskActs.find(a => a.task_name === t.task_name) || {};
-    let subActs = [];
-    try { subActs = JSON.parse(t.sub_activities||'[]'); } catch(e){}
+    // Find this task's monthly submission data
+    const act = taskActs.find(a =>
+      (a.task_name||'').trim().toLowerCase() === (t.task_name||'').trim().toLowerCase()
+    ) || {};
+
+    // Sub-activities defined in profile
+    let subActDefs = [];
+    try { subActDefs = JSON.parse(t.sub_activities||'[]'); } catch(e){}
+
+    // Sub-activity updates submitted in monthly report
     const savedSubs = act.sub_activities || [];
 
-    if(subActs.length){
-      subActs.forEach((sa, si) => {
+    if(subActDefs.length){
+      subActDefs.forEach((sa, si) => {
         const saved = savedSubs[si] || {};
+        const status = saved.status || 'Not started';
         rows.push({
-          orgName:        ngoName,
-          component:      t.component || '—',
-          taskActivity:   t.task_name + ' › ' + (sa.name || ''),
-          update:         saved.update || '',
-          startDate:      sa.start_date || t.start_date || '',
-          endDate:        sa.end_date   || t.end_date   || '',
-          completionDate: saved.done_date || '',
-          status:         saved.status || 'Not started'
+          component:      t.component   || '',
+          activity:       t.task_name   || '',
+          subActivity:    sa.name       || '',
+          startDate:      sa.start_date || '',
+          endDate:        sa.end_date   || '',
+          status:         status,
+          completionDate: (status==='Complete'||status==='Completed') ? (saved.done_date||'') : ''
         });
       });
     } else {
+      const status = act.status || 'Not started';
       rows.push({
-        orgName:        ngoName,
-        component:      t.component || '—',
-        taskActivity:   t.task_name,
-        update:         act.activity || act.update || '',
-        startDate:      t.start_date || '',
-        endDate:        t.end_date   || '',
-        completionDate: act.done_date || '',
-        status:         act.status   || 'Not started'
+        component:      t.component   || '',
+        activity:       t.task_name   || '',
+        subActivity:    '',
+        startDate:      t.start_date  || '',
+        endDate:        t.end_date    || '',
+        status:         status,
+        completionDate: (status==='Complete'||status==='Completed') ? (act.done_date||'') : ''
       });
     }
   });
@@ -3853,14 +3850,13 @@ function buildOfficialReport(n, selMonth){
 
   const tableRows = rows.map((row, i) => `<tr>
     <td class="sno">${i+1}</td>
-    <td>${row.orgName}</td>
-    <td style="color:var(--blue);font-weight:600">${row.component}</td>
-    <td>${row.taskActivity}</td>
-    <td>${row.update}</td>
-    <td>${fmtDate(row.startDate)}</td>
-    <td>${fmtDate(row.endDate)}</td>
-    <td>${fmtDate(row.completionDate)}</td>
+    <td style="color:var(--blue);font-weight:600;font-size:11px">${row.component}</td>
+    <td style="font-size:11px">${row.activity}</td>
+    <td style="font-size:11px;color:#555">${row.subActivity||'—'}</td>
+    <td style="font-size:11px;white-space:nowrap">${fmtDate(row.startDate)}</td>
+    <td style="font-size:11px;white-space:nowrap">${fmtDate(row.endDate)}</td>
     <td class="${statusClass(row.status)}">${statusLabel(row.status)}</td>
+    <td style="font-size:11px;white-space:nowrap">${row.completionDate ? fmtDate(row.completionDate) : ''}</td>
   </tr>`).join('');
 
   return `
@@ -3886,16 +3882,15 @@ function buildOfficialReport(n, selMonth){
     <table class="or-kpi">
       <thead><tr>
         <th class="sno">S.No</th>
-        <th style="width:12%">Org Name</th>
-        <th style="width:13%">Component</th>
-        <th style="width:20%">Task / Activity</th>
-        <th style="width:18%">Update</th>
-        <th style="width:7%">Start Date</th>
-        <th style="width:7%">End Date</th>
-        <th style="width:8%">Actual Completion Date</th>
-        <th style="width:8%">Status</th>
+        <th style="width:15%">Component</th>
+        <th style="width:20%">Activity</th>
+        <th style="width:20%">Sub Activity</th>
+        <th style="width:8%">Start Date</th>
+        <th style="width:8%">End Date</th>
+        <th style="width:10%">Status</th>
+        <th style="width:10%">Actual Completion Date</th>
       </tr></thead>
-      <tbody>${tableRows||'<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:16px">No activities defined</td></tr>'}</tbody>
+      <tbody>${tableRows||'<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:16px">No activities defined</td></tr>'}</tbody>
     </table>
 
     <div class="or-section">Section B — KPI Summary</div>
