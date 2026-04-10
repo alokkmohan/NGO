@@ -3227,7 +3227,7 @@ function downloadMonthReport(month){
     })();
     const subHtml = subActs.length
       ? '<ul style="margin:4px 0 0 14px;padding:0;font-size:10px;color:#555">'
-        + subActs.map(s=>`<li>${s.name||s}${s.start_date?' ('+s.start_date+(s.end_date?' – '+s.end_date:'')+')'':''}</li>`).join('')
+        + subActs.map(s=>`<li>${s.name||s}${s.start_date ? ' (' + s.start_date + (s.end_date ? ' \u2013 ' + s.end_date : '') + ')' : ''}</li>`).join('')
         + '</ul>'
       : '';
     return `<tr style="border-bottom:1px solid #eee">
