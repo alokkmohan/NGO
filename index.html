@@ -884,19 +884,8 @@ function isTaskLocked(v){ return v===true || String(v).toLowerCase()==='true'; }
 let SAMPLE_NGOS = [];
 let REPORTS     = [];
 
-// ── SAMPLE / DEMO DATA (delete these arrays when real data is ready) ──
-// To remove: clear DEMO_NGOS and DEMO_REPORTS to empty arrays []
-const DEMO_NGOS = [
-  {id:1,name:'Udhyam Learning',theme:'Literacy & Learning Outcomes',person:'Priya Sharma',dist:'Agra, Mathura',x:462,y:112,schools:120,students:8400,girls:4200,teachers:80,progress:72,month:'April 2026',kmi:'8,400 students reached with foundational literacy support.'},
-  {id:2,name:'Medha',theme:'Vocational & Life Skills',person:'Rahul Verma',dist:'Lucknow, Unnao',x:240,y:252,schools:95,students:6200,girls:3100,teachers:60,progress:65,month:'April 2026',kmi:'Life skills sessions in 95 schools.'},
-  {id:3,name:'Educate Girls',theme:'Girls Retention & Enrolment',person:'Anjali Singh',dist:'Varanasi, Mirzapur',x:372,y:352,schools:180,students:12000,girls:9800,teachers:90,progress:85,month:'April 2026',kmi:'9,800 girls enrolled with zero dropout in 28 schools.'},
-  {id:4,name:'SEED Impact',theme:'Teacher Capacity Building',person:'Vikram Yadav',dist:'Bareilly, Shahjahanpur',x:242,y:172,schools:110,students:9800,girls:4100,teachers:180,progress:55,month:'March 2026',kmi:'Teacher training completed in 110 schools.'},
-  {id:5,name:'1M1B',theme:'ICT / Digital Education',person:'Amit Kumar',dist:'Ghaziabad, Meerut',x:284,y:62,schools:75,students:14000,girls:6800,teachers:120,progress:90,month:'April 2026',kmi:'Digital labs active in 75 schools.'},
-];
-const DEMO_REPORTS = [
-  {ngo:'Educate Girls',month:'April 2026',schools:180,students:12000,girls:9800,teachers:90,status:'85',kmi:'9,800 girls enrolled.',submitted:'01/04/2026'},
-  {ngo:'1M1B',month:'April 2026',schools:75,students:14000,girls:6800,teachers:120,status:'90',kmi:'Digital labs active.',submitted:'02/04/2026'},
-];
+const DEMO_NGOS    = [];
+const DEMO_REPORTS = [];
 
 let currentUser = null;
 let currentPage = 'dashboard';
