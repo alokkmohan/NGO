@@ -3307,23 +3307,20 @@ function downloadMonthReport(month){
   const pct   = +rep.status||0;
   const pctCol= pct>=75?'#1D9E75':pct>=50?'#BA7517':'#E24B4A';
 
-  // Task rows
-  const taskRows = myProjs.map((t,idx)=>{
-    const act = acts.find(a=>a.task_name===t.task_name)||{};
-    const subActs = (() => {
-      try { return JSON.parse(act.sub_activities||t.sub_activities||'[]'); } catch(e){ return []; }
-    })();
-    const subHtml = subActs.length
-      ? '<ul style="margin:4px 0 0 14px;padding:0;font-size:10px;color:#555">'
-        + subActs.map(s=>`<li>${s.name||s}${s.start_date ? ' (' + s.start_date + (s.end_date ? ' \u2013 ' + s.end_date : '') + ')' : ''}</li>`).join('')
-        + '</ul>'
-      : '';
+  // Build rows using shared helper
+  const reportRows = buildReportRows(currentUser.org, acts, myProjs);
+  const taskRows = reportRows.map((row, idx) => {
+    const sCol = row.status==='Complete'||row.status==='Completed'?'#1D9E75':row.status==='In progress'?'#BA7517':'#888';
     return `<tr style="border-bottom:1px solid #eee">
-      <td style="padding:6px 8px;vertical-align:top">${idx+1}</td>
-      <td style="padding:6px 8px;vertical-align:top;font-size:11px;color:#1A3C6E">${t.component||'—'}</td>
-      <td style="padding:6px 8px;vertical-align:top;font-weight:600">${t.task_name||'—'}${subHtml}</td>
-      <td style="padding:6px 8px;text-align:center;vertical-align:top">${act.status||'—'}</td>
-      <td style="padding:6px 8px;vertical-align:top;font-size:11px">${act.activity||'—'}</td>
+      <td style="padding:6px 8px">${idx+1}</td>
+      <td style="padding:6px 8px;font-size:11px">${row.orgName}</td>
+      <td style="padding:6px 8px;font-size:11px;color:#1A3C6E;font-weight:600">${row.component}</td>
+      <td style="padding:6px 8px;font-size:11px">${row.taskActivity}</td>
+      <td style="padding:6px 8px;font-size:11px">${row.update}</td>
+      <td style="padding:6px 8px;font-size:11px;white-space:nowrap">${row.startDate}</td>
+      <td style="padding:6px 8px;font-size:11px;white-space:nowrap">${row.endDate}</td>
+      <td style="padding:6px 8px;font-size:11px;white-space:nowrap">${row.completionDate}</td>
+      <td style="padding:6px 8px;font-size:11px;font-weight:700;color:${sCol}">${row.status}</td>
     </tr>`;
   }).join('');
 
@@ -3384,10 +3381,13 @@ function downloadMonthReport(month){
 
   ${rep.kmi?`<h3>Key Monthly Indicator (KMI)</h3><div class="narr"><div class="txt">${rep.kmi}</div></div>`:''}
 
-  ${myProjs.length?`
+  ${reportRows.length?`
   <h3>Activity-wise Progress</h3>
   <table>
-    <thead><tr><th>#</th><th>Component</th><th>Task / Activity</th><th style="text-align:center">Status</th><th>Activity This Month</th></tr></thead>
+    <thead><tr>
+      <th>#</th><th>Org Name</th><th>Component</th><th>Task / Activity</th>
+      <th>Update</th><th>Start Date</th><th>End Date</th><th>Actual Completion Date</th><th>Status</th>
+    </tr></thead>
     <tbody>${taskRows}</tbody>
   </table>`:''}
 
@@ -3775,135 +3775,93 @@ function generateReport(){
   }
 }
 
+// ── Shared helper: build activity rows for report table ──────
+// Returns array of row objects: {orgName, component, taskActivity, update, startDate, endDate, completionDate, status}
+function buildReportRows(ngoName, taskActs, myProjs){
+  const rows = [];
+  myProjs.forEach(t => {
+    const act = taskActs.find(a => a.task_name === t.task_name) || {};
+    let subActs = [];
+    try { subActs = JSON.parse(t.sub_activities||'[]'); } catch(e){}
+    const savedSubs = act.sub_activities || [];
+
+    if(subActs.length){
+      subActs.forEach((sa, si) => {
+        const saved = savedSubs[si] || {};
+        rows.push({
+          orgName:        ngoName,
+          component:      t.component || '—',
+          taskActivity:   t.task_name + ' › ' + (sa.name || ''),
+          update:         saved.update || '',
+          startDate:      sa.start_date || t.start_date || '',
+          endDate:        sa.end_date   || t.end_date   || '',
+          completionDate: saved.done_date || '',
+          status:         saved.status || 'Not started'
+        });
+      });
+    } else {
+      rows.push({
+        orgName:        ngoName,
+        component:      t.component || '—',
+        taskActivity:   t.task_name,
+        update:         act.activity || act.update || '',
+        startDate:      t.start_date || '',
+        endDate:        t.end_date   || '',
+        completionDate: act.done_date || '',
+        status:         act.status   || 'Not started'
+      });
+    }
+  });
+  return rows;
+}
+
 function buildOfficialReport(n, selMonth){
-  // Find matching submitted report (latest if 'all')
   const ngoReps = REPORTS.filter(rep => rep.ngo === n.name &&
     (selMonth==='all' || rep.month === selMonth))
     .sort((a,b)=>(+b.id||0)-(+a.id||0));
   const r = ngoReps[0] || {};
 
-  // Format month display (fix ISO date if stored that way)
+  function fmtDate(v){
+    if(!v) return '';
+    if(/^\d{4}-\d{2}-\d{2}/.test(String(v))){
+      const mn=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      const d=new Date(v); return d.getDate()+' '+mn[d.getMonth()]+' '+d.getFullYear();
+    }
+    return String(v);
+  }
   function fmtMonth(val){
     if(!val) return '—';
-    // If it looks like an ISO date, convert to readable
     if(/^\d{4}-\d{2}-\d{2}/.test(val)){
-      const d = new Date(val);
+      const d=new Date(val);
       return d.toLocaleDateString('en-IN',{month:'long',year:'numeric'});
     }
     return val;
   }
 
-  // Parse tasks JSON safely
+  const statusClass = s => s==='Complete'||s==='Completed'?'status-done':s==='In progress'?'status-prog':'status-ns';
+  const statusLabel = s => s==='Complete'||s==='Completed'?'Completed':s==='In progress'?'In progress':'Not started';
+
   let taskActs = [];
   try { taskActs = JSON.parse(r.tasks_json || r.tasks || '[]'); } catch(e){}
-  // If tasks is readable text (old format), taskActs stays empty
 
-  const statusClass = s => s==='Complete'||s==='Completed' ? 'status-done'
-    : s==='In progress' ? 'status-prog' : 'status-ns';
-  const statusLabel = s => s==='Complete'||s==='Completed' ? 'Completed'
-    : s==='In progress' ? 'In progress' : 'Not started';
-
-  // ── Section A Part 1: Fixed KPI rows ────────────────
-  const KPI_ROWS = [
-    { indicator:'Schools covered / reached',        update: r.schools  ? r.schools+' schools'  : '', status: r.schools  ?'Completed':'Not started' },
-    { indicator:'Students benefited (total)',        update: r.students ? r.students+' students': '', status: r.students ?'Completed':'Not started' },
-    { indicator:'Girls enrolled / retained',         update: r.girls    ? r.girls+' girls'      : '', status: r.girls    ?'Completed':'Not started' },
-    { indicator:'Teachers trained',                 update: r.teachers ? r.teachers+' teachers': '', status: r.teachers ?'Completed':'Not started' },
-    { indicator:'Community meetings held',          update: r.meetings ? r.meetings+' meetings': '', status: r.meetings ?'Completed':'Not started' },
-    { indicator:'Events / camps organised',         update: r.events   ? r.events+' events'    : '', status: r.events   ?'Completed':'Not started' },
-    { indicator:'SC / ST / OBC students covered',   update: r.scst     ? r.scst+' students'    : '', status: r.scst     ?'Completed':'Not started' },
-    { indicator:'Divyang students supported',       update: r.divyang  ? r.divyang+' students' : '', status: r.divyang  ?'Completed':'Not started' },
-    { indicator:'Dropout prevention cases',         update: r.dropout  ? r.dropout+' cases'    : '', status: r.dropout  ?'Completed':'Not started' },
-    { indicator:'Key Milestone Indicator (KMI)',    update: r.kmi      || '',                        status: r.kmi      ?'Completed':'Not started' },
-  ];
-
-  // ── Section A Part 2: Task rows (3-level: Component → Activity → Sub Activity) ──
   const myProjs = PROJECTS.filter(p => p.ngo === n.name);
+  const rows    = buildReportRows(n.name, taskActs, myProjs);
 
-  let sno = 1;
-  const kpiRowsHtml = KPI_ROWS.map(k=>`<tr>
-    <td class="sno">${sno++}</td>
-    <td colspan="3">${k.indicator}</td>
-    <td></td><td></td><td></td>
-    <td class="${statusClass(k.status)}">${k.status}</td>
-    <td>${k.update}</td>
-    <td></td>
+  const period = r.report_from && r.report_to
+    ? fmtDate(r.report_from) + ' to ' + fmtDate(r.report_to)
+    : fmtMonth(r.month || (selMonth !== 'all' ? selMonth : ''));
+
+  const tableRows = rows.map((row, i) => `<tr>
+    <td class="sno">${i+1}</td>
+    <td>${row.orgName}</td>
+    <td style="color:var(--blue);font-weight:600">${row.component}</td>
+    <td>${row.taskActivity}</td>
+    <td>${row.update}</td>
+    <td>${fmtDate(row.startDate)}</td>
+    <td>${fmtDate(row.endDate)}</td>
+    <td>${fmtDate(row.completionDate)}</td>
+    <td class="${statusClass(row.status)}">${statusLabel(row.status)}</td>
   </tr>`).join('');
-
-  // Group tasks by component
-  const compGroups = {};
-  myProjs.forEach(t=>{
-    const c = t.component || 'Other';
-    if(!compGroups[c]) compGroups[c]=[];
-    compGroups[c].push(t);
-  });
-
-  const taskRowsHtml = Object.entries(compGroups).map(([comp, tasks])=>{
-    // Count total rows for this component (for rowspan)
-    const compRows = tasks.reduce((acc, t)=>{
-      let subActs = [];
-      try { subActs = JSON.parse(t.sub_activities||'[]'); } catch(e){}
-      return acc + Math.max(subActs.length, 1);
-    }, 0);
-
-    let compHeaderDone = false;
-    return tasks.map((t, ti)=>{
-      const act = taskActs.find(a => a.task_name === t.task_name) || {};
-      let subActs = [];
-      try { subActs = JSON.parse(t.sub_activities||'[]'); } catch(e){}
-      const savedSubs = act.sub_activities || [];
-
-      const actRowCount = Math.max(subActs.length, 1);
-
-      if(subActs.length){
-        // Expand into sub-activity rows
-        return subActs.map((sa, si)=>{
-          const saved = savedSubs[si] || {};
-          const rowSno = sno++;
-          const isFirstSub = si === 0;
-          const isFirstTask = ti === 0 && !compHeaderDone;
-          if(isFirstTask && isFirstSub) compHeaderDone = true;
-          return `<tr>
-            <td class="sno">${rowSno}</td>
-            ${isFirstTask && isFirstSub
-              ? `<td style="font-weight:700;font-size:11px;color:var(--blue);background:#eef2fb" rowspan="${compRows}">${comp}</td>`
-              : (isFirstSub && ti>0 ? '' : '')}
-            ${isFirstSub
-              ? `<td style="font-size:12px;font-weight:600" rowspan="${actRowCount}">${t.task_name}</td>`
-              : ''}
-            <td style="font-size:11px">${si+1}. ${sa.name}</td>
-            <td style="font-size:11px">${sa.start_date||t.start_date||''}</td>
-            <td style="font-size:11px">${sa.end_date||t.end_date||''}</td>
-            <td style="font-size:11px">${saved.done_date||''}</td>
-            <td class="${statusClass(saved.status||'Not started')}">${statusLabel(saved.status||'Not started')}</td>
-            <td style="font-size:11px">${saved.update||''}</td>
-            <td></td>
-          </tr>`;
-        }).join('');
-      } else {
-        // No sub-activities — single row
-        const rowSno = sno++;
-        const isFirstTask = ti === 0 && !compHeaderDone;
-        if(isFirstTask) compHeaderDone = true;
-        return `<tr>
-          <td class="sno">${rowSno}</td>
-          ${isFirstTask
-            ? `<td style="font-weight:700;font-size:11px;color:var(--blue);background:#eef2fb" rowspan="${compRows}">${comp}</td>`
-            : ''}
-          <td style="font-size:12px;font-weight:600">${t.task_name}</td>
-          <td style="font-size:11px;color:var(--muted)">—</td>
-          <td style="font-size:11px">${t.start_date||''}</td>
-          <td style="font-size:11px">${t.end_date||''}</td>
-          <td style="font-size:11px">${act.done_date||''}</td>
-          <td class="${statusClass(act.status||'Not started')}">${statusLabel(act.status||'Not started')}</td>
-          <td style="font-size:11px">${act.activity||act.update||''}</td>
-          <td></td>
-        </tr>`;
-      }
-    }).join('');
-  }).join('');
-
-  const reportMonth = fmtMonth(r.month || (selMonth !== 'all' ? selMonth : ''));
 
   return `
   <div class="official-report">
@@ -3916,7 +3874,7 @@ function buildOfficialReport(n, selMonth){
         <td>Name of Nodal Person</td><td>${n.person||'—'}</td>
       </tr>
       <tr>
-        <td>Reporting Month &amp; Year</td><td>${reportMonth}</td>
+        <td>Reporting Period</td><td>${period}</td>
         <td>Contact Number</td><td>${n.phone||'—'}</td>
       </tr>
       <tr>
@@ -3924,43 +3882,53 @@ function buildOfficialReport(n, selMonth){
       </tr>
     </table>
 
-    <div class="or-section">Section A — KPI Indicators &amp; Activity Details</div>
+    <div class="or-section">Section A — Activity-wise Progress</div>
     <table class="or-kpi">
-      <thead>
-        <tr>
-          <th class="sno">S.No</th>
-          <th style="width:10%">Component</th>
-          <th style="width:16%">Activity</th>
-          <th style="width:16%">Sub Activity</th>
-          <th style="width:7%">Start Date</th>
-          <th style="width:7%">End Date</th>
-          <th style="width:7%">Completion Date</th>
-          <th style="width:7%">Status</th>
-          <th style="width:20%">Monthly Update</th>
-          <th style="width:5%">Photo</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${kpiRowsHtml}
-        ${taskRowsHtml}
-      </tbody>
+      <thead><tr>
+        <th class="sno">S.No</th>
+        <th style="width:12%">Org Name</th>
+        <th style="width:13%">Component</th>
+        <th style="width:20%">Task / Activity</th>
+        <th style="width:18%">Update</th>
+        <th style="width:7%">Start Date</th>
+        <th style="width:7%">End Date</th>
+        <th style="width:8%">Actual Completion Date</th>
+        <th style="width:8%">Status</th>
+      </tr></thead>
+      <tbody>${tableRows||'<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:16px">No activities defined</td></tr>'}</tbody>
     </table>
 
-    <div class="or-section">Section B — Narrative Report (Brief)</div>
-    <div class="or-narrative"><label>Key Achievements this month:</label>${r.achieve||''}</div>
+    <div class="or-section">Section B — KPI Summary</div>
+    <table class="or-kpi" style="margin-bottom:12px">
+      <thead><tr>
+        <th>Schools</th><th>Students</th><th>Girls</th><th>Teachers</th>
+        <th>Meetings</th><th>Events</th><th>SC/ST</th><th>Divyang</th><th>Dropout</th><th>Progress</th>
+      </tr></thead>
+      <tbody><tr style="text-align:center">
+        <td>${r.schools||0}</td><td>${r.students||0}</td><td>${r.girls||0}</td>
+        <td>${r.teachers||0}</td><td>${r.meetings||0}</td><td>${r.events||0}</td>
+        <td>${r.scst||0}</td><td>${r.divyang||0}</td><td>${r.dropout||0}</td>
+        <td style="font-weight:700;color:${(+r.status||0)>=75?'#1D9E75':(+r.status||0)>=50?'#BA7517':'#E24B4A'}">${r.status||0}%</td>
+      </tr></tbody>
+    </table>
+
+    ${r.kmi?`<div class="or-narrative"><label>Key Milestone Indicator (KMI):</label>${r.kmi}</div>`:''}
+
+    <div class="or-section">Section C — Narrative Report</div>
+    <div class="or-narrative"><label>Key Achievements:</label>${r.achieve||''}</div>
     <div class="or-narrative"><label>Challenges faced:</label>${r.challenges||''}</div>
     <div class="or-narrative"><label>Plans for next month:</label>${r.plans||''}</div>
     <div class="or-narrative"><label>Support required from PMU:</label>${r.support||''}</div>
 
-    <div class="or-section">Section C — DIOS Observation / Remark</div>
-    <div class="or-narrative" style="min-height:70px"></div>
+    <div class="or-section">Section D — DIOS Observation / Remark</div>
+    <div class="or-narrative" style="min-height:60px"></div>
 
-    <div class="or-section">Section D — Signatures &amp; Certification</div>
+    <div class="or-section">Section E — Signatures &amp; Certification</div>
     <div class="or-sig">
       <div class="or-sig-box">Signature &amp; Stamp — NGO Nodal Officer<br><br><br></div>
       <div class="or-sig-box">Signature &amp; Stamp (DIOS)<br><br><br></div>
     </div>
-    <div style="margin-top:16px;font-size:9px;color:#999;text-align:right">
+    <div style="margin-top:12px;font-size:9px;color:#999;text-align:right">
       Generated: ${new Date().toLocaleString('en-IN')} &nbsp;|&nbsp; PMU Dashboard &nbsp;|&nbsp; For official use only
     </div>
   </div>`;
