@@ -574,14 +574,8 @@ tr:hover td{background:#FAFBFF}
         <div id="profile-display"></div>
       </div>
       <div class="card" id="my-reports-card" style="margin-top:14px;display:none">
-        <div class="card-title" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
-          <span>📋 My submitted reports
-            <span id="my-reports-count" style="font-size:12px;font-weight:400;color:var(--muted);margin-left:8px"></span>
-          </span>
-          <div style="display:flex;gap:8px">
-            <button onclick="downloadMyReportsCSV()" style="padding:5px 14px;background:var(--green);color:#fff;border:none;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer">⬇ CSV</button>
-            <button onclick="downloadMyReportsPDF()" style="padding:5px 14px;background:var(--blue);color:#fff;border:none;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer">🖨 PDF</button>
-          </div>
+        <div class="card-title">📋 My submitted reports
+          <span id="my-reports-count" style="font-size:12px;font-weight:400;color:var(--muted);margin-left:8px"></span>
         </div>
         <div id="my-reports-list"></div>
       </div>
@@ -2506,6 +2500,16 @@ function renderMyReports(){
   card.style.display='block';
   count.textContent = myReports.length + ' report' + (myReports.length!==1?'s':'') + ' submitted';
 
+  // Format ISO date / month string to readable "April 2026"
+  function fmtMonth(val){
+    if(!val) return '—';
+    if(/^\d{4}-\d{2}-\d{2}/.test(String(val))){
+      const d = new Date(val);
+      return d.toLocaleDateString('en-IN',{month:'long',year:'numeric'});
+    }
+    return String(val);
+  }
+
   list.innerHTML = `
     <div style="overflow-x:auto">
       <table style="width:100%;border-collapse:collapse;font-size:12px">
@@ -2521,16 +2525,17 @@ function renderMyReports(){
             <th style="padding:8px 10px;text-align:right;border-bottom:2px solid #2E6DB430;white-space:nowrap">Events</th>
             <th style="padding:8px 10px;text-align:center;border-bottom:2px solid #2E6DB430;white-space:nowrap">Progress</th>
             <th style="padding:8px 10px;text-align:left;border-bottom:2px solid #2E6DB430;white-space:nowrap">Submitted</th>
-            <th style="padding:8px 10px;text-align:left;border-bottom:2px solid #2E6DB430">Key Achievement</th>
+            <th style="padding:8px 10px;text-align:center;border-bottom:2px solid #2E6DB430">Download</th>
           </tr>
         </thead>
         <tbody>
           ${myReports.map((r,i)=>{
             const pct = +r.status||0;
             const col = pct>=75?'var(--green)':pct>=50?'var(--amber)':'var(--red)';
+            const mo  = fmtMonth(r.month);
             return `<tr style="border-bottom:1px solid var(--border)">
               <td style="padding:8px 10px;color:var(--muted)">${myReports.length - i}</td>
-              <td style="padding:8px 10px;font-weight:600">${r.month||'—'}</td>
+              <td style="padding:8px 10px;font-weight:600;white-space:nowrap">${mo}</td>
               <td style="padding:8px 10px;text-align:right">${(+r.schools||0).toLocaleString('en-IN')}</td>
               <td style="padding:8px 10px;text-align:right">${(+r.students||0).toLocaleString('en-IN')}</td>
               <td style="padding:8px 10px;text-align:right">${(+r.girls||0).toLocaleString('en-IN')}</td>
@@ -2539,7 +2544,12 @@ function renderMyReports(){
               <td style="padding:8px 10px;text-align:right">${(+r.events||0).toLocaleString('en-IN')}</td>
               <td style="padding:8px 10px;text-align:center;font-weight:700;color:${col}">${pct}%</td>
               <td style="padding:8px 10px;font-size:11px;color:var(--muted);white-space:nowrap">${r.submitted||'—'}</td>
-              <td style="padding:8px 10px;font-size:11px;color:var(--blue);font-style:italic;max-width:220px">${r.kmi||'—'}</td>
+              <td style="padding:8px 10px;text-align:center">
+                <button onclick="downloadMonthReport('${r.month}')"
+                  style="padding:4px 12px;background:var(--blue);color:#fff;border:none;border-radius:6px;font-size:11px;cursor:pointer;white-space:nowrap">
+                  ⬇ PDF
+                </button>
+              </td>
             </tr>`;
           }).join('')}
         </tbody>
@@ -3184,6 +3194,133 @@ function resetMonthlyReport(){
 }
 
 function submitReport(){ submitMonthlyReport(); } // legacy alias
+
+// ── Download full report for a single month (print-to-PDF) ──
+function downloadMonthReport(month){
+  const myNGO  = SAMPLE_NGOS.find(n=>n.name===currentUser.org)||{};
+  const myProjs= PROJECTS.filter(p=>p.ngo===currentUser.org);
+  const rep    = REPORTS.find(r=>r.ngo===currentUser.org && r.month===month);
+  if(!rep){ alert('Report not found for '+month); return; }
+
+  // Parse tasks
+  let acts = [];
+  try { acts = JSON.parse(rep.tasks||rep.tasks_json||'[]'); } catch(e){}
+
+  // Format month
+  function fmtM(v){
+    if(!v) return '—';
+    if(/^\d{4}-\d{2}-\d{2}/.test(String(v))){
+      return new Date(v).toLocaleDateString('en-IN',{month:'long',year:'numeric'});
+    }
+    return String(v);
+  }
+  const monthLabel = fmtM(month);
+  const today = new Date().toLocaleDateString('en-IN');
+  const pct   = +rep.status||0;
+  const pctCol= pct>=75?'#1D9E75':pct>=50?'#BA7517':'#E24B4A';
+
+  // Task rows
+  const taskRows = myProjs.map((t,idx)=>{
+    const act = acts.find(a=>a.task_name===t.task_name)||{};
+    const subActs = (() => {
+      try { return JSON.parse(act.sub_activities||t.sub_activities||'[]'); } catch(e){ return []; }
+    })();
+    const subHtml = subActs.length
+      ? '<ul style="margin:4px 0 0 14px;padding:0;font-size:10px;color:#555">'
+        + subActs.map(s=>`<li>${s.name||s}${s.start_date?' ('+s.start_date+(s.end_date?' – '+s.end_date:'')+')'':''}</li>`).join('')
+        + '</ul>'
+      : '';
+    return `<tr style="border-bottom:1px solid #eee">
+      <td style="padding:6px 8px;vertical-align:top">${idx+1}</td>
+      <td style="padding:6px 8px;vertical-align:top;font-size:11px;color:#1A3C6E">${t.component||'—'}</td>
+      <td style="padding:6px 8px;vertical-align:top;font-weight:600">${t.task_name||'—'}${subHtml}</td>
+      <td style="padding:6px 8px;text-align:center;vertical-align:top">${act.status||'—'}</td>
+      <td style="padding:6px 8px;vertical-align:top;font-size:11px">${act.activity||'—'}</td>
+    </tr>`;
+  }).join('');
+
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8">
+  <title>KPI Report – ${monthLabel} – ${currentUser.org}</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:Arial,sans-serif;font-size:12px;color:#222;padding:24px}
+    .header{text-align:center;border-bottom:3px solid #1A3C6E;padding-bottom:12px;margin-bottom:16px}
+    .header h1{font-size:16px;color:#1A3C6E}
+    .header h2{font-size:13px;color:#444;font-weight:400;margin-top:4px}
+    .meta-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px}
+    .meta-box{border:1px solid #ccc;border-radius:4px;padding:8px}
+    .meta-box .label{font-size:10px;color:#888;margin-bottom:3px}
+    .meta-box .val{font-size:13px;font-weight:700;color:#1A3C6E}
+    .kpi-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:16px}
+    .kpi-box{border:1px solid #2E6DB430;border-radius:6px;padding:10px;text-align:center;background:#f0f6ff}
+    .kpi-box .num{font-size:20px;font-weight:700;color:#1A3C6E}
+    .kpi-box .lbl{font-size:10px;color:#666;margin-top:3px}
+    h3{color:#1A3C6E;font-size:13px;margin:16px 0 8px;border-left:4px solid #1A3C6E;padding-left:8px}
+    table{width:100%;border-collapse:collapse;font-size:11px}
+    th{background:#1A3C6E;color:#fff;padding:7px 8px;text-align:left}
+    tr:nth-child(even){background:#f5f8ff}
+    .narr{border:1px solid #ddd;border-radius:6px;padding:10px 14px;margin-bottom:10px;background:#fafafa}
+    .narr .lbl{font-size:10px;color:#888;margin-bottom:4px;font-weight:700;text-transform:uppercase}
+    .narr .txt{font-size:12px;line-height:1.6;color:#333}
+    .footer{margin-top:20px;font-size:10px;color:#aaa;text-align:right;border-top:1px solid #eee;padding-top:8px}
+    @media print{body{padding:10px}.no-print{display:none}}
+  </style></head><body>
+
+  <div class="header">
+    <h1>Monthly KPI Progress Report</h1>
+    <h2>Samagra Shiksha, Secondary, Uttar Pradesh &nbsp;|&nbsp; PMU</h2>
+  </div>
+
+  <div class="meta-grid">
+    <div class="meta-box"><div class="label">Organisation</div><div class="val">${currentUser.org}</div></div>
+    <div class="meta-box"><div class="label">Reporting Month</div><div class="val">${monthLabel}</div></div>
+    <div class="meta-box"><div class="label">Nodal Person</div><div class="val">${myNGO.person||currentUser.name||'—'}</div></div>
+    <div class="meta-box"><div class="label">Progress</div><div class="val" style="color:${pctCol}">${pct}%</div></div>
+    <div class="meta-box"><div class="label">Districts</div><div class="val" style="font-size:11px">${myNGO.dist||'—'}</div></div>
+    <div class="meta-box"><div class="label">Submitted On</div><div class="val">${rep.submitted||today}</div></div>
+  </div>
+
+  <h3>Key Performance Indicators</h3>
+  <div class="kpi-grid">
+    <div class="kpi-box"><div class="num">${(+rep.schools||0).toLocaleString('en-IN')}</div><div class="lbl">Schools</div></div>
+    <div class="kpi-box"><div class="num">${(+rep.students||0).toLocaleString('en-IN')}</div><div class="lbl">Students</div></div>
+    <div class="kpi-box"><div class="num">${(+rep.girls||0).toLocaleString('en-IN')}</div><div class="lbl">Girls</div></div>
+    <div class="kpi-box"><div class="num">${(+rep.teachers||0).toLocaleString('en-IN')}</div><div class="lbl">Teachers Trained</div></div>
+    <div class="kpi-box"><div class="num">${(+rep.meetings||0).toLocaleString('en-IN')}</div><div class="lbl">Meetings</div></div>
+    <div class="kpi-box"><div class="num">${(+rep.events||0).toLocaleString('en-IN')}</div><div class="lbl">Events</div></div>
+    <div class="kpi-box"><div class="num">${(+rep.scst||0).toLocaleString('en-IN')}</div><div class="lbl">SC/ST Students</div></div>
+    <div class="kpi-box"><div class="num">${(+rep.divyang||0).toLocaleString('en-IN')}</div><div class="lbl">Divyang</div></div>
+    <div class="kpi-box"><div class="num">${(+rep.dropout||0).toLocaleString('en-IN')}</div><div class="lbl">Dropout</div></div>
+    ${rep.equipment||rep.training?`<div class="kpi-box"><div class="num" style="font-size:11px">${[rep.equipment,rep.training].filter(Boolean).join(', ')}</div><div class="lbl">Equipment / Training</div></div>`:''}
+  </div>
+
+  ${rep.kmi?`<h3>Key Monthly Indicator (KMI)</h3><div class="narr"><div class="txt">${rep.kmi}</div></div>`:''}
+
+  ${myProjs.length?`
+  <h3>Activity-wise Progress</h3>
+  <table>
+    <thead><tr><th>#</th><th>Component</th><th>Task / Activity</th><th style="text-align:center">Status</th><th>Activity This Month</th></tr></thead>
+    <tbody>${taskRows}</tbody>
+  </table>`:''}
+
+  <h3>Narrative Report</h3>
+  ${rep.achieve?`<div class="narr"><div class="lbl">Key Achievements</div><div class="txt">${rep.achieve}</div></div>`:''}
+  ${rep.challenges?`<div class="narr"><div class="lbl">Challenges Faced</div><div class="txt">${rep.challenges}</div></div>`:''}
+  ${rep.support?`<div class="narr"><div class="lbl">Support Required from PMU</div><div class="txt">${rep.support}</div></div>`:''}
+  ${rep.plans?`<div class="narr"><div class="lbl">Plans for Next Month</div><div class="txt">${rep.plans}</div></div>`:''}
+
+  <div class="footer">
+    Generated by PMU Dashboard &nbsp;|&nbsp; ${today} &nbsp;|&nbsp; For official use only
+  </div>
+
+  <script>window.onload=()=>window.print();<\/script>
+  </body></html>`;
+
+  const w = window.open('','_blank');
+  if(!w){ alert('Pop-up blocked. Please allow pop-ups for this site.'); return; }
+  w.document.write(html);
+  w.document.close();
+}
 
 function downloadKPIReport(){
   const myNGO = SAMPLE_NGOS.find(n=>n.name===currentUser.org)||{};
