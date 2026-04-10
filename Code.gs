@@ -41,12 +41,13 @@ function doGet(e) {
   }
 }
 
-// POST only used for photo upload (base64 payload too large for URL)
+// POST used for photo upload and saveProfile (large school list exceeds GET URL limit)
 function doPost(e) {
   try {
     const data   = JSON.parse(e.postData.contents);
     const action = data.action;
-    if (action === 'uploadPhoto') return respond(uploadPhoto(data));
+    if (action === 'uploadPhoto')  return respond(uploadPhoto(data));
+    if (action === 'saveProfile')  return respond(saveProfile(data));
     return respond({ error: 'Unknown action' });
   } catch (err) {
     return respond({ error: err.message });

@@ -1356,8 +1356,8 @@ async function saveProfile(){
 
   showLoader('Saving profile…');
   try {
-    // Save NGO profile
-    await apiFetch({
+    // Use POST to avoid URL length limit (school names can be very long)
+    await apiPost({
       action:     'saveProfile',
       email:      currentUser.email,
       password:   currentUser.password || '',
@@ -2450,7 +2450,8 @@ async function pvSave(sec){
         blocks:'',
         schools:selSchools.join(' | ')
       };
-      await apiFetch(data);
+      // Use POST to avoid URL length limit (school names can be very long)
+      await apiPost(data);
       if(myNGO.name){ myNGO.dist=data.dist; myNGO.schools_list=data.schools; }
     }
 
