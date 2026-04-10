@@ -2237,9 +2237,12 @@ function renderProfileView(){
           Add activities and sub-activities. After saving, click <b>🔒 Lock</b> on each activity — only locked activities appear in the Monthly Report form.
         </div>
         <div id="pve-comp-task-builder"></div>
+        <div id="pv-sec3-save-msg" style="display:none;background:#e8f5e9;border:1px solid #a5d6a7;border-radius:8px;padding:10px 14px;margin-top:8px;font-size:12px;color:#2e7d32;font-weight:600">
+          ✅ Tasks saved! Ab jo activity report mein include karni ho us par <b>🔒 Lock</b> dabao — lock ke baad wo delete nahi hogi.
+        </div>
         <div style="display:flex;gap:8px;margin-top:8px">
           <button onclick="pvSave(3)" style="padding:6px 20px;background:var(--green);color:#fff;border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer">💾 Save</button>
-          <button onclick="pvCancel(3)" style="padding:6px 16px;background:#f1f1f1;border:1px solid var(--border);border-radius:7px;font-size:12px;cursor:pointer">Cancel</button>
+          <button onclick="pvCancel(3);renderProfileView();renderMyReports();" style="padding:6px 16px;background:#f1f1f1;border:1px solid var(--border);border-radius:7px;font-size:12px;cursor:pointer">✕ Close</button>
         </div>
       </div>
     </div>
@@ -2424,23 +2427,35 @@ function lockTaskBlock(block){
   }
   block.style.background='#f1f8e9';
   block.style.borderColor='#a5d6a7';
+  // Show locked status message inside block
+  if(!block.querySelector('.lock-status-msg')){
+    const msgEl=document.createElement('div');
+    msgEl.className='lock-status-msg';
+    msgEl.style.cssText='margin-top:6px;font-size:11px;color:#2e7d32;background:#e8f5e9;border:1px solid #a5d6a7;border-radius:6px;padding:6px 10px;font-weight:600';
+    msgEl.textContent='🔒 Task saved & locked — Monthly Report mein dikhegi, delete nahi hogi.';
+    block.appendChild(msgEl);
+  }
 }
 
 // Lock a task via API then freeze the UI block
 async function lockTask(btn){
   const block=btn.closest('.task-block');
   if(!block.dataset.projectId){
-    alert('Please save your activities first, then lock.');
+    alert('Pehle Save karo, fir Lock karo.');
     return;
   }
   const taskName=block.querySelector('.comp-task-input')?.value||'this activity';
-  if(!confirm('Lock "'+taskName+'"?\n\nOnce locked it cannot be edited or deleted. Lock only after you have submitted at least one report using it.')) return;
+  if(!confirm('"'+taskName+'" ko lock karna chahte hain?\n\nLock hone ke baad edit ya delete nahi hoga.\nYe monthly report mein include ho jaayegi.')) return;
   showLoader('Locking…');
   try{
     await apiFetch({action:'lockProject', project_id:block.dataset.projectId});
     block.dataset.locked='true';
     lockTaskBlock(block);
-    // Refresh local PROJECTS cache
+    // Show inline locked confirmation inside the block
+    const msgEl=document.createElement('div');
+    msgEl.style.cssText='margin-top:6px;font-size:11px;color:#2e7d32;background:#e8f5e9;border:1px solid #a5d6a7;border-radius:6px;padding:6px 10px;font-weight:600';
+    msgEl.textContent='🔒 Task saved & locked — Monthly Report mein dikhegi, delete nahi hogi.';
+    block.appendChild(msgEl);
     await loadSheetData();
     hideLoader();
   }catch(e){ hideLoader(); alert('Lock failed: '+e.message); }
@@ -2510,6 +2525,27 @@ async function pvSave(sec){
       const checkedComps=[...document.querySelectorAll('.pve-comp-cb:checked')];
       if(!checkedComps.length){ hideLoader(); alert('Please select at least one component'); return; }
 
+      // Validate: every sub-activity must have a name + start date + end date
+      let validErr='';
+      outer: for(const cb of checkedComps){
+        const blocks=cb.closest('.comp-block').querySelectorAll('.task-block');
+        for(const block of blocks){
+          if(block.dataset.locked==='true') continue;
+          const taskName=block.querySelector('.comp-task-input')?.value.trim()||'';
+          if(!taskName) continue;
+          const subRows=[...block.querySelectorAll('.sub-act-rows > div')];
+          for(const row of subRows){
+            const name =row.querySelector('.sub-act-name')?.value.trim()||'';
+            const sDate=row.querySelector('.sub-act-start')?.value||'';
+            const eDate=row.querySelector('.sub-act-end')?.value||'';
+            if(!name) continue;
+            if(!sDate){ validErr=`"${taskName}" ki sub-activity "${name}" mein Start Date zaroori hai`; break outer; }
+            if(!eDate){ validErr=`"${taskName}" ki sub-activity "${name}" mein End Date zaroori hai`;   break outer; }
+          }
+        }
+      }
+      if(validErr){ hideLoader(); alert(validErr); return; }
+
       // Save each task block — UPDATE if project_id exists, INSERT if new; skip locked
       const tSchools =myNGO.target_schools ||0;
       const tStudents=myNGO.target_students||0;
@@ -2521,7 +2557,7 @@ async function pvSave(sec){
         const comp=cb.value;
         const blocks=cb.closest('.comp-block').querySelectorAll('.task-block');
         for(const block of blocks){
-          if(block.dataset.locked==='true') continue; // locked → never touch
+          if(block.dataset.locked==='true') continue;
           const taskName=block.querySelector('.comp-task-input')?.value.trim();
           if(!taskName) continue;
           const subActs=[...block.querySelectorAll('.sub-act-rows > div')].map(row=>({
@@ -2539,19 +2575,26 @@ async function pvSave(sec){
             start_date:subStarts.length?subStarts.sort()[0]:'',
             end_date:  subEnds.length?subEnds.sort().at(-1):''
           };
-          // Pass project_id to trigger UPDATE instead of INSERT
           if(block.dataset.projectId) payload.project_id=block.dataset.projectId;
           const res=await apiFetch(payload);
-          // Store returned project_id so lock button works immediately after save
           if(res?.project_id) block.dataset.projectId=String(res.project_id);
         }
       }
+      // Refresh data but KEEP form open — re-render task blocks in place with lock buttons
       await loadSheetData();
+      hideLoader();
+      pvInitTasks(); // re-draw blocks with updated project_ids + locked state
+      // Show inline success banner
+      const banner=document.getElementById('pv-sec3-save-msg');
+      if(banner){
+        banner.style.display='block';
+        setTimeout(()=>{ banner.style.display='none'; },4000);
+      }
+      return; // don't fall through to pvCancel below
     }
 
     hideLoader();
     pvCancel(sec);
-    // Reload profile view with fresh data
     await loadSheetData();
     renderProfileView();
     renderMyReports();
