@@ -1278,8 +1278,6 @@ function profileNext(step){
   if(step===2){
     const checkedDist = document.querySelectorAll('#dist-checks input:checked');
     if(!checkedDist.length){ alert('Please select at least one district'); return; }
-    const checkedBlocks = document.querySelectorAll('#block-checks input:checked');
-    if(!checkedBlocks.length){ alert('Please select at least one block'); return; }
     const checkedSchools = document.querySelectorAll('#school-list input:checked');
     if(!checkedSchools.length){ alert('Please select at least one school — select a district in the school section to see schools'); return; }
   }
@@ -2415,7 +2413,6 @@ async function pvSave(sec){
       const selDists =[...document.querySelectorAll('#pve-dist-checks input:checked')].map(c=>c.value);
       const selBlocks=[...document.querySelectorAll('#pve-block-checks input:checked')].map(c=>c.value.split('|')[1]);
       if(!selDists.length){ hideLoader(); alert('Please select at least one district'); return; }
-      if(!selBlocks.length){ hideLoader(); alert('Please select at least one block'); return; }
       const data={
         action:'saveProfile',
         email: currentUser.email,
