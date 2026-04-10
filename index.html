@@ -2234,11 +2234,11 @@ function renderProfileView(){
       </div>
       <div id="pv-sec3-form" style="display:none;padding:14px;border-top:1px solid var(--border);background:#fafcff">
         <div style="font-size:11px;color:var(--blue);background:#eef4ff;border-radius:7px;padding:9px 12px;margin-bottom:12px">
-          Add activities and sub-activities. After saving, click <b>🔒 Lock</b> on each activity — only locked activities appear in the Monthly Report form.
+          Add activities and sub-activities (start &amp; end date required). Click <b>💾 Save</b>, then <b>🔒 Lock Activities</b> — only locked activities appear in the Monthly Report.
         </div>
         <div id="pve-comp-task-builder"></div>
         <div id="pv-sec3-save-msg" style="display:none;background:#e8f5e9;border:1px solid #a5d6a7;border-radius:8px;padding:10px 14px;margin-top:8px;font-size:12px;color:#2e7d32;font-weight:600">
-          ✅ Activities saved! Ab <b>🔒 Lock Activities</b> dabao jo monthly report mein include karni hain.
+          ✅ Activities saved! Now click <b>🔒 Lock Activities</b> to include them in the Monthly Report.
         </div>
         <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
           <button onclick="pvSave(3)" style="padding:7px 22px;background:var(--green);color:#fff;border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer">💾 Save</button>
@@ -2432,7 +2432,7 @@ function lockTaskBlock(block){
     const msgEl=document.createElement('div');
     msgEl.className='lock-status-msg';
     msgEl.style.cssText='margin-top:6px;font-size:11px;color:#2e7d32;background:#e8f5e9;border:1px solid #a5d6a7;border-radius:6px;padding:6px 10px;font-weight:600';
-    msgEl.textContent='🔒 Task saved & locked — Monthly Report mein dikhegi, delete nahi hogi.';
+    msgEl.textContent='🔒 Locked — will appear in Monthly Report and cannot be deleted.';
     block.appendChild(msgEl);
   }
 }
@@ -2441,11 +2441,11 @@ function lockTaskBlock(block){
 async function lockTask(btn){
   const block=btn.closest('.task-block');
   if(!block.dataset.projectId){
-    alert('Pehle Save karo, fir Lock karo.');
+    alert('Please save first, then lock.');
     return;
   }
   const taskName=block.querySelector('.comp-task-input')?.value||'this activity';
-  if(!confirm('"'+taskName+'" ko lock karna chahte hain?\n\nLock hone ke baad edit ya delete nahi hoga.\nYe monthly report mein include ho jaayegi.')) return;
+  if(!confirm('Lock "'+taskName+'"?\n\nOnce locked it cannot be edited or deleted.\nIt will appear in the Monthly Report form.')) return;
   showLoader('Locking…');
   try{
     await apiFetch({action:'lockProject', project_id:block.dataset.projectId});
@@ -2454,7 +2454,7 @@ async function lockTask(btn){
     // Show inline locked confirmation inside the block
     const msgEl=document.createElement('div');
     msgEl.style.cssText='margin-top:6px;font-size:11px;color:#2e7d32;background:#e8f5e9;border:1px solid #a5d6a7;border-radius:6px;padding:6px 10px;font-weight:600';
-    msgEl.textContent='🔒 Task saved & locked — Monthly Report mein dikhegi, delete nahi hogi.';
+    msgEl.textContent='🔒 Locked — will appear in Monthly Report and cannot be deleted.';
     block.appendChild(msgEl);
     await loadSheetData();
     hideLoader();
@@ -2472,7 +2472,7 @@ function validateSubDates(changedInput){
     endEl.style.borderColor='var(--red)';
     endEl.title='End date cannot be before start date';
     endEl.value='';
-    alert('End date, start date se pehle nahi ho sakti');
+    alert('End date cannot be before start date');
   } else {
     endEl.style.borderColor='';
     endEl.title='End Date';
@@ -2485,11 +2485,11 @@ function validateSubDates(changedInput){
 async function lockAllSaved(){
   const blocks=[...document.querySelectorAll('#pve-comp-task-builder .task-block')].filter(b=>b.dataset.projectId && b.dataset.locked!=='true');
   if(!blocks.length){
-    alert('Koi unlocked saved activity nahi mili.\nPehle Save karo, fir Lock karo.');
+    alert('No saved unlocked activities found.\nPlease save your activities first, then lock.');
     return;
   }
   const names=blocks.map(b=>b.querySelector('.comp-task-input')?.value||'').filter(Boolean);
-  if(!confirm('Ye activities lock ho jaayengi:\n\n'+names.map(n=>'• '+n).join('\n')+'\n\nLock hone ke baad edit ya delete nahi hongi.\nMonthly Report mein include ho jaayengi.')) return;
+  if(!confirm('Lock the following activities?\n\n'+names.map(n=>'• '+n).join('\n')+'\n\nOnce locked they cannot be edited or deleted.\nThey will appear in the Monthly Report form.')) return;
   showLoader('Locking…');
   try{
     for(const block of blocks){
@@ -2504,7 +2504,7 @@ async function lockAllSaved(){
     if(banner){
       banner.style.background='#e8f5e9';
       banner.style.borderColor='#a5d6a7';
-      banner.innerHTML='🔒 <b>Activities locked!</b> Ab ye Monthly Report mein dikhti hain. Delete nahi hongi.';
+      banner.innerHTML='🔒 <b>Activities locked!</b> They will now appear in the Monthly Report and cannot be deleted.';
       banner.style.display='block';
     }
   }catch(e){ hideLoader(); alert('Lock failed: '+e.message); }
@@ -2588,8 +2588,8 @@ async function pvSave(sec){
             const sDate=row.querySelector('.sub-act-start')?.value||'';
             const eDate=row.querySelector('.sub-act-end')?.value||'';
             if(!name) continue;
-            if(!sDate){ validErr=`"${taskName}" ki sub-activity "${name}" mein Start Date zaroori hai`; break outer; }
-            if(!eDate){ validErr=`"${taskName}" ki sub-activity "${name}" mein End Date zaroori hai`;   break outer; }
+            if(!sDate){ validErr=`Start Date is required for sub-activity "${name}" under "${taskName}"`; break outer; }
+            if(!eDate){ validErr=`End Date is required for sub-activity "${name}" under "${taskName}"`;   break outer; }
           }
         }
       }
@@ -3271,7 +3271,7 @@ async function submitMonthlyReport(){
   });
   if(overlap){
     const ef = overlap.report_from, et = overlap.report_to;
-    alert(`⚠️ Date range overlap!\n\nAapki ${ef} se ${et} tak ki report already submit ho chuki hai.\n\nKoi correction chahiye to PMU Admin se sampark karein.`);
+    alert(`Date range overlap!\n\nA report for ${ef} to ${et} has already been submitted.\n\nFor corrections please contact the PMU Admin.`);
     return;
   }
 
