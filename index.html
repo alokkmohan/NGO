@@ -2221,8 +2221,12 @@ function renderProfileView(){
             <div style="font-weight:700;color:var(--blue);font-size:12px;margin-bottom:5px;padding:5px 8px;background:var(--blue)10;border-radius:6px">▸ ${comp}</div>
             ${tasks.map(t=>{
               let subs=[];try{subs=JSON.parse(t.sub_activities||'[]');}catch(e){}
-              return `<div style="padding:7px 10px;background:#f8f9ff;border-radius:6px;margin-bottom:4px;font-size:12px;border-left:3px solid var(--green)">
-                <div style="font-weight:600">${t.task_name||'—'}</div>
+              const isLocked=String(t.locked)==='true';
+              return `<div style="padding:7px 10px;background:${isLocked?'#f1f8e9':'#f8f9ff'};border-radius:6px;margin-bottom:4px;font-size:12px;border-left:3px solid ${isLocked?'#66bb6a':'var(--green)'}">
+                <div style="display:flex;align-items:center;gap:6px">
+                  <span style="font-weight:600">${t.task_name||'—'}</span>
+                  ${isLocked?'<span style="font-size:10px;color:#2e7d32;background:#c8e6c9;border-radius:10px;padding:1px 8px;font-weight:700">🔒 Locked</span>':'<span style="font-size:10px;color:#b8860b;background:#fff8e1;border-radius:10px;padding:1px 8px">unlocked</span>'}
+                </div>
                 ${subs.length?`<div style="margin-top:5px;padding-left:8px">${subs.map((s,i)=>`<div style="font-size:11px;color:var(--muted);margin-bottom:2px">${i+1}. ${s.name}${s.start_date?' <span style="color:#888">('+s.start_date+(s.end_date?' → '+s.end_date:'')+')</span>':''}</div>`).join('')}</div>`:''}
               </div>`;
             }).join('')}
@@ -2230,7 +2234,7 @@ function renderProfileView(){
       </div>
       <div id="pv-sec3-form" style="display:none;padding:14px;border-top:1px solid var(--border);background:#fafcff">
         <div style="font-size:11px;color:var(--blue);background:#eef4ff;border-radius:7px;padding:9px 12px;margin-bottom:12px">
-          Select components and define activities with sub-activities. Existing tasks will be replaced.
+          Add activities and sub-activities. After saving, click <b>🔒 Lock</b> on each activity — only locked activities appear in the Monthly Report form.
         </div>
         <div id="pve-comp-task-builder"></div>
         <div style="display:flex;gap:8px;margin-top:8px">
@@ -2506,10 +2510,7 @@ async function pvSave(sec){
       const checkedComps=[...document.querySelectorAll('.pve-comp-cb:checked')];
       if(!checkedComps.length){ hideLoader(); alert('Please select at least one component'); return; }
 
-      // Step 1: delete all UNLOCKED tasks for this NGO before re-saving
-      await apiFetch({action:'deleteUnlockedProjects', ngo:currentUser.org});
-
-      // Step 2: save each task block (skip locked blocks — they are already in DB)
+      // Save each task block — UPDATE if project_id exists, INSERT if new; skip locked
       const tSchools =myNGO.target_schools ||0;
       const tStudents=myNGO.target_students||0;
       const tGirls   =myNGO.target_girls   ||0;
@@ -2520,7 +2521,7 @@ async function pvSave(sec){
         const comp=cb.value;
         const blocks=cb.closest('.comp-block').querySelectorAll('.task-block');
         for(const block of blocks){
-          if(block.dataset.locked==='true') continue; // locked → already safe in DB
+          if(block.dataset.locked==='true') continue; // locked → never touch
           const taskName=block.querySelector('.comp-task-input')?.value.trim();
           if(!taskName) continue;
           const subActs=[...block.querySelectorAll('.sub-act-rows > div')].map(row=>({
@@ -2530,15 +2531,18 @@ async function pvSave(sec){
           })).filter(s=>s.name);
           const subStarts=subActs.map(s=>s.start_date).filter(Boolean);
           const subEnds  =subActs.map(s=>s.end_date).filter(Boolean);
-          const res=await apiFetch({
+          const payload={
             action:'saveProject', ngo:currentUser.org, component:comp, task_name:taskName,
             description:'', sub_activities:JSON.stringify(subActs),
             target_schools:tSchools,target_students:tStudents,target_girls:tGirls,
             target_teachers:tTeachers,target_meetings:tMeetings,target_events:tEvents,
             start_date:subStarts.length?subStarts.sort()[0]:'',
             end_date:  subEnds.length?subEnds.sort().at(-1):''
-          });
-          // Store new project_id on block so it can be locked right away
+          };
+          // Pass project_id to trigger UPDATE instead of INSERT
+          if(block.dataset.projectId) payload.project_id=block.dataset.projectId;
+          const res=await apiFetch(payload);
+          // Store returned project_id so lock button works immediately after save
           if(res?.project_id) block.dataset.projectId=String(res.project_id);
         }
       }
@@ -2993,10 +2997,14 @@ function prefillReportForm(){
 function buildReportTaskCards(){
   const container = document.getElementById('r-task-cards');
   if(!container) return;
-  const myProjs = PROJECTS.filter(p => p.ngo === currentUser.org);
+  const myProjs = PROJECTS.filter(p => p.ngo === currentUser.org && String(p.locked) === 'true');
   if(!myProjs.length){
-    container.innerHTML = `<div style="text-align:center;padding:20px;color:var(--muted)">
-      No tasks found. Go to <a href="#" onclick="showPage('profile-view');return false;" style="color:var(--blue2)">My Profile</a> to define tasks.
+    const hasAny = PROJECTS.some(p => p.ngo === currentUser.org);
+    container.innerHTML = `<div style="text-align:center;padding:24px 16px;color:var(--muted)">
+      ${hasAny
+        ? `<b style="color:#b8860b">🔒 No locked activities yet.</b><br><span style="font-size:12px">Go to <a href="#" onclick="showPage('profile-view');return false;" style="color:var(--blue2)">My Profile → Section 3</a>, save your activities, then lock each one before submitting a report.</span>`
+        : `No activities found. Go to <a href="#" onclick="showPage('profile-view');return false;" style="color:var(--blue2)">My Profile</a> to add activities.`
+      }
     </div>`;
     return;
   }

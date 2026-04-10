@@ -495,12 +495,33 @@ function saveProject(data) {
       'target_schools','target_students','target_girls','target_teachers',
       'target_meetings','target_events','start_date','end_date','status','created_on','sub_activities']);
   } else {
-    // Ensure sub_activities column exists
     const hRow = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
-    if (!hRow.includes('sub_activities')) {
-      sheet.getRange(1, hRow.length + 1).setValue('sub_activities');
+    if (!hRow.includes('sub_activities')) sheet.getRange(1, hRow.length+1).setValue('sub_activities');
+  }
+
+  // UPDATE existing row if project_id provided
+  if (data.project_id) {
+    const rows = sheet.getDataRange().getValues();
+    const h = rows[0];
+    const pidIdx    = h.indexOf('project_id');
+    const lockedIdx = h.indexOf('locked');
+    for (let i = 1; i < rows.length; i++) {
+      if (String(rows[i][pidIdx]) !== String(data.project_id)) continue;
+      // Never update a locked task
+      if (lockedIdx >= 0 && String(rows[i][lockedIdx]) === 'true') return { success: true, project_id: data.project_id, skipped: true };
+      const set = (col, val) => { const ci = h.indexOf(col); if(ci>=0) sheet.getRange(i+1,ci+1).setValue(val); };
+      set('component',     data.component   || '');
+      set('task_name',     data.task_name   || '');
+      set('description',   data.description || '');
+      set('sub_activities',data.sub_activities || '[]');
+      set('start_date',    data.start_date  || '');
+      set('end_date',      data.end_date    || '');
+      set('status',        'active');
+      return { success: true, project_id: data.project_id };
     }
   }
+
+  // INSERT new row
   const id = new Date().getTime();
   sheet.appendRow([
     id, data.ngo, data.component, data.task_name, data.description||'',
