@@ -664,11 +664,30 @@ tr:hover td{background:#FAFBFF}
       <!-- Submit -->
       <div id="r-submit-area" style="margin-bottom:24px">
         <button id="r-submit-btn" class="btn-grn" style="width:100%;padding:14px;font-size:15px" onclick="submitMonthlyReport()">✅ Save Report</button>
-        <div id="r-lock-wrap" style="display:none;margin-top:10px">
-          <button class="btn-blu" style="width:100%;padding:12px;font-size:13px;background:#fff8e1;color:#b8860b;border:2px solid #ffe082;border-radius:8px" onclick="lockMonthReport()">🔒 Lock Report — No more changes for this month</button>
-          <div style="font-size:11px;color:var(--muted);text-align:center;margin-top:4px">Lock only when all entries are final. Once locked, this month cannot be edited.</div>
+        <div style="font-size:11px;color:var(--muted);text-align:center;margin-top:6px">You can save multiple times. Lock only when all entries are final.</div>
+
+        <!-- Shown after first save -->
+        <div id="r-lock-wrap" style="display:none;margin-top:14px">
+          <!-- View + Download row -->
+          <div style="display:flex;gap:8px;margin-bottom:10px">
+            <button onclick="viewCurrentMonthReport()"
+              style="flex:1;padding:11px 8px;background:#e8f0fe;color:var(--blue);border:1px solid #c5d5f5;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">
+              👁 View Report
+            </button>
+            <button onclick="downloadCurrentMonthReport()"
+              style="flex:1;padding:11px 8px;background:#e8f5e9;color:var(--green);border:1px solid #a5d6a7;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">
+              ⬇ Download PDF
+            </button>
+          </div>
+          <!-- Lock button -->
+          <button id="r-lock-btn" onclick="lockMonthReport()"
+            style="width:100%;padding:12px;font-size:13px;font-weight:700;background:#fff8e1;color:#b8860b;border:2px solid #ffe082;border-radius:8px;cursor:pointer">
+            🔒 Lock Report — finalise &amp; submit to PMU
+          </button>
+          <div style="font-size:11px;color:var(--muted);text-align:center;margin-top:5px">
+            Once locked this month cannot be edited. Lock only when all entries are final.
+          </div>
         </div>
-        <div style="font-size:11px;color:var(--muted);text-align:center;margin-top:6px">You can save multiple times. Lock when finalised.</div>
       </div>
 
       <!-- Success message -->
@@ -1074,6 +1093,8 @@ function onReportMonthChange(){
       submitBtn.style.opacity = '1';
       submitBtn.textContent = '💾 Update Report';
       lockWrap.style.display = 'block';
+      const _lb = document.getElementById('r-lock-btn');
+      if(_lb) _lb.textContent = '🔒 Lock ' + monthLabel + ' Report — finalise & submit to PMU';
       // Pre-fill form with saved data
       prefillFromExisting(existing);
     }
@@ -3611,6 +3632,9 @@ async function submitMonthlyReport(){
   // Show lock button — saved but not yet locked
   document.getElementById('r-lock-wrap').style.display = 'block';
   document.getElementById('r-submit-btn').textContent = '💾 Update Report';
+  // Update lock button to show month name
+  const _lockBtn = document.getElementById('r-lock-btn');
+  if(_lockBtn) _lockBtn.textContent = '🔒 Lock ' + months + ' Report — finalise & submit to PMU';
   const wrap = document.getElementById('r-month-status-wrap');
   const stEl = document.getElementById('r-month-status');
   wrap.style.display = 'block';
@@ -3618,6 +3642,23 @@ async function submitMonthlyReport(){
   stEl.textContent = '✅ Saved! You can update again or Lock to finalise.';
   renderMyReports();
   document.getElementById('r-submit-area').scrollIntoView({behavior:'smooth'});
+}
+
+// View the currently selected month's report in a print window
+function viewCurrentMonthReport(){
+  const monthPick = document.getElementById('r-month-pick');
+  if(!monthPick?.value){ alert('Please select a reporting month first.'); return; }
+  const [yr, mo] = monthPick.value.split('-').map(Number);
+  const mNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const monthLabel = mNames[mo-1] + ' ' + yr;
+  const rep = REPORTS.find(r => r.ngo === currentUser.org && r.month === monthLabel);
+  if(!rep){ alert('Please save the report first before viewing.'); return; }
+  downloadMonthReport(rep.report_from || monthLabel);
+}
+
+// Download PDF of the currently selected month's report
+function downloadCurrentMonthReport(){
+  viewCurrentMonthReport(); // same function — print dialog allows save as PDF
 }
 
 async function lockMonthReport(){
