@@ -1162,10 +1162,12 @@ function deselectAllSchools(accordionId){
 // ── Per-task Geographic Coverage helpers ─────────────────────
 
 function getNGODistricts(){
-  const wizardDists = [...document.querySelectorAll('#dist-checks input:checked')].map(c=>c.value);
-  if(wizardDists.length) return wizardDists;
+  // Try saved NGO-level districts first
   const myNGO = currentUser ? (SAMPLE_NGOS.find(n=>n.name===currentUser.org)||{}) : {};
-  return (myNGO.dist||'').split(',').map(d=>d.trim()).filter(Boolean);
+  const saved = (myNGO.dist||'').split(',').map(d=>d.trim()).filter(Boolean);
+  if(saved.length) return saved;
+  // Fallback: show all 75 UP districts (geo coverage step removed from wizard)
+  return UP_DISTRICTS;
 }
 
 function initTaskGeo(block){
