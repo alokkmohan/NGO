@@ -125,7 +125,7 @@ function sendOTP(data) {
           '  ' + otp + '\n\n' +
           'This OTP is valid for 10 minutes.\n' +
           'Do not share this OTP with anyone.\n\n' +
-          'Login at: https://alokkmohan.github.io/NGO/\n\n' +
+          'Login at: https://samsecup.dataimpact.in/\n\n' +
           '— PMU Team, Samagra UP Secondary Education Programme'
       });
       return { success: true };
@@ -741,7 +741,7 @@ function forgotPassword(data) {
         MailApp.sendEmail({
           to: rows[i][0],
           subject: 'Samagra UP NGO Portal — Password Reset',
-          body: `Dear ${rows[i][3] || 'Partner'},\n\nYour password has been reset.\n\nTemporary Password: ${temp}\n\nPlease login and change your password immediately.\n\nLogin at: https://alokkmohan.github.io/NGO/\n\n— PMU Team, Samagra UP Secondary Education Programme`
+          body: `Dear ${rows[i][3] || 'Partner'},\n\nYour password has been reset.\n\nTemporary Password: ${temp}\n\nPlease login and change your password immediately.\n\nLogin at: https://samsecup.dataimpact.in/\n\n— PMU Team, Samagra UP Secondary Education Programme`
         });
       } catch(e) {
         // Email failed — still return temp password so admin can share manually

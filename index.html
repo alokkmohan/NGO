@@ -367,6 +367,10 @@ tr:hover td{background:#FAFBFF}
         <div class="wform-group">
           <label>Select districts <span>*</span></label>
           <input type="text" id="dist-search" placeholder="🔍 Search district..." oninput="filterDistList()" style="width:100%;padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;margin-bottom:6px">
+          <div style="display:flex;gap:6px;margin-bottom:6px">
+            <button type="button" onclick="selectAllDists('dist-checks','onDistrictChange')" style="padding:3px 10px;font-size:11px;background:var(--blue);color:#fff;border:none;border-radius:5px;cursor:pointer">✓ Select All</button>
+            <button type="button" onclick="deselectAllDists('dist-checks','onDistrictChange')" style="padding:3px 10px;font-size:11px;background:#f1f1f1;border:1px solid var(--border);border-radius:5px;cursor:pointer">✕ Deselect All</button>
+          </div>
           <div style="max-height:200px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:8px" id="dist-checks"></div>
         </div>
       </div>
@@ -374,14 +378,8 @@ tr:hover td{background:#FAFBFF}
         <label>Schools <span>*</span>
           <span style="font-weight:400;font-size:11px;color:var(--muted);margin-left:6px">Schools where you work</span>
         </label>
-        <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px">
-          <select id="school-dist-sel" onchange="loadSchoolsForDist()" style="flex:1;padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px">
-            <option value="">-- Select district --</option>
-          </select>
-          <span id="school-loading" style="font-size:12px;color:var(--muted);display:none">Loading…</span>
-        </div>
-        <input type="text" id="school-search" placeholder="🔍 Search by school name or UDISE..." oninput="filterSchoolList()" style="width:100%;padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;margin-bottom:6px;display:none">
-        <div id="school-list" style="max-height:180px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:8px;font-size:12px;color:var(--muted)">Schools will appear after selecting a district</div>
+        <input type="text" id="school-accordion-search" placeholder="🔍 Search school by name or UDISE across all districts..." oninput="filterSchoolAccordion('school-accordion','school-accordion-search')" style="width:100%;padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;margin-bottom:6px">
+        <div id="school-accordion" style="max-height:360px;overflow-y:auto"></div>
         <div id="selected-schools-display" style="margin-top:8px;display:flex;flex-wrap:wrap;gap:4px"></div>
       </div>
       <div class="wizard-nav">
@@ -864,7 +862,7 @@ const THEME_COLORS = {
 };
 
 // ── APPS SCRIPT WEB APP URL ── replace after deploying Code.gs ──
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyyjOc9yL0ek1eBs9RRwpdAMoimVI3f-DHJKQrEnkSlJ3hPf4B3LXl6iLq1TdUlc1iyuw/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbx3ICCfE1irrNIkmu1wV2CYI9TqH-0i3DOxegKLe_2m2z4DjagUGNIvzsWFlwKTT7srUQ/exec';
 
 // Global date formatter — handles YYYY-MM-DD and ISO timestamps (2026-03-31T18:30:00.000Z)
 function fmtDate(v){
@@ -1086,23 +1084,7 @@ function filterDistList(){
 }
 
 function onDistrictChange(){
-  const checked = [...document.querySelectorAll('#dist-checks input:checked')].map(c=>c.value);
-  const schoolSec = document.getElementById('school-section');
-  const schoolDistSel = document.getElementById('school-dist-sel');
-
-  if(!checked.length){
-    if(schoolSec) schoolSec.style.display = 'none';
-    return;
-  }
-
-  if(schoolSec && schoolDistSel){
-    schoolSec.style.display = 'block';
-    schoolDistSel.innerHTML = '<option value="">-- Select district --</option>' +
-      checked.map(d => `<option value="${d}">${d}</option>`).join('');
-    document.getElementById('school-list').innerHTML = '<span style="color:var(--muted)">Select a district above to see schools</span>';
-    const searchEl = document.getElementById('school-search');
-    if(searchEl) searchEl.style.display = 'none';
-  }
+  buildSchoolAccordion();
 }
 
 function onReportDateChange(){ /* legacy — no-op */ }
@@ -1174,57 +1156,105 @@ function prefillFromExisting(rep){
   buildReportTaskCards(rep);
 }
 
-function filterSchoolList(){
-  const q = (document.getElementById('school-search')?.value||'').toLowerCase();
-  document.querySelectorAll('#school-list label').forEach(lbl => {
-    lbl.style.display = lbl.textContent.toLowerCase().includes(q) ? '' : 'none';
+let _schoolCache = null;
+
+// ── School Accordion shared helpers ───────────────────────────
+function toggleSchoolGroup(groupId){
+  const body = document.getElementById('sg-' + groupId);
+  if(!body) return;
+  const isHidden = body.style.display === 'none';
+  body.style.display = isHidden ? 'block' : 'none';
+  const arrow = body.previousElementSibling.querySelector('.sg-arrow');
+  if(arrow) arrow.textContent = isHidden ? '▼' : '▶';
+}
+
+function selectAllInGroup(accordionId, distNorm){
+  document.querySelectorAll('#sg-' + accordionId + '-' + distNorm + ' input[type="checkbox"]').forEach(cb => cb.checked = true);
+  if(accordionId === 'school-accordion') updateSelectedSchools();
+  else pveUpdateSelectedSchools();
+}
+
+function deselectAllInGroup(accordionId, distNorm){
+  document.querySelectorAll('#sg-' + accordionId + '-' + distNorm + ' input[type="checkbox"]').forEach(cb => cb.checked = false);
+  if(accordionId === 'school-accordion') updateSelectedSchools();
+  else pveUpdateSelectedSchools();
+}
+
+function selectAllDists(containerId, callbackName){
+  document.querySelectorAll('#' + containerId + ' label').forEach(lbl => {
+    if(lbl.style.display !== 'none') lbl.querySelector('input').checked = true;
+  });
+  if(callbackName && window[callbackName]) window[callbackName]();
+}
+
+function deselectAllDists(containerId, callbackName){
+  document.querySelectorAll('#' + containerId + ' input[type="checkbox"]').forEach(cb => cb.checked = false);
+  if(callbackName && window[callbackName]) window[callbackName]();
+}
+
+function filterSchoolAccordion(accordionId, searchId){
+  const q = (document.getElementById(searchId)?.value || '').toLowerCase();
+  document.querySelectorAll('#' + accordionId + ' .sg-body label').forEach(lbl => {
+    lbl.style.display = !q || lbl.textContent.toLowerCase().includes(q) ? '' : 'none';
   });
 }
 
-let _schoolCache = null;
-async function loadSchoolsForDist(){
-  const val = document.getElementById('school-dist-sel')?.value;
-  if(!val) return;
-  const schoolList = document.getElementById('school-list');
-  const loadingEl = document.getElementById('school-loading');
+function _buildAccordionHTML(accordionId, dists, savedSchools, onChangeFn){
+  if(!dists.length) return '<div style="color:var(--muted);font-size:12px;padding:8px">Select districts above to see schools</div>';
+  return dists.map(dist => {
+    const schools = (_schoolCache && _schoolCache[dist.toUpperCase()]) || [];
+    const distNorm = dist.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+    const groupId  = accordionId + '-' + distNorm;
+    return `<div style="border:1px solid var(--border);border-radius:8px;margin-bottom:6px;overflow:hidden">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:7px 10px;background:#f0f6ff;cursor:pointer;border-bottom:1px solid var(--border)" onclick="toggleSchoolGroup('${groupId}')">
+        <span style="font-weight:600;font-size:12px;color:var(--blue)"><span class="sg-arrow">▼</span> ${dist} <span style="font-weight:400;color:var(--muted)">(${schools.length} schools)</span></span>
+        <div style="display:flex;gap:5px" onclick="event.stopPropagation()">
+          <button type="button" onclick="selectAllInGroup('${accordionId}','${distNorm}')" style="padding:2px 8px;font-size:11px;background:var(--blue);color:#fff;border:none;border-radius:5px;cursor:pointer">Select All</button>
+          <button type="button" onclick="deselectAllInGroup('${accordionId}','${distNorm}')" style="padding:2px 8px;font-size:11px;background:#f1f1f1;border:1px solid var(--border);border-radius:5px;cursor:pointer">Deselect</button>
+        </div>
+      </div>
+      <div class="sg-body" id="sg-${groupId}" style="padding:6px 8px;max-height:200px;overflow-y:auto">
+        ${schools.length ? schools.map(s =>
+          `<label style="display:flex;align-items:center;gap:5px;font-size:11px;cursor:pointer;padding:3px 0;border-bottom:1px solid #f0f0f0">
+            <input type="checkbox" class="school-cb" value="${s.n}" onchange="${onChangeFn}()" style="width:12px;height:12px;flex-shrink:0" ${savedSchools.includes(s.n)?'checked':''}>
+            <span style="flex:1">${s.n}</span>
+            <span style="font-size:10px;color:var(--muted);white-space:nowrap">${s.u}</span>
+          </label>`).join('') : '<span style="color:var(--muted);font-size:11px">No schools found in this district</span>'}
+      </div>
+    </div>`;
+  }).join('');
+}
 
-  schoolList.innerHTML = '<span style="color:var(--muted)">Loading schools…</span>';
-  if(loadingEl) loadingEl.style.display = 'inline';
-
+async function buildSchoolAccordion(){
+  const dists = [...document.querySelectorAll('#dist-checks input:checked')].map(c => c.value);
+  const accordion = document.getElementById('school-accordion');
+  const schoolSec  = document.getElementById('school-section');
+  if(!dists.length){ if(schoolSec) schoolSec.style.display = 'none'; return; }
+  if(schoolSec) schoolSec.style.display = 'block';
+  accordion.innerHTML = '<div style="padding:8px;color:var(--muted);font-size:12px">Loading school data…</div>';
   if(!_schoolCache){
     try {
       const res = await fetch('https://raw.githubusercontent.com/alokkmohan/NGO/main/school_data.json');
       _schoolCache = await res.json();
     } catch(e){
-      schoolList.innerHTML = '<span style="color:var(--red)">Could not load school data. Please check your internet connection.</span>';
-      if(loadingEl) loadingEl.style.display = 'none';
+      accordion.innerHTML = '<span style="color:var(--red);font-size:12px">Could not load school data. Please check your internet connection.</span>';
       return;
     }
   }
-  if(loadingEl) loadingEl.style.display = 'none';
-
-  const schools = _schoolCache[val.toUpperCase()] || [];
-  if(!schools.length){
-    schoolList.innerHTML = '<span style="color:var(--muted)">No schools found in this district</span>';
-    return;
-  }
-  const searchEl = document.getElementById('school-search');
-  if(searchEl){ searchEl.style.display = ''; searchEl.value = ''; }
-  schoolList.innerHTML = schools.map(s =>
-    `<label style="display:flex;align-items:center;gap:5px;font-size:11px;cursor:pointer;padding:3px 0;border-bottom:1px solid #f0f0f0">
-      <input type="checkbox" value="${s.n}" onchange="updateSelectedSchools()" style="width:12px;height:12px;flex-shrink:0">
-      <span style="flex:1">${s.n}</span>
-      <span style="font-size:10px;color:var(--muted);white-space:nowrap">${s.u}</span>
-    </label>`).join('');
+  accordion.innerHTML = _buildAccordionHTML('school-accordion', dists, [], 'updateSelectedSchools');
+  updateSelectedSchools();
 }
 
 function updateSelectedSchools(){
-  const checked = [...document.querySelectorAll('#school-list input:checked')];
+  const checked = [...document.querySelectorAll('#school-accordion .school-cb:checked')];
   const display = document.getElementById('selected-schools-display');
   if(!display) return;
-  display.innerHTML = checked.map(c =>
-    `<span style="background:var(--blue)15;color:var(--blue);border:1px solid var(--blue)30;border-radius:20px;padding:2px 8px;font-size:11px">${c.value}</span>`
-  ).join('');
+  const count = checked.length;
+  display.innerHTML = count
+    ? `<span style="background:var(--blue)15;color:var(--blue);border:1px solid var(--blue)30;border-radius:20px;padding:2px 10px;font-size:11px;font-weight:600">${count} school${count>1?'s':''} selected</span> `
+      + checked.slice(0,5).map(c=>`<span style="background:var(--blue)15;color:var(--blue);border:1px solid var(--blue)30;border-radius:20px;padding:2px 8px;font-size:11px">${c.value}</span>`).join('')
+      + (count>5 ? `<span style="font-size:11px;color:var(--muted)"> +${count-5} more</span>` : '')
+    : '';
 }
 
 function buildThemeChecks(containerId){
@@ -1327,8 +1357,8 @@ function profileNext(step){
   if(step===2){
     const checkedDist = document.querySelectorAll('#dist-checks input:checked');
     if(!checkedDist.length){ alert('Please select at least one district'); return; }
-    const checkedSchools = document.querySelectorAll('#school-list input:checked');
-    if(!checkedSchools.length){ alert('Please select at least one school — select a district in the school section to see schools'); return; }
+    const checkedSchools = document.querySelectorAll('#school-accordion .school-cb:checked');
+    if(!checkedSchools.length){ alert('Please select at least one school from the school section below'); return; }
   }
   if(step===3){
     const checkedComps = document.querySelectorAll('.comp-cb:checked');
@@ -1354,7 +1384,7 @@ function profileNext(step){
 
 function buildStep4Summary(){
   // Auto-fill target_schools from selected schools count
-  const selectedSchools = [...document.querySelectorAll('#school-list input:checked')];
+  const selectedSchools = [...document.querySelectorAll('#school-accordion .school-cb:checked')];
   const tSchools = document.getElementById('pf-tschools');
   if(tSchools && selectedSchools.length) tSchools.value = selectedSchools.length;
 
@@ -1403,7 +1433,7 @@ function profileBack(step){
 
 async function saveProfile(){
   const selDist   = [...document.querySelectorAll('#dist-checks input:checked')].map(c=>c.value).join(', ');
-  const selSchools= [...document.querySelectorAll('#school-list input:checked')].map(c=>c.value).join(' | ');
+  const selSchools= [...document.querySelectorAll('#school-accordion .school-cb:checked')].map(c=>c.value).join(' | ');
 
   // Collect all checked components
   const checkedComps = [...document.querySelectorAll('.comp-cb:checked')];
@@ -2256,18 +2286,16 @@ function renderProfileView(){
           <label style="font-size:11px;font-weight:600;display:block;margin-bottom:5px">Select districts</label>
           <input type="text" id="pve-dist-search" placeholder="🔍 Search district..." oninput="pveFilterDist()"
             style="width:100%;padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;margin-bottom:5px">
+          <div style="display:flex;gap:6px;margin-bottom:5px">
+            <button type="button" onclick="selectAllDists('pve-dist-checks','pveOnDistChange')" style="padding:3px 10px;font-size:11px;background:var(--blue);color:#fff;border:none;border-radius:5px;cursor:pointer">✓ Select All</button>
+            <button type="button" onclick="deselectAllDists('pve-dist-checks','pveOnDistChange')" style="padding:3px 10px;font-size:11px;background:#f1f1f1;border:1px solid var(--border);border-radius:5px;cursor:pointer">✕ Deselect All</button>
+          </div>
           <div id="pve-dist-checks" style="max-height:180px;overflow-y:auto;border:1px solid var(--border);border-radius:7px;padding:8px;font-size:11px"></div>
         </div>
         <div style="margin-bottom:12px">
           <label style="font-size:11px;font-weight:600;display:block;margin-bottom:5px">Schools</label>
-          <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px">
-            <select id="pve-school-dist-sel" onchange="pveLoadSchools()" style="flex:1;padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px">
-              <option value="">-- Select district to see schools --</option>
-            </select>
-            <span id="pve-school-loading" style="font-size:12px;color:var(--muted);display:none">Loading…</span>
-          </div>
-          <input type="text" id="pve-school-search" placeholder="🔍 Search by name or UDISE..." oninput="pveFilterSchools()" style="width:100%;padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;margin-bottom:6px;display:none">
-          <div id="pve-school-list" style="max-height:180px;overflow-y:auto;border:1px solid var(--border);border-radius:7px;padding:8px;font-size:11px;color:var(--muted)">Select a district above to see schools</div>
+          <input type="text" id="pve-school-accordion-search" placeholder="🔍 Search school by name or UDISE across all districts..." oninput="filterSchoolAccordion('pve-school-accordion','pve-school-accordion-search')" style="width:100%;padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;margin-bottom:6px">
+          <div id="pve-school-accordion" style="max-height:320px;overflow-y:auto"></div>
           <div id="pve-selected-schools" style="margin-top:6px;display:flex;flex-wrap:wrap;gap:4px"></div>
         </div>
         <div style="display:flex;gap:8px">
@@ -2353,64 +2381,44 @@ function pveFilterDist(){
   });
 }
 
-function pveOnDistChange(){
-  const checked=[...document.querySelectorAll('#pve-dist-checks input:checked')].map(c=>c.value);
-  const sel=document.getElementById('pve-school-dist-sel');
-  if(!sel) return;
-  sel.innerHTML='<option value="">-- Select district to see schools --</option>'+
-    checked.map(d=>`<option value="${d}">${d}</option>`).join('');
-  document.getElementById('pve-school-list').innerHTML='<span style="color:var(--muted)">Select a district above to see schools</span>';
-  const sr=document.getElementById('pve-school-search');
-  if(sr) sr.style.display='none';
+async function pveOnDistChange(){
+  await pveBuildSchoolAccordion();
 }
 
-async function pveLoadSchools(){
-  const val=document.getElementById('pve-school-dist-sel')?.value;
-  if(!val) return;
-  const list=document.getElementById('pve-school-list');
-  const loading=document.getElementById('pve-school-loading');
-  list.innerHTML='<span style="color:var(--muted)">Loading…</span>';
-  if(loading) loading.style.display='inline';
+async function pveBuildSchoolAccordion(){
+  const dists = [...document.querySelectorAll('#pve-dist-checks input:checked')].map(c => c.value);
+  const accordion = document.getElementById('pve-school-accordion');
+  if(!accordion) return;
+  if(!dists.length){
+    accordion.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:8px">Select districts above to see schools</div>';
+    return;
+  }
+  accordion.innerHTML = '<div style="padding:8px;color:var(--muted);font-size:12px">Loading school data…</div>';
   if(!_schoolCache){
     try{
-      const res=await fetch('https://raw.githubusercontent.com/alokkmohan/NGO/main/school_data.json');
-      _schoolCache=await res.json();
+      const res = await fetch('https://raw.githubusercontent.com/alokkmohan/NGO/main/school_data.json');
+      _schoolCache = await res.json();
     }catch(e){
-      list.innerHTML='<span style="color:var(--red)">Could not load school data.</span>';
-      if(loading) loading.style.display='none';
+      accordion.innerHTML = '<span style="color:var(--red);font-size:12px">Could not load school data.</span>';
       return;
     }
   }
-  if(loading) loading.style.display='none';
-  const schools=_schoolCache[val.toUpperCase()]||[];
-  if(!schools.length){ list.innerHTML='<span style="color:var(--muted)">No schools found</span>'; return; }
-  // Pre-check schools that were already saved
-  const myNGO=SAMPLE_NGOS.find(n=>n.name===currentUser.org)||{};
-  const savedSchools=(myNGO.schools_list||'').split('|').map(s=>s.trim()).filter(Boolean);
-  const sr=document.getElementById('pve-school-search');
-  if(sr){ sr.style.display=''; sr.value=''; }
-  list.innerHTML=schools.map(s=>`
-    <label style="display:flex;align-items:center;gap:5px;font-size:11px;cursor:pointer;padding:3px 0;border-bottom:1px solid #f0f0f0">
-      <input type="checkbox" value="${s.n}" onchange="pveUpdateSelectedSchools()" style="width:12px;height:12px;flex-shrink:0"
-        ${savedSchools.includes(s.n)?'checked':''}>
-      <span style="flex:1">${s.n}</span>
-      <span style="font-size:10px;color:var(--muted);white-space:nowrap">${s.u}</span>
-    </label>`).join('');
+  const myNGO = SAMPLE_NGOS.find(n => n.name === currentUser.org) || {};
+  const savedSchools = (myNGO.schools_list || '').split('|').map(s => s.trim()).filter(Boolean);
+  accordion.innerHTML = _buildAccordionHTML('pve-school-accordion', dists, savedSchools, 'pveUpdateSelectedSchools');
   pveUpdateSelectedSchools();
 }
 
-function pveFilterSchools(){
-  const q=(document.getElementById('pve-school-search')?.value||'').toLowerCase();
-  document.querySelectorAll('#pve-school-list label').forEach(l=>{
-    l.style.display=l.textContent.toLowerCase().includes(q)?'':'none';
-  });
-}
-
 function pveUpdateSelectedSchools(){
-  const checked=[...document.querySelectorAll('#pve-school-list input:checked')];
-  const disp=document.getElementById('pve-selected-schools');
+  const checked = [...document.querySelectorAll('#pve-school-accordion .school-cb:checked')];
+  const disp = document.getElementById('pve-selected-schools');
   if(!disp) return;
-  disp.innerHTML=checked.map(c=>`<span style="background:var(--amber)15;color:var(--amber);border:1px solid var(--amber)40;border-radius:20px;padding:2px 8px;font-size:11px">${c.value}</span>`).join('');
+  const count = checked.length;
+  disp.innerHTML = count
+    ? `<span style="background:var(--amber)15;color:var(--amber);border:1px solid var(--amber)40;border-radius:20px;padding:2px 10px;font-size:11px;font-weight:600">${count} school${count>1?'s':''} selected</span> `
+      + checked.slice(0,5).map(c=>`<span style="background:var(--amber)15;color:var(--amber);border:1px solid var(--amber)40;border-radius:20px;padding:2px 8px;font-size:11px">${c.value}</span>`).join('')
+      + (count>5 ? `<span style="font-size:11px;color:var(--muted)"> +${count-5} more</span>` : '')
+    : '';
 }
 
 // Section 3 — Component/Task builder initialisation
@@ -2618,7 +2626,7 @@ async function pvSave(sec){
     if(sec===2){
       const selDists=[...document.querySelectorAll('#pve-dist-checks input:checked')].map(c=>c.value);
       if(!selDists.length){ hideLoader(); alert('Please select at least one district'); return; }
-      const selSchools=[...document.querySelectorAll('#pve-school-list input:checked')].map(c=>c.value);
+      const selSchools=[...document.querySelectorAll('#pve-school-accordion .school-cb:checked')].map(c=>c.value);
       const data={
         action:'saveProfile',
         email: currentUser.email,
