@@ -1175,13 +1175,13 @@ function toggleSchoolGroup(groupId){
 function selectAllInGroup(accordionId, distNorm){
   document.querySelectorAll('#sg-' + accordionId + '-' + distNorm + ' input[type="checkbox"]').forEach(cb => cb.checked = true);
   if(accordionId === 'school-accordion') updateSelectedSchools();
-  else pveUpdateSelectedSchools();
+  else if(accordionId === 'pve-school-accordion') pveUpdateSelectedSchools();
 }
 
 function deselectAllInGroup(accordionId, distNorm){
   document.querySelectorAll('#sg-' + accordionId + '-' + distNorm + ' input[type="checkbox"]').forEach(cb => cb.checked = false);
   if(accordionId === 'school-accordion') updateSelectedSchools();
-  else pveUpdateSelectedSchools();
+  else if(accordionId === 'pve-school-accordion') pveUpdateSelectedSchools();
 }
 
 function selectAllDists(containerId, callbackName){
@@ -1206,6 +1206,115 @@ function deselectAllSchools(accordionId){
   document.querySelectorAll('#' + accordionId + ' .school-cb').forEach(cb => cb.checked = false);
   if(accordionId === 'school-accordion') updateSelectedSchools();
   else pveUpdateSelectedSchools();
+}
+
+// ── Per-task Geographic Coverage helpers ─────────────────────
+
+function getNGODistricts(){
+  const wizardDists = [...document.querySelectorAll('#dist-checks input:checked')].map(c=>c.value);
+  if(wizardDists.length) return wizardDists;
+  const myNGO = currentUser ? (SAMPLE_NGOS.find(n=>n.name===currentUser.org)||{}) : {};
+  return (myNGO.dist||'').split(',').map(d=>d.trim()).filter(Boolean);
+}
+
+function initTaskGeo(block){
+  const distChecks = block.querySelector('.task-dist-checks');
+  if(!distChecks) return;
+  const dists = getNGODistricts();
+  distChecks.innerHTML = dists.length
+    ? dists.map(d=>`<label style="display:inline-flex;align-items:center;gap:3px;font-size:10px;cursor:pointer;padding:2px 6px;border:1px solid var(--border);border-radius:12px;background:#fff;white-space:nowrap">
+        <input type="checkbox" class="task-dist-cb" value="${d}" onchange="onTaskDistChange(this)" style="width:10px;height:10px"> ${d}
+      </label>`).join('')
+    : '<span style="font-size:11px;color:var(--muted)">Complete Geographic Coverage step first</span>';
+}
+
+function taskDistSelectAll(btn){
+  const geo = btn.closest('.task-geo');
+  geo.querySelectorAll('.task-dist-cb').forEach(cb=>cb.checked=true);
+  const specificType = geo.querySelector('.task-school-type[value="specific"]:checked');
+  if(specificType) buildTaskSchoolAccordion(geo);
+}
+
+function taskDistDeselect(btn){
+  btn.closest('.task-geo').querySelectorAll('.task-dist-cb').forEach(cb=>cb.checked=false);
+}
+
+function onTaskDistChange(cb){
+  const geo = cb.closest('.task-geo');
+  if(geo.querySelector('.task-school-type[value="specific"]:checked')) buildTaskSchoolAccordion(geo);
+}
+
+function onTaskSchoolTypeChange(radio){
+  const geo = radio.closest('.task-geo');
+  const specific = geo.querySelector('.task-school-specific');
+  if(radio.value === 'specific'){
+    specific.style.display = 'block';
+    buildTaskSchoolAccordion(geo);
+  } else {
+    specific.style.display = 'none';
+  }
+}
+
+function onTaskSchoolSearch(input){
+  const q = input.value.toLowerCase();
+  const accordion = input.nextElementSibling;
+  accordion.querySelectorAll('.sg-body label').forEach(lbl=>{
+    lbl.style.display = !q || lbl.textContent.toLowerCase().includes(q) ? '' : 'none';
+  });
+}
+
+async function buildTaskSchoolAccordion(geo, savedSchools=[]){
+  const dists = [...geo.querySelectorAll('.task-dist-cb:checked')].map(c=>c.value);
+  const accordion = geo.querySelector('.task-school-accordion');
+  if(!accordion) return;
+  if(!dists.length){
+    accordion.innerHTML = '<div style="color:var(--muted);font-size:11px;padding:4px">Select districts above first</div>';
+    return;
+  }
+  accordion.innerHTML = '<div style="color:var(--muted);font-size:11px;padding:4px">Loading…</div>';
+  if(!_schoolCache){
+    try{
+      const res = await fetch('https://raw.githubusercontent.com/alokkmohan/NGO/main/school_data.json');
+      _schoolCache = await res.json();
+    }catch(e){
+      accordion.innerHTML = '<span style="color:var(--red);font-size:11px">Could not load schools</span>';
+      return;
+    }
+  }
+  const accId = 'tacc-' + Math.random().toString(36).slice(2,7);
+  accordion.id = accId;
+  accordion.innerHTML = _buildAccordionHTML(accId, dists, savedSchools, 'taskSchoolNoop');
+}
+
+function taskSchoolNoop(){ /* no-op — task school checkboxes collected at save time */ }
+
+function getTaskGeo(block){
+  const taskDist = [...block.querySelectorAll('.task-dist-cb:checked')].map(c=>c.value).join(', ');
+  const schoolType = block.querySelector('.task-school-type:checked')?.value || 'all';
+  const taskSchools = schoolType === 'all'
+    ? 'ALL'
+    : [...block.querySelectorAll('.task-school-accordion .school-cb:checked')].map(c=>c.value).join(' | ');
+  return { task_dist: taskDist, task_schools: taskSchools };
+}
+
+function prefillTaskGeo(block, taskDist, taskSchools){
+  initTaskGeo(block);
+  if(taskDist){
+    const savedDists = taskDist.split(',').map(d=>d.trim());
+    block.querySelectorAll('.task-dist-cb').forEach(cb=>{ cb.checked = savedDists.includes(cb.value); });
+  }
+  const isSpecific = taskSchools && taskSchools !== 'ALL';
+  const allRadio = block.querySelector('.task-school-type[value="all"]');
+  const specRadio = block.querySelector('.task-school-type[value="specific"]');
+  if(isSpecific && specRadio){
+    specRadio.checked = true;
+    const specific = block.querySelector('.task-school-specific');
+    if(specific) specific.style.display = 'block';
+    const savedSch = taskSchools.split('|').map(s=>s.trim()).filter(Boolean);
+    buildTaskSchoolAccordion(block.querySelector('.task-geo'), savedSch);
+  } else if(allRadio){
+    allRadio.checked = true;
+  }
 }
 
 function filterSchoolAccordion(accordionId, searchId){
@@ -1312,6 +1421,7 @@ function addCompTask(containerId){
   const taskRows = document.getElementById(containerId);
   if(!taskRows) return;
   const taskIdx = taskRows.children.length + 1;
+  const uid = 'tb' + Date.now().toString(36) + Math.random().toString(36).slice(2,5);
   const div = document.createElement('div');
   div.className = 'task-block';
   div.style.cssText = 'border:1px solid #d0daf0;border-radius:8px;padding:10px 12px;margin-bottom:8px;background:#fafcff';
@@ -1330,11 +1440,38 @@ function addCompTask(containerId){
         style="padding:4px 14px;background:#e8f0fe;color:var(--blue);border:1px solid #c2d0f5;border-radius:6px;font-size:11px;cursor:pointer;font-weight:600">
         + Add Sub Activity
       </button>
+    </div>
+    <div class="task-geo" style="margin-top:10px;padding:9px 11px;background:#f0f4ff;border:1px solid #d0daf0;border-radius:7px">
+      <div style="font-size:11px;font-weight:700;color:var(--blue);margin-bottom:7px">📍 Geographic Coverage for this Activity</div>
+      <div style="margin-bottom:7px">
+        <div style="font-size:10px;font-weight:600;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.4px">Districts</div>
+        <div style="display:flex;gap:5px;margin-bottom:4px">
+          <button type="button" onclick="taskDistSelectAll(this)" style="padding:2px 7px;font-size:10px;background:var(--blue);color:#fff;border:none;border-radius:4px;cursor:pointer">✓ All</button>
+          <button type="button" onclick="taskDistDeselect(this)" style="padding:2px 7px;font-size:10px;background:#f1f1f1;border:1px solid var(--border);border-radius:4px;cursor:pointer">✕ None</button>
+        </div>
+        <div class="task-dist-checks" style="max-height:80px;overflow-y:auto;border:1px solid var(--border);border-radius:6px;padding:5px;background:#fff;display:flex;flex-wrap:wrap;gap:3px"></div>
+      </div>
+      <div>
+        <div style="font-size:10px;font-weight:600;color:var(--muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:.4px">Schools</div>
+        <div style="display:flex;gap:14px;margin-bottom:5px">
+          <label style="font-size:11px;cursor:pointer;display:flex;align-items:center;gap:4px">
+            <input type="radio" name="${uid}_st" class="task-school-type" value="all" checked onchange="onTaskSchoolTypeChange(this)"> All schools
+          </label>
+          <label style="font-size:11px;cursor:pointer;display:flex;align-items:center;gap:4px">
+            <input type="radio" name="${uid}_st" class="task-school-type" value="specific" onchange="onTaskSchoolTypeChange(this)"> Specific schools
+          </label>
+        </div>
+        <div class="task-school-specific" style="display:none">
+          <input type="text" class="task-school-search" placeholder="🔍 Search school..." oninput="onTaskSchoolSearch(this)"
+            style="width:100%;padding:5px 8px;border:1px solid var(--border);border-radius:5px;font-size:11px;margin-bottom:4px;box-sizing:border-box">
+          <div class="task-school-accordion" style="max-height:180px;overflow-y:auto"></div>
+        </div>
+      </div>
     </div>`;
   taskRows.appendChild(div);
   div.querySelector('.comp-task-input').focus();
-  // Auto-add first sub-activity
   addSubActivity(div.querySelector('button[onclick*="addSubActivity"]'));
+  initTaskGeo(div);
 }
 
 function addSubActivity(btn){
@@ -1500,6 +1637,7 @@ async function saveProfile(){
         const taskStart = subStarts.length ? subStarts.sort()[0]                   : (startDate || '');
         const taskEnd   = subEnds.length   ? subEnds.sort().at(-1)                 : (endDate   || '');
 
+        const geo = getTaskGeo(block);
         await apiFetch({
           action:          'saveProject',
           ngo:             currentUser.org,
@@ -1514,7 +1652,9 @@ async function saveProfile(){
           target_meetings: tMeetings,
           target_events:   tEvents,
           start_date:      taskStart,
-          end_date:        taskEnd
+          end_date:        taskEnd,
+          task_dist:       geo.task_dist,
+          task_schools:    geo.task_schools
         });
       }
     }
@@ -2498,6 +2638,8 @@ function pvInitTasks(){
         const addBtn=lastBlock.querySelector('button[onclick*="addSubActivity"]');
         addSubActivity(addBtn);
       }
+      // Pre-fill geographic coverage
+      prefillTaskGeo(lastBlock, proj.task_dist||'', proj.task_schools||'ALL');
       // If locked, freeze the block
       if(lastBlock.dataset.locked==='true') lockTaskBlock(lastBlock);
     });
@@ -2507,6 +2649,7 @@ function pvInitTasks(){
 // Visually freeze a task block so it cannot be edited or deleted
 function lockTaskBlock(block){
   block.querySelectorAll('input,textarea,select').forEach(el=>el.disabled=true);
+  block.querySelectorAll('.task-geo button').forEach(b=>b.disabled=true);
   // Remove delete button only (no per-task lock button anymore)
   block.querySelector('button[title="Remove Activity"]')?.remove();
   block.querySelectorAll('button[onclick*="addSubActivity"]').forEach(b=>b.remove());
@@ -2710,13 +2853,15 @@ async function pvSave(sec){
           })).filter(s=>s.name);
           const subStarts=subActs.map(s=>s.start_date).filter(Boolean);
           const subEnds  =subActs.map(s=>s.end_date).filter(Boolean);
+          const geo=getTaskGeo(block);
           const payload={
             action:'saveProject', ngo:currentUser.org, component:comp, task_name:taskName,
             description:'', sub_activities:JSON.stringify(subActs),
             target_schools:tSchools,target_students:tStudents,target_girls:tGirls,
             target_teachers:tTeachers,target_meetings:tMeetings,target_events:tEvents,
             start_date:subStarts.length?subStarts.sort()[0]:'',
-            end_date:  subEnds.length?subEnds.sort().at(-1):''
+            end_date:  subEnds.length?subEnds.sort().at(-1):'',
+            task_dist:geo.task_dist, task_schools:geo.task_schools
           };
           if(block.dataset.projectId) payload.project_id=block.dataset.projectId;
           const res=await apiFetch(payload);

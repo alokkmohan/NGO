@@ -573,10 +573,13 @@ function saveProject(data) {
     sheet = ss.insertSheet('Projects');
     sheet.appendRow(['project_id','ngo','component','task_name','description',
       'target_schools','target_students','target_girls','target_teachers',
-      'target_meetings','target_events','start_date','end_date','status','created_on','sub_activities']);
+      'target_meetings','target_events','start_date','end_date','status','created_on',
+      'sub_activities','task_dist','task_schools']);
   } else {
     const hRow = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
     if (!hRow.includes('sub_activities')) sheet.getRange(1, hRow.length+1).setValue('sub_activities');
+    if (!hRow.includes('task_dist'))    sheet.getRange(1, sheet.getLastColumn()+1).setValue('task_dist');
+    if (!hRow.includes('task_schools')) sheet.getRange(1, sheet.getLastColumn()+1).setValue('task_schools');
   }
 
   // UPDATE existing row if project_id provided
@@ -596,6 +599,8 @@ function saveProject(data) {
       set('sub_activities',data.sub_activities || '[]');
       set('start_date',    data.start_date  || '');
       set('end_date',      data.end_date    || '');
+      set('task_dist',     data.task_dist   || '');
+      set('task_schools',  data.task_schools|| '');
       set('status',        'active');
       return { success: true, project_id: data.project_id };
     }
@@ -609,7 +614,9 @@ function saveProject(data) {
     +data.target_teachers||0, +data.target_meetings||0, +data.target_events||0,
     data.start_date||'', data.end_date||'', 'active',
     new Date().toLocaleDateString('en-IN'),
-    data.sub_activities || '[]'
+    data.sub_activities || '[]',
+    data.task_dist    || '',
+    data.task_schools || ''
   ]);
   return { success: true, project_id: id };
 }
