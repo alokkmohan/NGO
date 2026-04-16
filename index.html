@@ -2329,10 +2329,19 @@ function renderPartnerTable(){
 function renderProfileView(){
   const u = currentUser;
   const myNGO = SAMPLE_NGOS.find(n => n.name === u.org) || {};
-  const dists  = (myNGO.dist||'').split(',').map(d=>d.trim()).filter(Boolean);
-  const blocks = (myNGO.blocks||'').split(',').map(b=>b.trim()).filter(Boolean);
-  const schools= (myNGO.schools_list||'').split('|').map(s=>s.trim()).filter(Boolean);
   const myProjects = PROJECTS.filter(p => p.ngo === u.org && p.status !== 'deleted');
+
+  // Aggregate geographic coverage from tasks (task_dist + task_schools)
+  const taskDistSet = new Set();
+  const taskSchoolSet = new Set();
+  let anyAllSchools = false;
+  myProjects.forEach(p => {
+    (p.task_dist||'').split(',').map(d=>d.trim()).filter(Boolean).forEach(d=>taskDistSet.add(d));
+    if((p.task_schools||'').trim().toUpperCase()==='ALL'){ anyAllSchools=true; }
+    else { (p.task_schools||'').split('|').map(s=>s.trim()).filter(Boolean).forEach(s=>taskSchoolSet.add(s)); }
+  });
+  const taskDists   = [...taskDistSet].sort();
+  const taskSchools = anyAllSchools ? [] : [...taskSchoolSet].sort();
 
   // Group projects by component
   const byComp = {};
@@ -2400,61 +2409,7 @@ function renderProfileView(){
       </div>
     </div>
 
-    <!-- ── SECTION 2: Geographic Coverage ── -->
-    <div id="pv-sec2" style="border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:12px">
-      <div style="background:var(--blue);color:#fff;padding:8px 14px;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:space-between">
-        📍 Geographic Coverage
-        <button onclick="pvEdit(2)" style="padding:3px 12px;background:#fff;color:var(--blue);border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">✏ Edit</button>
-      </div>
-      <div id="pv-sec2-view" style="padding:12px 14px">
-        <div style="margin-bottom:10px">
-          <div style="font-size:11px;color:var(--muted);margin-bottom:4px">Districts (${dists.length})</div>
-          <div style="display:flex;flex-wrap:wrap;gap:4px">
-            ${dists.length ? dists.map(d=>`<span style="background:var(--blue)15;color:var(--blue);border:1px solid var(--blue)30;border-radius:20px;padding:3px 10px;font-size:12px">${d}</span>`).join('') : '<span style="color:var(--muted);font-size:12px">—</span>'}
-          </div>
-        </div>
-        <div style="margin-bottom:10px">
-          <div style="font-size:11px;color:var(--muted);margin-bottom:4px">Blocks (${blocks.length})</div>
-          <div style="display:flex;flex-wrap:wrap;gap:4px">
-            ${blocks.length ? blocks.slice(0,12).map(b=>`<span style="background:#e8f4ea;color:var(--green);border:1px solid #a8d5b0;border-radius:20px;padding:3px 10px;font-size:12px">${b}</span>`).join('')+(blocks.length>12?`<span style="font-size:11px;color:var(--muted);padding:3px 6px">+${blocks.length-12} more</span>`:'') : '<span style="color:var(--muted);font-size:12px">—</span>'}
-          </div>
-        </div>
-        <div>
-          <div style="font-size:11px;color:var(--muted);margin-bottom:4px">Schools (${schools.length})</div>
-          <div style="display:flex;flex-wrap:wrap;gap:4px">
-            ${schools.length ? schools.slice(0,10).map(s=>`<span style="background:#fef9e7;color:var(--amber);border:1px solid #f5d48a;border-radius:20px;padding:3px 10px;font-size:11px">${s}</span>`).join('')+(schools.length>10?`<span style="font-size:11px;color:var(--muted);padding:3px 6px">+${schools.length-10} more</span>`:'') : '<span style="color:var(--muted);font-size:12px">—</span>'}
-          </div>
-        </div>
-      </div>
-      <div id="pv-sec2-form" style="display:none;padding:14px;border-top:1px solid var(--border);background:#fafcff">
-        <div style="margin-bottom:12px">
-          <label style="font-size:11px;font-weight:600;display:block;margin-bottom:5px">Select districts</label>
-          <input type="text" id="pve-dist-search" placeholder="🔍 Search district..." oninput="pveFilterDist()"
-            style="width:100%;padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;margin-bottom:5px">
-          <div style="display:flex;gap:6px;margin-bottom:5px">
-            <button type="button" onclick="selectAllDists('pve-dist-checks','pveOnDistChange')" style="padding:3px 10px;font-size:11px;background:var(--blue);color:#fff;border:none;border-radius:5px;cursor:pointer">✓ Select All</button>
-            <button type="button" onclick="deselectAllDists('pve-dist-checks','pveOnDistChange')" style="padding:3px 10px;font-size:11px;background:#f1f1f1;border:1px solid var(--border);border-radius:5px;cursor:pointer">✕ Deselect All</button>
-          </div>
-          <div id="pve-dist-checks" style="max-height:180px;overflow-y:auto;border:1px solid var(--border);border-radius:7px;padding:8px;font-size:11px"></div>
-        </div>
-        <div style="margin-bottom:12px">
-          <label style="font-size:11px;font-weight:600;display:block;margin-bottom:5px">Schools</label>
-          <div style="display:flex;gap:6px;margin-bottom:6px">
-            <button type="button" onclick="selectAllSchools('pve-school-accordion')" style="padding:3px 10px;font-size:11px;background:var(--green);color:#fff;border:none;border-radius:5px;cursor:pointer">✓ Select All Schools</button>
-            <button type="button" onclick="deselectAllSchools('pve-school-accordion')" style="padding:3px 10px;font-size:11px;background:#f1f1f1;border:1px solid var(--border);border-radius:5px;cursor:pointer">✕ Deselect All Schools</button>
-          </div>
-          <input type="text" id="pve-school-accordion-search" placeholder="🔍 Search school by name or UDISE across all districts..." oninput="filterSchoolAccordion('pve-school-accordion','pve-school-accordion-search')" style="width:100%;padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;margin-bottom:6px">
-          <div id="pve-school-accordion" style="max-height:320px;overflow-y:auto"></div>
-          <div id="pve-selected-schools" style="margin-top:6px;display:flex;flex-wrap:wrap;gap:4px"></div>
-        </div>
-        <div style="display:flex;gap:8px">
-          <button onclick="pvSave(2)" style="padding:6px 20px;background:var(--green);color:#fff;border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer">💾 Save</button>
-          <button onclick="pvCancel(2)" style="padding:6px 16px;background:#f1f1f1;border:1px solid var(--border);border-radius:7px;font-size:12px;cursor:pointer">Cancel</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- ── SECTION 3: Major Components & Tasks ── -->
+    <!-- ── SECTION 3: Major Components & Tasks (shown first) ── -->
     <div id="pv-sec3" style="border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:12px">
       <div style="background:var(--blue);color:#fff;padding:8px 14px;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:space-between">
         🎯 Major Components & Tasks
@@ -2463,23 +2418,31 @@ function renderProfileView(){
       <div id="pv-sec3-view" style="padding:12px 14px">
         ${Object.keys(byComp).length ? Object.entries(byComp).map(([comp, tasks])=>`
           <div style="margin-bottom:12px">
-            <div style="font-weight:700;color:var(--blue);font-size:12px;margin-bottom:5px;padding:5px 8px;background:var(--blue)10;border-radius:6px">▸ ${comp}</div>
+            <div style="font-weight:700;color:var(--blue);font-size:12px;margin-bottom:5px;padding:5px 8px;background:#e8f0fe;border-radius:6px">▸ ${comp}</div>
             ${tasks.map(t=>{
-              let subs=[];try{subs=JSON.parse(t.sub_activities||'[]');}catch(e){}
               const isLocked=isTaskLocked(t.locked);
-              return `<div style="padding:7px 10px;background:${isLocked?'#f1f8e9':'#f8f9ff'};border-radius:6px;margin-bottom:4px;font-size:12px;border-left:3px solid ${isLocked?'#66bb6a':'var(--green)'}">
-                <div style="display:flex;align-items:center;gap:6px">
+              const dateLabel = t.start_date ? (t.start_date + (t.end_date ? ' → '+t.end_date : '')) : '';
+              const taskDist  = (t.task_dist||'').split(',').map(d=>d.trim()).filter(Boolean);
+              const allSchools= (t.task_schools||'').trim().toUpperCase()==='ALL';
+              const taskSchoolList = allSchools ? [] : (t.task_schools||'').split('|').map(s=>s.trim()).filter(Boolean);
+              return `<div style="padding:8px 10px;background:${isLocked?'#f1f8e9':'#f8f9ff'};border-radius:6px;margin-bottom:6px;font-size:12px;border-left:3px solid ${isLocked?'#66bb6a':'#b0bcd4'}">
+                <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
                   <span style="font-weight:600">${t.task_name||'—'}</span>
                   ${isLocked?'<span style="font-size:10px;color:#2e7d32;background:#c8e6c9;border-radius:10px;padding:1px 8px;font-weight:700">🔒 Locked</span>':'<span style="font-size:10px;color:#b8860b;background:#fff8e1;border-radius:10px;padding:1px 8px">unlocked</span>'}
+                  ${dateLabel?`<span style="font-size:11px;color:var(--muted)">${dateLabel}</span>`:''}
                 </div>
-                ${subs.length?`<div style="margin-top:5px;padding-left:8px">${subs.map((s,i)=>`<div style="font-size:11px;color:var(--muted);margin-bottom:2px">${i+1}. ${s.name}${s.start_date?' <span style="color:#888">('+s.start_date+(s.end_date?' → '+s.end_date:'')+')</span>':''}</div>`).join('')}</div>`:''}
+                ${taskDist.length?`<div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:3px">
+                  <span style="font-size:10px;color:var(--muted);align-self:center;margin-right:2px">📍</span>
+                  ${taskDist.map(d=>`<span style="background:#e8f0fe;color:var(--blue);border-radius:12px;padding:2px 8px;font-size:11px">${d}</span>`).join('')}
+                  ${allSchools?'<span style="background:#e8f5e9;color:var(--green);border-radius:12px;padding:2px 8px;font-size:11px;font-weight:600">All Schools</span>':taskSchoolList.length?`<span style="background:#fff8e1;color:var(--amber);border-radius:12px;padding:2px 8px;font-size:11px">${taskSchoolList.length} school${taskSchoolList.length>1?'s':''}</span>`:''}
+                </div>`:''}
               </div>`;
             }).join('')}
           </div>`).join('') : '<div style="color:var(--muted);font-size:12px">No tasks defined yet.</div>'}
       </div>
       <div id="pv-sec3-form" style="display:none;padding:14px;border-top:1px solid var(--border);background:#fafcff">
         <div style="font-size:11px;color:var(--blue);background:#eef4ff;border-radius:7px;padding:9px 12px;margin-bottom:12px">
-          Add activities and sub-activities (start &amp; end date required). Click <b>💾 Save</b>, then <b>🔒 Lock Activities</b> — only locked activities appear in the Monthly Report.
+          Add activities with start &amp; end dates. Click <b>💾 Save</b>, then <b>🔒 Lock Activities</b> — only locked activities appear in the Monthly Report.
         </div>
         <div id="pve-comp-task-builder"></div>
         <div id="pv-sec3-save-msg" style="display:none;background:#e8f5e9;border:1px solid #a5d6a7;border-radius:8px;padding:10px 14px;margin-top:8px;font-size:12px;color:#2e7d32;font-weight:600">
@@ -2489,6 +2452,32 @@ function renderProfileView(){
           <button onclick="pvSave(3)" style="padding:7px 22px;background:var(--green);color:#fff;border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer">💾 Save</button>
           <button onclick="lockAllSaved()" style="padding:7px 18px;background:#fff8e1;border:1px solid #ffe082;color:#b8860b;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer">🔒 Lock Activities</button>
           <button onclick="pvCancel(3);renderProfileView();renderMyReports();" style="padding:7px 16px;background:#f1f1f1;border:1px solid var(--border);border-radius:7px;font-size:12px;cursor:pointer">✕ Close</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── SECTION 2: Geographic Coverage (read-only, derived from tasks) ── -->
+    <div id="pv-sec2" style="border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:12px">
+      <div style="background:var(--blue);color:#fff;padding:8px 14px;font-size:12px;font-weight:700">
+        📍 Geographic Coverage
+        <span style="font-size:10px;font-weight:400;opacity:.7;margin-left:8px">— derived from Major Components &amp; Tasks</span>
+      </div>
+      <div id="pv-sec2-view" style="padding:12px 14px">
+        <div style="margin-bottom:10px">
+          <div style="font-size:11px;color:var(--muted);margin-bottom:6px">Districts covered (${taskDists.length})</div>
+          <div style="display:flex;flex-wrap:wrap;gap:4px">
+            ${taskDists.length ? taskDists.map(d=>`<span style="background:#e8f0fe;color:var(--blue);border:1px solid #c5d5f5;border-radius:20px;padding:3px 10px;font-size:12px">${d}</span>`).join('') : '<span style="color:var(--muted);font-size:12px">—</span>'}
+          </div>
+        </div>
+        <div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:6px">Schools covered</div>
+          <div style="display:flex;flex-wrap:wrap;gap:4px">
+            ${anyAllSchools
+              ? `<span style="background:#e8f5e9;color:var(--green);border:1px solid #a5d6a7;border-radius:20px;padding:3px 12px;font-size:12px;font-weight:600">All Schools in covered districts</span>`
+              : taskSchools.length
+                ? taskSchools.slice(0,12).map(s=>`<span style="background:#fef9e7;color:var(--amber);border:1px solid #f5d48a;border-radius:20px;padding:3px 10px;font-size:11px">${s}</span>`).join('')+(taskSchools.length>12?`<span style="font-size:11px;color:var(--muted);padding:3px 6px">+${taskSchools.length-12} more</span>`:'')
+                : '<span style="color:var(--muted);font-size:12px">—</span>'}
+          </div>
         </div>
       </div>
     </div>
