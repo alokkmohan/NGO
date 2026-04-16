@@ -378,6 +378,10 @@ tr:hover td{background:#FAFBFF}
         <label>Schools <span>*</span>
           <span style="font-weight:400;font-size:11px;color:var(--muted);margin-left:6px">Schools where you work</span>
         </label>
+        <div style="display:flex;gap:6px;margin-bottom:6px">
+          <button type="button" onclick="selectAllSchools('school-accordion')" style="padding:3px 10px;font-size:11px;background:var(--green);color:#fff;border:none;border-radius:5px;cursor:pointer">✓ Select All Schools</button>
+          <button type="button" onclick="deselectAllSchools('school-accordion')" style="padding:3px 10px;font-size:11px;background:#f1f1f1;border:1px solid var(--border);border-radius:5px;cursor:pointer">✕ Deselect All Schools</button>
+        </div>
         <input type="text" id="school-accordion-search" placeholder="🔍 Search school by name or UDISE across all districts..." oninput="filterSchoolAccordion('school-accordion','school-accordion-search')" style="width:100%;padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;margin-bottom:6px">
         <div id="school-accordion" style="max-height:360px;overflow-y:auto"></div>
         <div id="selected-schools-display" style="margin-top:8px;display:flex;flex-wrap:wrap;gap:4px"></div>
@@ -1190,6 +1194,18 @@ function selectAllDists(containerId, callbackName){
 function deselectAllDists(containerId, callbackName){
   document.querySelectorAll('#' + containerId + ' input[type="checkbox"]').forEach(cb => cb.checked = false);
   if(callbackName && window[callbackName]) window[callbackName]();
+}
+
+function selectAllSchools(accordionId){
+  document.querySelectorAll('#' + accordionId + ' .school-cb').forEach(cb => cb.checked = true);
+  if(accordionId === 'school-accordion') updateSelectedSchools();
+  else pveUpdateSelectedSchools();
+}
+
+function deselectAllSchools(accordionId){
+  document.querySelectorAll('#' + accordionId + ' .school-cb').forEach(cb => cb.checked = false);
+  if(accordionId === 'school-accordion') updateSelectedSchools();
+  else pveUpdateSelectedSchools();
 }
 
 function filterSchoolAccordion(accordionId, searchId){
@@ -2294,6 +2310,10 @@ function renderProfileView(){
         </div>
         <div style="margin-bottom:12px">
           <label style="font-size:11px;font-weight:600;display:block;margin-bottom:5px">Schools</label>
+          <div style="display:flex;gap:6px;margin-bottom:6px">
+            <button type="button" onclick="selectAllSchools('pve-school-accordion')" style="padding:3px 10px;font-size:11px;background:var(--green);color:#fff;border:none;border-radius:5px;cursor:pointer">✓ Select All Schools</button>
+            <button type="button" onclick="deselectAllSchools('pve-school-accordion')" style="padding:3px 10px;font-size:11px;background:#f1f1f1;border:1px solid var(--border);border-radius:5px;cursor:pointer">✕ Deselect All Schools</button>
+          </div>
           <input type="text" id="pve-school-accordion-search" placeholder="🔍 Search school by name or UDISE across all districts..." oninput="filterSchoolAccordion('pve-school-accordion','pve-school-accordion-search')" style="width:100%;padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;margin-bottom:6px">
           <div id="pve-school-accordion" style="max-height:320px;overflow-y:auto"></div>
           <div id="pve-selected-schools" style="margin-top:6px;display:flex;flex-wrap:wrap;gap:4px"></div>
