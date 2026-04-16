@@ -2868,15 +2868,16 @@ async function pvSave(sec){
           if(res?.project_id) block.dataset.projectId=String(res.project_id);
         }
       }
-      // Refresh data but KEEP form open — re-render task blocks in place with lock buttons
+      // Refresh data in background (don't re-render form — project_ids already updated in-place)
       await loadSheetData();
       hideLoader();
-      pvInitTasks(); // re-draw blocks with updated project_ids + locked state
-      // Show inline success banner
+      // Show confirmation banner
       const banner=document.getElementById('pv-sec3-save-msg');
       if(banner){
-        banner.style.display='block';
-        setTimeout(()=>{ banner.style.display='none'; },4000);
+        banner.style.cssText='display:block;background:#e8f5e9;border:1px solid #a5d6a7;border-radius:8px;padding:12px 16px;margin-top:10px;font-size:13px;color:#2e7d32;font-weight:600;text-align:center';
+        banner.innerHTML='✅ <b>Activities saved successfully!</b> Click 🔒 Lock Activities to include them in Monthly Report.';
+        banner.scrollIntoView({behavior:'smooth',block:'nearest'});
+        setTimeout(()=>{ banner.style.display='none'; },8000);
       }
       return; // don't fall through to pvCancel below
     }
