@@ -1433,13 +1433,13 @@ function addCompTask(containerId){
       <button type="button" onclick="this.closest('.task-block').remove()" title="Remove Activity"
         style="padding:4px 10px;background:#fff0f0;border:1px solid #f5c6c6;color:var(--red);border-radius:6px;font-size:16px;cursor:pointer;line-height:1">−</button>
     </div>
-    <div style="margin-left:12px">
-      <div style="font-size:11px;color:var(--muted);margin-bottom:5px">Sub Activities (numbered steps under this activity):</div>
-      <div class="sub-act-rows"></div>
-      <button type="button" onclick="addSubActivity(this)"
-        style="padding:4px 14px;background:#e8f0fe;color:var(--blue);border:1px solid #c2d0f5;border-radius:6px;font-size:11px;cursor:pointer;font-weight:600">
-        + Add Sub Activity
-      </button>
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap">
+      <label style="font-size:11px;color:var(--muted);white-space:nowrap">Start Date:</label>
+      <input type="date" class="act-start-date" title="Activity Start Date"
+        style="padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;outline:none">
+      <label style="font-size:11px;color:var(--muted);white-space:nowrap">End Date:</label>
+      <input type="date" class="act-end-date" title="Activity End Date"
+        style="padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;outline:none">
     </div>
     <div class="task-geo" style="margin-top:10px;padding:9px 11px;background:#f0f4ff;border:1px solid #d0daf0;border-radius:7px">
       <div style="font-size:11px;font-weight:700;color:var(--blue);margin-bottom:7px">📍 Geographic Coverage for this Activity</div>
@@ -1470,7 +1470,6 @@ function addCompTask(containerId){
     </div>`;
   taskRows.appendChild(div);
   div.querySelector('.comp-task-input').focus();
-  addSubActivity(div.querySelector('button[onclick*="addSubActivity"]'));
   initTaskGeo(div);
 }
 
@@ -1623,19 +1622,10 @@ async function saveProfile(){
       const comp = cb.value;
       const taskBlocks = cb.closest('.comp-block').querySelectorAll('.task-block');
       for(const block of taskBlocks){
-        const taskName = block.querySelector('.comp-task-input')?.value.trim();
+        const taskName  = block.querySelector('.comp-task-input')?.value.trim();
         if(!taskName) continue;
-        // Collect sub-activities (dates live here, not on Activity)
-        const subActs = [...block.querySelectorAll('.sub-act-rows > div')].map(row => ({
-          name:       row.querySelector('.sub-act-name')?.value.trim() || '',
-          start_date: row.querySelector('.sub-act-start')?.value || '',
-          end_date:   row.querySelector('.sub-act-end')?.value   || ''
-        })).filter(s => s.name);
-        // Derive activity-level dates from sub-activities (earliest start, latest end)
-        const subStarts = subActs.map(s=>s.start_date).filter(Boolean);
-        const subEnds   = subActs.map(s=>s.end_date).filter(Boolean);
-        const taskStart = subStarts.length ? subStarts.sort()[0]                   : (startDate || '');
-        const taskEnd   = subEnds.length   ? subEnds.sort().at(-1)                 : (endDate   || '');
+        const taskStart = block.querySelector('.act-start-date')?.value || '';
+        const taskEnd   = block.querySelector('.act-end-date')?.value   || '';
 
         const geo = getTaskGeo(block);
         await apiFetch({
@@ -1644,7 +1634,7 @@ async function saveProfile(){
           component:       comp,
           task_name:       taskName,
           description:     '',
-          sub_activities:  JSON.stringify(subActs),
+          sub_activities:  '[]',
           target_schools:  tSchools,
           target_students: tStudents,
           target_girls:    tGirls,
@@ -2617,27 +2607,11 @@ function pvInitTasks(){
       lastBlock.dataset.projectId=proj.project_id||'';
       lastBlock.dataset.locked=isTaskLocked(proj.locked)?'true':'';
       lastBlock.querySelector('.comp-task-input').value=proj.task_name||'';
-      // Pre-fill sub-activities
-      let subs=[];
-      try{subs=JSON.parse(proj.sub_activities||'[]');}catch(e){}
-      const subContainer=lastBlock.querySelector('.sub-act-rows');
-      // Remove auto-added empty row, re-add with data
-      subContainer.innerHTML='';
-      if(subs.length){
-        subs.forEach((sa,i)=>{
-          const addBtn=lastBlock.querySelector('button[onclick*="addSubActivity"]');
-          addSubActivity(addBtn);
-          const row=subContainer.lastElementChild;
-          if(!row) return;
-          row.querySelector('.sub-act-name').value=sa.name||'';
-          row.querySelector('.sub-act-start').value=sa.start_date||'';
-          row.querySelector('.sub-act-end').value=sa.end_date||'';
-        });
-      } else {
-        // restore the one auto-added row (blank)
-        const addBtn=lastBlock.querySelector('button[onclick*="addSubActivity"]');
-        addSubActivity(addBtn);
-      }
+      // Pre-fill start/end dates
+      const sdEl=lastBlock.querySelector('.act-start-date');
+      const edEl=lastBlock.querySelector('.act-end-date');
+      if(sdEl) sdEl.value=proj.start_date||'';
+      if(edEl) edEl.value=proj.end_date||'';
       // Pre-fill geographic coverage
       prefillTaskGeo(lastBlock, proj.task_dist||'', proj.task_schools||'ALL');
       // If locked, freeze the block
@@ -2652,8 +2626,7 @@ function lockTaskBlock(block){
   block.querySelectorAll('.task-geo button').forEach(b=>b.disabled=true);
   // Remove delete button only (no per-task lock button anymore)
   block.querySelector('button[title="Remove Activity"]')?.remove();
-  block.querySelectorAll('button[onclick*="addSubActivity"]').forEach(b=>b.remove());
-  block.querySelectorAll('.sub-act-rows button').forEach(b=>b.remove());
+  // No sub-activity rows to clean up (removed in favour of report-time entries)
   // Show locked badge next to task name
   const nameRow=block.querySelector('.comp-task-input')?.parentElement;
   if(nameRow && !nameRow.querySelector('.locked-badge')){
@@ -2846,21 +2819,15 @@ async function pvSave(sec){
           if(block.dataset.locked==='true') continue;
           const taskName=block.querySelector('.comp-task-input')?.value.trim();
           if(!taskName) continue;
-          const subActs=[...block.querySelectorAll('.sub-act-rows > div')].map(row=>({
-            name:      row.querySelector('.sub-act-name')?.value.trim()||'',
-            start_date:row.querySelector('.sub-act-start')?.value||'',
-            end_date:  row.querySelector('.sub-act-end')?.value||''
-          })).filter(s=>s.name);
-          const subStarts=subActs.map(s=>s.start_date).filter(Boolean);
-          const subEnds  =subActs.map(s=>s.end_date).filter(Boolean);
+          const taskStart=block.querySelector('.act-start-date')?.value||'';
+          const taskEnd  =block.querySelector('.act-end-date')?.value||'';
           const geo=getTaskGeo(block);
           const payload={
             action:'saveProject', ngo:currentUser.org, component:comp, task_name:taskName,
-            description:'', sub_activities:JSON.stringify(subActs),
+            description:'', sub_activities:'[]',
             target_schools:tSchools,target_students:tStudents,target_girls:tGirls,
             target_teachers:tTeachers,target_meetings:tMeetings,target_events:tEvents,
-            start_date:subStarts.length?subStarts.sort()[0]:'',
-            end_date:  subEnds.length?subEnds.sort().at(-1):'',
+            start_date:taskStart, end_date:taskEnd,
             task_dist:geo.task_dist, task_schools:geo.task_schools
           };
           if(block.dataset.projectId) payload.project_id=block.dataset.projectId;
@@ -3348,95 +3315,129 @@ function buildReportTaskCards(existingRep){
   container.innerHTML = Object.entries(byComp).map(([comp, tasks]) =>
     `<div style="margin-bottom:14px">
       <div style="font-size:11px;font-weight:700;color:var(--blue);text-transform:uppercase;letter-spacing:.5px;
-        margin-bottom:6px;padding:5px 10px;background:var(--blue)10;border-radius:6px">▸ ${comp}</div>
+        margin-bottom:6px;padding:5px 10px;background:#e8f0fe;border-radius:6px">▸ ${comp}</div>
       ${tasks.map(t => {
         const tid = 'task_' + (t.project_id || t.task_name).toString().replace(/[^a-z0-9]/gi,'_');
         const lastAct = lastTasks.find(a => a.task_name === t.task_name) || {};
-        // Parse sub-activities from project definition
-        let subActs = [];
-        try { subActs = JSON.parse(t.sub_activities || '[]'); } catch(e){}
-
-        // Sub-activity rows HTML
-        const subRowsHtml = subActs.length
-          ? subActs.map((sa, si) => {
-              const sid = `${tid}_sub${si}`;
-              const lastSub = (lastAct.sub_activities || [])[si] || {};
-              return `<div style="border:1px solid #e0e8f8;border-radius:7px;padding:10px 12px;margin-bottom:6px;background:#fff">
-                <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap">
-                  <span style="font-size:12px;font-weight:600;color:var(--text);flex:1">${si+1}. ${sa.name}</span>
-                  ${sa.start_date?`<span style="font-size:10px;color:var(--muted)">${fmtDate(sa.start_date)}${sa.end_date?' → '+fmtDate(sa.end_date):''}</span>`:''}
-                  <select id="${sid}_status"
-                    onchange="document.getElementById('${sid}_done_wrap').style.display=this.value==='Complete'?'flex':'none'"
-                    style="padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:#fff">
-                    <option value="Not started"${(lastSub.status||'Not started')==='Not started'?' selected':''}>⚪ Not started</option>
-                    <option value="In progress"${lastSub.status==='In progress'?' selected':''}>🟡 In progress</option>
-                    <option value="Complete"${lastSub.status==='Complete'?' selected':''}>🟢 Complete</option>
-                  </select>
-                </div>
-                <textarea id="${sid}_update" placeholder="Monthly update for this sub-activity..."
-                  style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;height:52px;resize:vertical;outline:none;margin-bottom:6px">${lastSub.update||''}</textarea>
-                <div id="${sid}_done_wrap" style="display:${lastSub.status==='Complete'?'flex':'none'};align-items:center;gap:8px;margin-bottom:6px">
-                  <label style="font-size:11px;white-space:nowrap">Completion Date:</label>
-                  <input type="date" id="${sid}_done" value="${lastSub.done_date||''}"
-                    style="padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;outline:none">
-                </div>
-                <div style="border:1px dashed var(--border);border-radius:7px;padding:8px;background:#fafbff">
-                  <div style="font-size:11px;font-weight:600;color:var(--blue);margin-bottom:5px">📷 Photos</div>
-                  <div onclick="document.getElementById('${sid}_file').click()"
-                    style="border:1px dashed #b0bcd4;border-radius:6px;padding:7px;text-align:center;cursor:pointer;background:#fff;font-size:11px;color:var(--muted)">
-                    Click to upload photos
-                  </div>
-                  <input type="file" id="${sid}_file" multiple accept="image/*" style="display:none"
-                    onchange="handleTaskPhotos(this,'${sid}')">
-                  <div class="photo-preview-grid" id="${sid}_preview" style="margin-top:5px"></div>
-                  <div style="font-size:10px;color:var(--muted)" id="${sid}_count"></div>
-                </div>
-              </div>`;
-            }).join('')
-          : `<div style="padding:10px 12px">
-              <div class="wform-group" style="margin-bottom:8px">
-                <label style="font-size:11px">Activity Details — what was done this month <span style="color:var(--red)">*</span></label>
-                <textarea id="${tid}_activity" placeholder="Describe what was done this month..."
-                  style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;height:64px;resize:vertical;outline:none">${lastAct.activity||''}</textarea>
-              </div>
-              <div id="${tid}_done_wrap" style="display:${lastAct.status==='Complete'?'block':'none'};margin-bottom:8px">
-                <label style="font-size:11px">Actual Completion Date</label>
-                <input type="date" id="${tid}_done" value="${lastAct.done_date||''}"
-                  style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;outline:none">
-              </div>
-              <div style="border:1px dashed var(--border);border-radius:8px;padding:10px;background:#fafbff;margin-top:4px">
-                <div style="font-size:11px;font-weight:600;color:var(--blue);margin-bottom:6px">📷 Photos / Documents</div>
-                <div onclick="document.getElementById('${tid}_file').click()"
-                  style="border:1px dashed #b0bcd4;border-radius:6px;padding:8px;text-align:center;cursor:pointer;background:#fff;font-size:11px;color:var(--muted)">
-                  Click to upload photos (JPG/PNG, max 5MB each, up to 5)
-                </div>
-                <input type="file" id="${tid}_file" multiple accept="image/*" style="display:none"
-                  onchange="handleTaskPhotos(this,'${tid}')">
-                <div class="photo-preview-grid" id="${tid}_preview" style="margin-top:6px"></div>
-                <div style="font-size:10px;color:var(--muted);margin-top:4px" id="${tid}_count"></div>
-              </div>
-            </div>`;
+        const actStart = t.start_date || '';
+        const actEnd   = t.end_date   || '';
+        const dateLabel = actStart ? (actStart + (actEnd ? ' → ' + actEnd : '')) : '';
 
         return `<div style="border:1px solid var(--border);border-radius:8px;margin-bottom:10px;overflow:hidden">
           <div style="background:#f0f6ff;padding:8px 12px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px">
             <div>
               <span style="font-weight:700;font-size:13px;color:var(--blue)">${t.task_name}</span>
-              ${t.start_date?`<span style="font-size:11px;color:var(--muted);margin-left:8px">${t.start_date}${t.end_date?' → '+t.end_date:''}</span>`:''}
-              ${subActs.length?`<span style="font-size:10px;background:#dde8fb;color:var(--blue);border-radius:10px;padding:1px 7px;margin-left:6px">${subActs.length} sub-activities</span>`:''}
+              ${dateLabel?`<span style="font-size:11px;color:var(--muted);margin-left:8px">${dateLabel}</span>`:''}
             </div>
           </div>
-          <div style="padding:${subActs.length?'8px':'0px'} 10px ${subActs.length?'4px':'0px'}">
-            ${subRowsHtml}
+          <div style="padding:10px 12px">
+            <div class="rse-list" id="${tid}_selist" data-tid="${tid}" data-start="${actStart}" data-end="${actEnd}"></div>
+            <button type="button"
+              onclick="addReportSubEntry('${tid}','${actStart}','${actEnd}')"
+              style="margin-top:4px;padding:5px 14px;background:var(--blue);color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer">
+              + Add Sub-Activity Entry
+            </button>
           </div>
         </div>`;
       }).join('')}
     </div>`
   ).join('');
+
+  // Pre-fill from existing report data
+  myProjs.forEach(t => {
+    const tid = 'task_' + (t.project_id || t.task_name).toString().replace(/[^a-z0-9]/gi,'_');
+    const lastAct = lastTasks.find(a => a.task_name === t.task_name) || {};
+    const actStart = t.start_date || '';
+    const actEnd   = t.end_date   || '';
+    const subs = lastAct.sub_activities || [];
+    if(subs.length){
+      subs.forEach(sa => addReportSubEntry(tid, actStart, actEnd, sa));
+    } else {
+      addReportSubEntry(tid, actStart, actEnd);
+    }
+  });
 }
 
 function onProjectChange(){ /* legacy stub */ }
 function reportNext(step){ /* legacy stub */ }
 function reportBack(step){ /* legacy stub */ }
+
+// ── Report sub-activity entry helpers ──
+
+let _rseCounter = 0;
+
+function addReportSubEntry(tid, actStart, actEnd, prefill){
+  const list = document.getElementById(tid + '_selist');
+  if(!list) return;
+  const idx = _rseCounter++;
+  const sid = tid + '_rse' + idx;
+
+  // Date constraints
+  const minAttr = actStart ? ` min="${actStart}"` : '';
+  const maxAttr = actEnd   ? ` max="${actEnd}"` : '';
+  const dateHint = (actStart || actEnd)
+    ? `<span style="font-size:10px;color:var(--muted)">${actStart||''}${actEnd?' → '+actEnd:''}</span>`
+    : '';
+
+  const div = document.createElement('div');
+  div.className = 'report-sub-entry';
+  div.dataset.sid = sid;
+  div.style.cssText = 'border:1px solid #dde8fb;border-radius:7px;padding:10px 12px;margin-bottom:8px;background:#fff;position:relative';
+  div.innerHTML = `
+    <button type="button" onclick="removeReportSubEntry(this)"
+      title="Remove this entry"
+      style="position:absolute;top:6px;right:8px;background:none;border:none;font-size:16px;cursor:pointer;color:var(--muted);line-height:1">×</button>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap">
+      <label style="font-size:11px;color:var(--muted);white-space:nowrap">Date:</label>
+      <input type="date" class="rse-date"${minAttr}${maxAttr}
+        onchange="validateRseDate(this,'${actStart}','${actEnd}')"
+        style="padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;outline:none">
+      ${dateHint}
+    </div>
+    <textarea class="rse-details" rows="2" placeholder="What was done? (required)"
+      style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;resize:vertical;outline:none;margin-bottom:8px"></textarea>
+    <div style="border:1px dashed var(--border);border-radius:7px;padding:8px;background:#fafbff">
+      <div style="font-size:11px;font-weight:600;color:var(--blue);margin-bottom:5px">📷 Photo (optional)</div>
+      <div onclick="document.getElementById('${sid}_file').click()"
+        style="border:1px dashed #b0bcd4;border-radius:6px;padding:7px;text-align:center;cursor:pointer;background:#fff;font-size:11px;color:var(--muted)">
+        Click to attach a photo (max 5MB)
+      </div>
+      <input type="file" id="${sid}_file" accept="image/*" style="display:none"
+        onchange="handleRsePhoto(this,'${sid}')">
+      <div class="photo-preview-grid" id="${sid}_preview" style="margin-top:5px"></div>
+      <div style="font-size:10px;color:var(--muted)" id="${sid}_count"></div>
+    </div>`;
+
+  list.appendChild(div);
+
+  // Pre-fill if data provided
+  if(prefill){
+    div.querySelector('.rse-date').value   = prefill.date    || '';
+    div.querySelector('.rse-details').value = prefill.details || prefill.update || '';
+  }
+}
+
+function removeReportSubEntry(btn){
+  btn.closest('.report-sub-entry').remove();
+}
+
+function validateRseDate(input, minDate, maxDate){
+  const v = input.value;
+  if(!v) return;
+  if(minDate && v < minDate){ input.value = minDate; return; }
+  if(maxDate && v > maxDate){ input.value = maxDate; return; }
+}
+
+// Per-sub-entry photo store (reuses same taskPhotos map with sid key)
+function handleRsePhoto(input, sid){
+  const MAX_SIZE = 5 * 1024 * 1024;
+  const file = input.files[0];
+  if(!file) return;
+  if(file.size > MAX_SIZE){ alert('Photo too large (max 5MB).'); input.value=''; return; }
+  taskPhotos[sid] = [file];
+  input.value = '';
+  renderTaskPhotoPreview(sid);
+}
 
 // Per-task photo store: { tid: [File, ...] }
 const taskPhotos = {};
@@ -3507,57 +3508,42 @@ async function submitMonthlyReport(){
   const activities = myProjs.map(t => {
     const tid = 'task_' + (t.project_id || t.task_name).toString().replace(/[^a-z0-9]/gi,'_');
 
-    // Parse sub-activities defined in project profile
-    let subActDefs = [];
-    try { subActDefs = JSON.parse(t.sub_activities || '[]'); } catch(e){}
-
-    // Collect sub-activity monthly data
-    const sub_activities = subActDefs.map((sa, si) => {
-      const sid = `${tid}_sub${si}`;
+    // Collect sub-activity entries filled in by the user this month
+    const seList = document.getElementById(tid + '_selist');
+    const entries = seList ? Array.from(seList.querySelectorAll('.report-sub-entry')) : [];
+    const sub_activities = entries.map(entry => {
+      const sid = entry.dataset.sid || '';
       return {
-        name:       sa.name,
-        start_date: sa.start_date || '',
-        end_date:   sa.end_date   || '',
-        update:     document.getElementById(sid+'_update')?.value.trim() || '',
-        status:     document.getElementById(sid+'_status')?.value || 'Not started',
-        done_date:  document.getElementById(sid+'_done')?.value  || ''
+        date:    entry.querySelector('.rse-date')?.value    || '',
+        details: entry.querySelector('.rse-details')?.value.trim() || '',
+        photo_key: sid   // used to look up taskPhotos[sid]
       };
-    });
+    }).filter(e => e.date || e.details); // skip completely empty rows
 
-    // Derive task-level status from sub-activities (or fallback single select)
-    const taskStatus = sub_activities.length
-      ? (sub_activities.every(s=>s.status==='Complete') ? 'Complete'
-         : sub_activities.some(s=>s.status==='In progress'||s.status==='Complete') ? 'In progress' : 'Not started')
-      : (document.querySelector(`.task-status-sel[data-tid="${tid}"]`)?.value || 'Not started');
+    // Task has entries → "In progress" or "Complete" (user can set via overall; derive from entries)
+    const taskStatus = sub_activities.length ? 'In progress' : 'Not started';
 
     return {
       task_id:        t.project_id || '',
       task_name:      t.task_name,
       component:      t.component,
-      activity:       document.getElementById(tid+'_activity')?.value.trim() || '',
+      start_date:     t.start_date || '',
+      end_date:       t.end_date   || '',
       status:         taskStatus,
-      update:         document.getElementById(tid+'_update')?.value.trim()  || '',
-      done_date:      document.getElementById(tid+'_done')?.value            || '',
       sub_activities: sub_activities,
-      photos:         []  // filled below after upload
+      photos:         []
     };
   });
 
-  // Overall status: if any task complete → In progress overall
-  const overallStatus = activities.some(a=>a.status==='Complete') ? '100' :
-                        activities.some(a=>a.status==='In progress') ? '60' : '0';
+  // Overall status: if any task has entries → 60%
+  const overallStatus = activities.some(a=>a.sub_activities.length) ? '60' : '0';
 
-  // Collect all per-task + per-sub-activity photos for upload
+  // Collect all sub-entry photos for upload
   const allTaskPhotos = activities.flatMap(a => {
-    const tid = 'task_' + (a.task_id || a.task_name).toString().replace(/[^a-z0-9]/gi,'_');
-    // Photos on the task itself
-    const taskP = (taskPhotos[tid] || []).map(f => ({ file: f, tid, task_name: a.task_name }));
-    // Photos on sub-activities
-    const subP  = a.sub_activities.flatMap((sa, si) => {
-      const sid = `${tid}_sub${si}`;
-      return (taskPhotos[sid] || []).map(f => ({ file: f, tid: sid, task_name: `${a.task_name} › ${sa.name}` }));
+    return a.sub_activities.flatMap(sa => {
+      const sid = sa.photo_key;
+      return (taskPhotos[sid] || []).map(f => ({ file: f, tid: sid, task_name: a.task_name }));
     });
-    return [...taskP, ...subP];
   });
 
   const report = {
