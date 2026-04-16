@@ -165,45 +165,40 @@ function verifyOTP(data) {
 }
 
 // Check if NGO has completed their profile
+// Criteria: person name filled in NGOs sheet + at least one active task saved in Projects
 function isNGOProfileDone(orgName) {
   const ss = getSS();
 
-  // Check NGOs sheet — must have person name AND district filled
+  // Check NGOs sheet — must have person name filled
   const ngoSheet = ss.getSheetByName('NGOs');
   if (!ngoSheet) return false;
   const ngoRows = ngoSheet.getDataRange().getValues();
   const h = ngoRows[0];
   const nameIdx   = h.indexOf('name');
   const personIdx = h.indexOf('person');
-  const distIdx   = h.indexOf('dist');
 
-  let hasPerson = false, hasDist = false;
+  let hasPerson = false;
   for (let i = 1; i < ngoRows.length; i++) {
     const rowName = nameIdx >= 0 ? String(ngoRows[i][nameIdx]||'') : String(ngoRows[i][1]||'');
     if (rowName.trim().toLowerCase() !== orgName.trim().toLowerCase()) continue;
     const person = personIdx >= 0 ? String(ngoRows[i][personIdx]||'') : String(ngoRows[i][14]||'');
-    const dist   = distIdx   >= 0 ? String(ngoRows[i][distIdx]  ||'') : String(ngoRows[i][4] ||'');
     hasPerson = person.trim() !== '';
-    hasDist   = dist.trim()   !== '';
     break;
   }
-  if (!hasPerson || !hasDist) return false;
+  if (!hasPerson) return false;
 
-  // Check Projects sheet — must have at least one locked active task
+  // Check Projects sheet — must have at least one active (non-deleted) task saved
   const projSheet = ss.getSheetByName('Projects');
   if (!projSheet) return false;
   const projRows = projSheet.getDataRange().getValues();
   const ph = projRows[0];
   const pNgoIdx    = ph.indexOf('ngo');
   const pStatusIdx = ph.indexOf('status');
-  const pLockedIdx = ph.indexOf('locked');
   for (let i = 1; i < projRows.length; i++) {
     const pNgo    = pNgoIdx    >= 0 ? String(projRows[i][pNgoIdx]   ||'') : '';
     const pStatus = pStatusIdx >= 0 ? String(projRows[i][pStatusIdx]||'') : '';
-    const pLocked = pLockedIdx >= 0 ? String(projRows[i][pLockedIdx]||'') : '';
     if (pNgo.trim().toLowerCase() !== orgName.trim().toLowerCase()) continue;
-    if (pStatus === 'deleted') continue;
-    if (pLocked.toLowerCase() === 'true') return true;
+    if (pStatus !== 'deleted') return true;
   }
   return false;
 }
