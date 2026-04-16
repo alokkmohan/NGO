@@ -2397,7 +2397,7 @@ function renderProfileView(){
             <div style="font-weight:700;color:var(--blue);font-size:12px;margin-bottom:5px;padding:5px 8px;background:#e8f0fe;border-radius:6px">▸ ${comp}</div>
             ${tasks.map(t=>{
               const isLocked=isTaskLocked(t.locked);
-              const dateLabel = t.start_date ? (t.start_date + (t.end_date ? ' → '+t.end_date : '')) : '';
+              const dateLabel = t.start_date ? (fmtDate(t.start_date) + (t.end_date ? ' → '+fmtDate(t.end_date) : '')) : '';
               const taskDist  = (t.task_dist||'').split(',').map(d=>d.trim()).filter(Boolean);
               const allSchools= (t.task_schools||'').trim().toUpperCase()==='ALL';
               const taskSchoolList = allSchools ? [] : (t.task_schools||'').split('|').map(s=>s.trim()).filter(Boolean);
@@ -3273,6 +3273,15 @@ function buildReportTaskCards(existingRep){
   let lastTasks = [];
   try { lastTasks = JSON.parse(lastRep.tasks_json || lastRep.tasks || '[]'); } catch(e){}
 
+  // Compute reporting month date range for constraining sub-entry dates
+  const monthPickVal = document.getElementById('r-month-pick')?.value || '';
+  let monthMin = '', monthMax = '';
+  if(monthPickVal){
+    const [yr, mo] = monthPickVal.split('-').map(Number);
+    monthMin = monthPickVal + '-01';
+    monthMax = monthPickVal + '-' + String(new Date(yr, mo, 0).getDate()).padStart(2,'0');
+  }
+
   // Group by component
   const byComp = {};
   myProjs.forEach(p => { const c=p.component||'Other'; if(!byComp[c]) byComp[c]=[]; byComp[c].push(p); });
@@ -3284,9 +3293,9 @@ function buildReportTaskCards(existingRep){
       ${tasks.map(t => {
         const tid = 'task_' + (t.project_id || t.task_name).toString().replace(/[^a-z0-9]/gi,'_');
         const lastAct = lastTasks.find(a => a.task_name === t.task_name) || {};
-        const actStart = t.start_date || '';
-        const actEnd   = t.end_date   || '';
-        const dateLabel = actStart ? (actStart + (actEnd ? ' → ' + actEnd : '')) : '';
+        const actStart  = t.start_date || '';
+        const actEnd    = t.end_date   || '';
+        const dateLabel = actStart ? (fmtDate(actStart) + (actEnd ? ' → ' + fmtDate(actEnd) : '')) : '';
 
         return `<div style="border:1px solid var(--border);border-radius:8px;margin-bottom:10px;overflow:hidden">
           <div style="background:#f0f6ff;padding:8px 12px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px">
@@ -3298,7 +3307,7 @@ function buildReportTaskCards(existingRep){
           <div style="padding:10px 12px">
             <div class="rse-list" id="${tid}_selist" data-tid="${tid}" data-start="${actStart}" data-end="${actEnd}"></div>
             <button type="button"
-              onclick="addReportSubEntry('${tid}','${actStart}','${actEnd}')"
+              onclick="addReportSubEntry('${tid}','${actStart}','${actEnd}','${monthMin}','${monthMax}')"
               style="margin-top:4px;padding:5px 14px;background:var(--blue);color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer">
               + Add Sub-Activity Entry
             </button>
@@ -3316,9 +3325,9 @@ function buildReportTaskCards(existingRep){
     const actEnd   = t.end_date   || '';
     const subs = lastAct.sub_activities || [];
     if(subs.length){
-      subs.forEach(sa => addReportSubEntry(tid, actStart, actEnd, sa));
+      subs.forEach(sa => addReportSubEntry(tid, actStart, actEnd, sa, monthMin, monthMax));
     } else {
-      addReportSubEntry(tid, actStart, actEnd);
+      addReportSubEntry(tid, actStart, actEnd, null, monthMin, monthMax);
     }
   });
 }
@@ -3331,17 +3340,27 @@ function reportBack(step){ /* legacy stub */ }
 
 let _rseCounter = 0;
 
-function addReportSubEntry(tid, actStart, actEnd, prefill){
+function addReportSubEntry(tid, actStart, actEnd, prefill, monthMin, monthMax){
   const list = document.getElementById(tid + '_selist');
   if(!list) return;
+
+  // If monthMin/monthMax not passed, try to compute from the month picker
+  if(!monthMin){
+    const mpv = document.getElementById('r-month-pick')?.value || '';
+    if(mpv){
+      const [yr, mo] = mpv.split('-').map(Number);
+      monthMin = mpv + '-01';
+      monthMax = mpv + '-' + String(new Date(yr, mo, 0).getDate()).padStart(2,'0');
+    }
+  }
+
   const idx = _rseCounter++;
   const sid = tid + '_rse' + idx;
 
-  // Date constraints
-  const minAttr = actStart ? ` min="${actStart}"` : '';
-  const maxAttr = actEnd   ? ` max="${actEnd}"` : '';
-  const dateHint = (actStart || actEnd)
-    ? `<span style="font-size:10px;color:var(--muted)">${actStart||''}${actEnd?' → '+actEnd:''}</span>`
+  const minAttr = monthMin ? ` min="${monthMin}"` : '';
+  const maxAttr = monthMax ? ` max="${monthMax}"` : '';
+  const rangeHint = (monthMin || monthMax)
+    ? `<span style="font-size:10px;color:var(--muted);white-space:nowrap">(${fmtDate(monthMin)}${monthMax?' – '+fmtDate(monthMax):''})</span>`
     : '';
 
   const div = document.createElement('div');
@@ -3353,11 +3372,15 @@ function addReportSubEntry(tid, actStart, actEnd, prefill){
       title="Remove this entry"
       style="position:absolute;top:6px;right:8px;background:none;border:none;font-size:16px;cursor:pointer;color:var(--muted);line-height:1">×</button>
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap">
-      <label style="font-size:11px;color:var(--muted);white-space:nowrap">Date:</label>
-      <input type="date" class="rse-date"${minAttr}${maxAttr}
-        onchange="validateRseDate(this,'${actStart}','${actEnd}')"
+      <label style="font-size:11px;color:var(--muted);white-space:nowrap">From:</label>
+      <input type="date" class="rse-from"${minAttr}${maxAttr}
+        onchange="validateRseFromTo(this.closest('.report-sub-entry'),'${monthMin}','${monthMax}')"
         style="padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;outline:none">
-      ${dateHint}
+      <label style="font-size:11px;color:var(--muted);white-space:nowrap">To:</label>
+      <input type="date" class="rse-to"${minAttr}${maxAttr}
+        onchange="validateRseFromTo(this.closest('.report-sub-entry'),'${monthMin}','${monthMax}')"
+        style="padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;outline:none">
+      ${rangeHint}
     </div>
     <textarea class="rse-details" rows="2" placeholder="What was done? (required)"
       style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;resize:vertical;outline:none;margin-bottom:8px"></textarea>
@@ -3377,8 +3400,9 @@ function addReportSubEntry(tid, actStart, actEnd, prefill){
 
   // Pre-fill if data provided
   if(prefill){
-    div.querySelector('.rse-date').value   = prefill.date    || '';
-    div.querySelector('.rse-details').value = prefill.details || prefill.update || '';
+    div.querySelector('.rse-from').value    = prefill.from_date || prefill.date || '';
+    div.querySelector('.rse-to').value      = prefill.to_date   || prefill.date || '';
+    div.querySelector('.rse-details').value = prefill.details   || prefill.update || '';
   }
 }
 
@@ -3386,11 +3410,18 @@ function removeReportSubEntry(btn){
   btn.closest('.report-sub-entry').remove();
 }
 
-function validateRseDate(input, minDate, maxDate){
-  const v = input.value;
-  if(!v) return;
-  if(minDate && v < minDate){ input.value = minDate; return; }
-  if(maxDate && v > maxDate){ input.value = maxDate; return; }
+function validateRseFromTo(entry, monthMin, monthMax){
+  const fromEl = entry.querySelector('.rse-from');
+  const toEl   = entry.querySelector('.rse-to');
+  if(!fromEl || !toEl) return;
+  let from = fromEl.value, to = toEl.value;
+  // Clamp to month range
+  if(monthMin){ if(from && from < monthMin) fromEl.value = from = monthMin; if(to && to < monthMin) toEl.value = to = monthMin; }
+  if(monthMax){ if(from && from > monthMax) fromEl.value = from = monthMax; if(to && to > monthMax) toEl.value = to = monthMax; }
+  // to must be >= from
+  if(from && to && to < from){ toEl.value = from; }
+  // If from filled but to empty, auto-set to = from
+  if(from && !to){ toEl.value = from; }
 }
 
 // Per-sub-entry photo store (reuses same taskPhotos map with sid key)
@@ -3479,11 +3510,12 @@ async function submitMonthlyReport(){
     const sub_activities = entries.map(entry => {
       const sid = entry.dataset.sid || '';
       return {
-        date:    entry.querySelector('.rse-date')?.value    || '',
-        details: entry.querySelector('.rse-details')?.value.trim() || '',
-        photo_key: sid   // used to look up taskPhotos[sid]
+        from_date: entry.querySelector('.rse-from')?.value        || '',
+        to_date:   entry.querySelector('.rse-to')?.value          || '',
+        details:   entry.querySelector('.rse-details')?.value.trim() || '',
+        photo_key: sid
       };
-    }).filter(e => e.date || e.details); // skip completely empty rows
+    }).filter(e => e.from_date || e.to_date || e.details); // skip completely empty rows
 
     // Task has entries → "In progress" or "Complete" (user can set via overall; derive from entries)
     const taskStatus = sub_activities.length ? 'In progress' : 'Not started';
