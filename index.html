@@ -390,6 +390,7 @@ tr:hover td{background:#FAFBFF}
       <div class="nav-sep" id="nav-ngo-sep">NGO Actions</div>
       <div class="nav-item" id="nav-profile-item" onclick="showPage('profile-view')"><span class="ni">🏢</span>My Profile</div>
       <div class="nav-item" id="nav-report-item" onclick="showPage('monthly-report')"><span class="ni">📝</span>Monthly Report</div>
+      <div class="nav-item" id="nav-myreports-item" onclick="showPage('my-reports')"><span class="ni">📋</span>My Reports</div>
       <div class="nav-sep" id="nav-admin-sep" style="display:none">Admin</div>
       <div class="nav-item" id="nav-ngos-item" style="display:none" onclick="showPage('ngo-list')"><span class="ni">👥</span>All Partners</div>
       <div class="nav-item" id="nav-admin-report-item" style="display:none" onclick="showPage('admin-reports')"><span class="ni">📊</span>Generate Reports</div>
@@ -664,29 +665,11 @@ tr:hover td{background:#FAFBFF}
       <!-- Submit -->
       <div id="r-submit-area" style="margin-bottom:24px">
         <button id="r-submit-btn" class="btn-grn" style="width:100%;padding:14px;font-size:15px" onclick="submitMonthlyReport()">✅ Save Report</button>
-        <div style="font-size:11px;color:var(--muted);text-align:center;margin-top:6px">You can save multiple times. Lock only when all entries are final.</div>
-
-        <!-- Shown after first save -->
-        <div id="r-lock-wrap" style="display:none;margin-top:14px">
-          <!-- View + Download row -->
-          <div style="display:flex;gap:8px;margin-bottom:10px">
-            <button onclick="viewCurrentMonthReport()"
-              style="flex:1;padding:11px 8px;background:#e8f0fe;color:var(--blue);border:1px solid #c5d5f5;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">
-              👁 View Report
-            </button>
-            <button onclick="downloadCurrentMonthReport()"
-              style="flex:1;padding:11px 8px;background:#e8f5e9;color:var(--green);border:1px solid #a5d6a7;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">
-              ⬇ Download PDF
-            </button>
-          </div>
-          <!-- Lock button -->
-          <button id="r-lock-btn" onclick="lockMonthReport()"
-            style="width:100%;padding:12px;font-size:13px;font-weight:700;background:#fff8e1;color:#b8860b;border:2px solid #ffe082;border-radius:8px;cursor:pointer">
-            🔒 Lock Report — finalise &amp; submit to PMU
-          </button>
-          <div style="font-size:11px;color:var(--muted);text-align:center;margin-top:5px">
-            Once locked this month cannot be edited. Lock only when all entries are final.
-          </div>
+        <div id="r-lock-wrap" style="display:none"></div><!-- stub kept for JS compat -->
+        <div style="font-size:12px;color:var(--muted);text-align:center;margin-top:8px">
+          You can save multiple times. To view, download or lock — go to
+          <a href="#" onclick="showPage('my-reports');return false;" style="color:var(--blue2);font-weight:600">📋 My Reports</a>
+        </div>
         </div>
       </div>
 
@@ -703,6 +686,48 @@ tr:hover td{background:#FAFBFF}
         </div>
       </div>
 
+    </div>
+
+    <!-- ── PAGE: MY REPORTS ── -->
+    <div class="page" id="page-my-reports">
+      <div class="card" style="margin-bottom:14px">
+        <div class="card-title">📋 My Reports</div>
+
+        <!-- Month filter + action buttons -->
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:16px;padding:12px 14px;background:#f8faff;border:1px solid var(--border);border-radius:10px">
+          <div style="flex:1;min-width:180px">
+            <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px">Select Month</label>
+            <select id="mr-month-filter" onchange="mrOnMonthChange()"
+              style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:7px;font-size:13px;background:#fff;outline:none">
+              <option value="">— All months —</option>
+            </select>
+          </div>
+          <div id="mr-actions" style="display:none;display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;padding-top:16px">
+            <button onclick="mrView()"
+              style="padding:8px 16px;background:#e8f0fe;color:var(--blue);border:1px solid #c5d5f5;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer">
+              👁 View
+            </button>
+            <button onclick="mrDownloadPDF()"
+              style="padding:8px 16px;background:#e8f5e9;color:var(--green);border:1px solid #a5d6a7;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer">
+              ⬇ PDF
+            </button>
+            <button onclick="mrDownloadCSV()"
+              style="padding:8px 16px;background:#f3e5f5;color:#7b1fa2;border:1px solid #ce93d8;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer">
+              ⬇ CSV
+            </button>
+            <button id="mr-lock-btn" onclick="mrLock()"
+              style="padding:8px 16px;background:#fff8e1;color:#b8860b;border:2px solid #ffe082;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer">
+              🔒 Lock Report
+            </button>
+          </div>
+        </div>
+
+        <!-- Status of selected month -->
+        <div id="mr-status" style="display:none;margin-bottom:12px"></div>
+
+        <!-- Reports table -->
+        <div id="mr-table-wrap" style="overflow-x:auto"></div>
+      </div>
     </div>
 
     <!-- ── PAGE: ALL NGOs (Admin) ── -->
@@ -1778,6 +1803,7 @@ function initApp(){
     document.getElementById('nav-ngo-sep').style.display='none';
     document.getElementById('nav-profile-item').style.display='none';
     document.getElementById('nav-report-item').style.display='none';
+    document.getElementById('nav-myreports-item').style.display='none';
     document.getElementById('tb-role-badge').className='badge badge-red';
     fillAdminNGOSelect();
   } else {
@@ -2119,24 +2145,25 @@ function showPage(p){
 
   const pageMap={
     'dashboard':'page-dashboard','profile-view':'page-profile-view',
-    'monthly-report':'page-monthly-report','ngo-list':'page-ngo-list',
-    'admin-reports':'page-admin-reports'
+    'monthly-report':'page-monthly-report','my-reports':'page-my-reports',
+    'ngo-list':'page-ngo-list','admin-reports':'page-admin-reports'
   };
   const titleMap={
     'dashboard':'Dashboard & Map','profile-view':'My Profile',
-    'monthly-report':'Monthly Report','ngo-list':'All Partners',
-    'admin-reports':'Generate Reports'
+    'monthly-report':'Monthly Report','my-reports':'My Reports',
+    'ngo-list':'All Partners','admin-reports':'Generate Reports'
   };
   document.getElementById(pageMap[p]).classList.add('active');
   document.getElementById('page-title').textContent = titleMap[p]||p;
 
-  const navMap={'dashboard':0,'profile-view':1,'monthly-report':2,'ngo-list':3,'admin-reports':4};
+  const navMap={'dashboard':0,'profile-view':1,'monthly-report':2,'my-reports':3,'ngo-list':4,'admin-reports':5};
   const navItems = document.querySelectorAll('.nav-item');
   if(navMap[p]!==undefined && navItems[navMap[p]]) navItems[navMap[p]].classList.add('active');
 
   if(p==='profile-view'){ renderProfileView(); renderMyReports(); }
   if(p==='ngo-list') renderAdminNGOList();
   if(p==='monthly-report'){reportStep=0;updateReportSteps();prefillReportForm();}
+  if(p==='my-reports') renderReportsPage();
   if(p==='dashboard' && _lmap){ setTimeout(()=>_lmap.invalidateSize(), 100); }
 }
 
@@ -2979,6 +3006,150 @@ function renderMyReports(){
     <div style="padding-top:10px;font-size:11px;color:var(--muted)">
       Reports are read-only once submitted. Contact PMU Admin for corrections.
     </div>`;
+}
+
+// ════════════════════════════════════
+// MY REPORTS PAGE
+// ════════════════════════════════════
+function renderReportsPage(){
+  if(currentUser.role === 'admin') return;
+  const myReports = REPORTS.filter(r => r.ngo === currentUser.org)
+    .sort((a,b) => (+b.id||0) - (+a.id||0));
+
+  // Populate month filter
+  const sel = document.getElementById('mr-month-filter');
+  if(sel){
+    const months = [...new Set(myReports.map(r => r.month).filter(Boolean))];
+    sel.innerHTML = '<option value="">— All months —</option>'
+      + months.map(m => `<option value="${m}">${m}</option>`).join('');
+  }
+
+  // Show table
+  mrRenderTable(myReports);
+  document.getElementById('mr-actions').style.display = 'none';
+  document.getElementById('mr-status').style.display  = 'none';
+}
+
+function mrOnMonthChange(){
+  const sel = document.getElementById('mr-month-filter');
+  const month = sel?.value || '';
+  const myReports = REPORTS.filter(r => r.ngo === currentUser.org)
+    .sort((a,b) => (+b.id||0) - (+a.id||0));
+  const filtered = month ? myReports.filter(r => r.month === month) : myReports;
+  mrRenderTable(filtered);
+
+  const actDiv = document.getElementById('mr-actions');
+  const stDiv  = document.getElementById('mr-status');
+  if(!month){ actDiv.style.display='none'; stDiv.style.display='none'; return; }
+
+  // Show actions
+  actDiv.style.display = 'flex';
+  const rep = myReports.find(r => r.month === month);
+  const isLocked = rep && String(rep.report_locked) === 'true';
+  const lockBtn = document.getElementById('mr-lock-btn');
+  if(lockBtn){
+    lockBtn.textContent = '🔒 Lock ' + month + ' Report';
+    lockBtn.style.display = isLocked ? 'none' : '';
+  }
+  if(stDiv){
+    stDiv.style.display = 'block';
+    stDiv.innerHTML = isLocked
+      ? `<div style="padding:8px 12px;border-radius:7px;background:#fce4ec;color:#c62828;border:1px solid #ef9a9a;font-size:12px;font-weight:600">🔒 ${month} — Locked and submitted to PMU. No further changes allowed.</div>`
+      : `<div style="padding:8px 12px;border-radius:7px;background:#e8f5e9;color:#2e7d32;border:1px solid #a5d6a7;font-size:12px;font-weight:600">✏ ${month} — Draft saved. Review, then lock to submit to PMU.</div>`;
+  }
+}
+
+function mrRenderTable(reports){
+  const wrap = document.getElementById('mr-table-wrap');
+  if(!wrap) return;
+  if(!reports.length){
+    wrap.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:20px;text-align:center">No reports found.</div>';
+    return;
+  }
+  const rows = reports.map((r,i) => {
+    const isLocked = String(r.report_locked) === 'true';
+    const rid = r.report_from || r.month;
+    const period = r.report_from && r.report_to
+      ? fmtDate(r.report_from) + ' → ' + fmtDate(r.report_to)
+      : r.month || '—';
+    return `<tr style="border-bottom:1px solid var(--border)">
+      <td style="padding:8px 10px;color:var(--muted);font-size:12px">${i+1}</td>
+      <td style="padding:8px 10px;font-size:12px;font-weight:600;white-space:nowrap">${r.month||'—'}</td>
+      <td style="padding:8px 10px;font-size:11px;color:var(--muted);white-space:nowrap">${period}</td>
+      <td style="padding:8px 10px;text-align:right">${(+r.schools||0).toLocaleString('en-IN')}</td>
+      <td style="padding:8px 10px;text-align:right">${(+r.students||0).toLocaleString('en-IN')}</td>
+      <td style="padding:8px 10px;text-align:center">
+        ${isLocked
+          ? '<span style="font-size:11px;color:#2e7d32;background:#e8f5e9;border:1px solid #a5d6a7;border-radius:10px;padding:2px 8px;font-weight:700">🔒 Locked</span>'
+          : '<span style="font-size:11px;color:#b8860b;background:#fff8e1;border:1px solid #ffe082;border-radius:10px;padding:2px 8px">Draft</span>'}
+      </td>
+      <td style="padding:8px 10px;text-align:center;white-space:nowrap">
+        <button onclick="mrViewRep('${rid}')"
+          style="padding:3px 10px;background:#e8f0fe;color:var(--blue);border:1px solid #c5d5f5;border-radius:5px;font-size:11px;cursor:pointer;margin-right:4px">👁 View</button>
+        <button onclick="mrDownloadPDFRep('${rid}')"
+          style="padding:3px 10px;background:#e8f5e9;color:var(--green);border:1px solid #a5d6a7;border-radius:5px;font-size:11px;cursor:pointer">⬇ PDF</button>
+      </td>
+    </tr>`;
+  }).join('');
+  wrap.innerHTML = `<table style="width:100%;border-collapse:collapse;font-size:13px">
+    <thead><tr style="background:#f0f6ff;color:var(--blue)">
+      <th style="padding:8px 10px;text-align:left">#</th>
+      <th style="padding:8px 10px;text-align:left">Month</th>
+      <th style="padding:8px 10px;text-align:left">Period</th>
+      <th style="padding:8px 10px;text-align:right">Schools</th>
+      <th style="padding:8px 10px;text-align:right">Students</th>
+      <th style="padding:8px 10px;text-align:center">Status</th>
+      <th style="padding:8px 10px;text-align:center">Actions</th>
+    </tr></thead>
+    <tbody>${rows}</tbody>
+  </table>`;
+}
+
+function mrView(){
+  const month = document.getElementById('mr-month-filter')?.value;
+  if(!month){ alert('Please select a month first.'); return; }
+  const rep = REPORTS.find(r => r.ngo === currentUser.org && r.month === month);
+  if(!rep){ alert('Report not found for ' + month + '. Please save it first.'); return; }
+  downloadMonthReport(rep.report_from || month);
+}
+function mrViewRep(rid){ downloadMonthReport(rid); }
+function mrDownloadPDF(){ mrView(); }
+function mrDownloadPDFRep(rid){ downloadMonthReport(rid); }
+
+function mrDownloadCSV(){
+  const month = document.getElementById('mr-month-filter')?.value;
+  const myReports = REPORTS.filter(r => r.ngo === currentUser.org
+    && (!month || r.month === month)).sort((a,b)=>(+a.id||0)-(+b.id||0));
+  if(!myReports.length){ alert('No reports to download.'); return; }
+  const org = currentUser.org || 'NGO';
+  const headers = ['Month','Period','Schools','Students','Girls','Teachers','Meetings','Events','Status'];
+  const rows = myReports.map(r => [
+    r.month||'', (r.report_from&&r.report_to ? r.report_from+' to '+r.report_to : r.month||''),
+    r.schools||0, r.students||0, r.girls||0, r.teachers||0, r.meetings||0, r.events||0,
+    String(r.report_locked)==='true' ? 'Locked' : 'Draft'
+  ]);
+  const csv = [headers, ...rows].map(r => r.map(c=>`"${String(c||'').replace(/"/g,'""')}"`).join(',')).join('\r\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'}));
+  a.download = `Reports_${org.replace(/[^a-zA-Z0-9]/g,'_')}${month?'_'+month.replace(/ /g,'_'):''}.csv`;
+  a.click(); URL.revokeObjectURL(a.href);
+}
+
+async function mrLock(){
+  const month = document.getElementById('mr-month-filter')?.value;
+  if(!month){ alert('Please select a month to lock.'); return; }
+  const rep = REPORTS.find(r => r.ngo === currentUser.org && r.month === month);
+  if(!rep){ alert('No saved report found for ' + month + '.'); return; }
+  if(String(rep.report_locked) === 'true'){ alert(month + ' is already locked.'); return; }
+  if(!confirm('Lock report for ' + month + '?\n\nOnce locked it cannot be edited. Lock only when all entries are final.')) return;
+  showLoader('Locking report…');
+  try {
+    await apiFetch({action:'lockReport', ngo:currentUser.org, month});
+    rep.report_locked = 'true';
+    hideLoader();
+    mrOnMonthChange();
+    mrRenderTable(REPORTS.filter(r => r.ngo === currentUser.org).sort((a,b)=>(+b.id||0)-(+a.id||0)));
+  } catch(e){ hideLoader(); alert('Lock failed: ' + e.message); }
 }
 
 function downloadMyReportsCSV(){
