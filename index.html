@@ -334,17 +334,17 @@ tr:hover td{background:#FAFBFF}
       <div class="si"><div class="si-dot active" id="psi1">1</div></div>
       <div class="si"><div class="si-line" id="psl1"></div></div>
       <div class="si"><div class="si-dot" id="psi2">2</div></div>
-      <div class="si"><div class="si-line" id="psl2"></div></div>
-      <div class="si"><div class="si-dot" id="psi3">3</div></div>
-      <div class="si"><div class="si-line" id="psl3"></div></div>
-      <div class="si"><div class="si-dot" id="psi4">4</div></div>
     </div>
 
     <!-- Step 1: Basic Info -->
     <div class="card" id="profile-p1">
       <div class="card-title">📋 Basic information</div>
       <div class="wform-row">
-        <div class="wform-group"><label>Organisation name <span>*</span></label><input id="pf-org" placeholder="Full legal name" readonly style="background:#f0f4fa"></div>
+        <div class="wform-group">
+          <label>Organisation name <span>*</span></label>
+          <input id="pf-org" placeholder="Full legal name of your organisation">
+          <div id="pf-org-note" style="display:none;font-size:11px;color:var(--blue);margin-top:3px">This name will appear on the PMU dashboard.</div>
+        </div>
         <div class="wform-group"><label>Type of organisation</label>
           <select id="pf-type"><option>NGO / Non-profit</option><option>International Organisation</option><option>Government Partner</option><option>Academic Institution</option><option>CSR / Corporate Foundation</option></select>
         </div>
@@ -360,71 +360,16 @@ tr:hover td{background:#FAFBFF}
       <div class="wizard-nav"><span></span><button class="btn-blu" onclick="profileNext(1)">Next →</button></div>
     </div>
 
-    <!-- Step 2: Geographic Coverage -->
+    <!-- Step 2: Components & Tasks (was Step 3) -->
     <div class="card" id="profile-p2" style="display:none">
-      <div class="card-title">📍 Geographic coverage</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
-        <div class="wform-group">
-          <label>Select districts <span>*</span></label>
-          <input type="text" id="dist-search" placeholder="🔍 Search district..." oninput="filterDistList()" style="width:100%;padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;margin-bottom:6px">
-          <div style="display:flex;gap:6px;margin-bottom:6px">
-            <button type="button" onclick="selectAllDists('dist-checks','onDistrictChange')" style="padding:3px 10px;font-size:11px;background:var(--blue);color:#fff;border:none;border-radius:5px;cursor:pointer">✓ Select All</button>
-            <button type="button" onclick="deselectAllDists('dist-checks','onDistrictChange')" style="padding:3px 10px;font-size:11px;background:#f1f1f1;border:1px solid var(--border);border-radius:5px;cursor:pointer">✕ Deselect All</button>
-          </div>
-          <div style="max-height:200px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:8px" id="dist-checks"></div>
-        </div>
-      </div>
-      <div class="wform-group" id="school-section" style="margin-top:12px;display:none">
-        <label>Schools <span>*</span>
-          <span style="font-weight:400;font-size:11px;color:var(--muted);margin-left:6px">Schools where you work</span>
-        </label>
-        <div style="display:flex;gap:6px;margin-bottom:6px">
-          <button type="button" onclick="selectAllSchools('school-accordion')" style="padding:3px 10px;font-size:11px;background:var(--green);color:#fff;border:none;border-radius:5px;cursor:pointer">✓ Select All Schools</button>
-          <button type="button" onclick="deselectAllSchools('school-accordion')" style="padding:3px 10px;font-size:11px;background:#f1f1f1;border:1px solid var(--border);border-radius:5px;cursor:pointer">✕ Deselect All Schools</button>
-        </div>
-        <input type="text" id="school-accordion-search" placeholder="🔍 Search school by name or UDISE across all districts..." oninput="filterSchoolAccordion('school-accordion','school-accordion-search')" style="width:100%;padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;margin-bottom:6px">
-        <div id="school-accordion" style="max-height:360px;overflow-y:auto"></div>
-        <div id="selected-schools-display" style="margin-top:8px;display:flex;flex-wrap:wrap;gap:4px"></div>
-      </div>
-      <div class="wizard-nav">
-        <button class="btn-sec" onclick="profileBack(2)">← Back</button>
-        <button class="btn-blu" onclick="profileNext(2)">Next →</button>
-      </div>
-    </div>
-
-    <!-- Step 3: Multi-Component & Multi-Task Setup -->
-    <div class="card" id="profile-p3" style="display:none">
       <div class="card-title">🎯 Define your Components & Tasks</div>
       <div style="background:#f0f6ff;border:1px solid #2E6DB430;border-radius:8px;padding:10px 14px;font-size:12px;color:var(--blue);margin-bottom:14px">
-        Select the components you work in — add your tasks under each component. You can add multiple components and tasks.
+        Select the components you work in — add activities with start &amp; end dates. Save each task individually using <b>💾 Save Task</b>, then click <b>Save Profile</b> when done.
       </div>
       <div id="comp-task-builder"></div>
       <div class="wizard-nav">
-        <button class="btn-sec" onclick="profileBack(3)">← Back</button>
-        <button class="btn-blu" onclick="profileNext(3)">Next →</button>
-      </div>
-    </div>
-
-    <!-- Step 4: KPI Targets -->
-    <div class="card" id="profile-p4" style="display:none">
-      <div class="card-title">📊 Overall KPI targets</div>
-      <div id="step4-summary" style="margin-bottom:14px"></div>
-      <div style="font-size:12px;color:var(--muted);margin-bottom:14px">Enter overall targets for the full programme duration — these will apply across all tasks.</div>
-      <div class="wform-row">
-        <div class="wform-group"><label>Programme start date</label><input id="pf-start" type="date"></div>
-        <div class="wform-group"><label>Expected end date</label><input id="pf-end" type="date"></div>
-      </div>
-      <div class="wform-row3">
-        <div class="wform-group"><label>Target schools</label><input id="pf-tschools" type="number" placeholder="0" min="0"></div>
-        <div class="wform-group"><label>Target students</label><input id="pf-tstudents" type="number" placeholder="0" min="0"></div>
-        <div class="wform-group"><label>Target girls</label><input id="pf-tgirls" type="number" placeholder="0" min="0"></div>
-        <div class="wform-group"><label>Target teachers trained</label><input id="pf-tteachers" type="number" placeholder="0" min="0"></div>
-        <div class="wform-group"><label>Target community meetings</label><input id="pf-tmeetings" type="number" placeholder="0" min="0"></div>
-        <div class="wform-group"><label>Target events / workshops</label><input id="pf-tevents" type="number" placeholder="0" min="0"></div>
-      </div>
-      <div class="wizard-nav">
-        <button class="btn-sec" onclick="profileBack(4)">← Back</button>
-        <button class="btn-grn" onclick="saveProfile()">Save Profile & Open Dashboard ✓</button>
+        <button class="btn-sec" onclick="profileBack(2)">← Back</button>
+        <button class="btn-grn" onclick="saveProfile()">💾 Save Profile &amp; Open Dashboard</button>
       </div>
     </div>
   </div>
@@ -1047,29 +992,35 @@ function startApp(){
 function showProfileScreen(){
   document.getElementById('auth-screen').style.display='none';
   document.getElementById('profile-screen').style.display='block';
-  // Pre-fill read-only fields
-  const orgEl = document.getElementById('pf-org');
-  if(orgEl) orgEl.value = currentUser.org||'';
+
+  // Organisation name: editable only if not yet set in sheet
+  const orgEl   = document.getElementById('pf-org');
+  const orgNote = document.getElementById('pf-org-note');
+  const orgFilled = !!(currentUser.org||'').trim();
+  if(orgEl){
+    orgEl.value = currentUser.org||'';
+    orgEl.readOnly = orgFilled;
+    orgEl.style.background = orgFilled ? '#f0f4fa' : '';
+    if(orgNote) orgNote.style.display = orgFilled ? 'none' : 'block';
+  }
+
   const emailEl = document.getElementById('pf-email');
   if(emailEl){ emailEl.value = currentUser.email||''; emailEl.readOnly = true; emailEl.style.background='#f0f4fa'; }
   const personEl = document.getElementById('pf-person');
   if(personEl && !personEl.value) personEl.value = currentUser.name||'';
-  // Build district checkboxes
-  if(document.getElementById('dist-checks')) buildDistChecks('dist-checks');
-  if(document.getElementById('theme-checks')) buildThemeChecks('theme-checks');
+
   // Build multi-component + multi-task builder
   buildCompTaskBuilder();
+
   // Reset wizard to step 1
-  for(let i=1;i<=4;i++){
+  for(let i=1;i<=2;i++){
     const pg = document.getElementById(`profile-p${i}`);
     if(pg) pg.style.display = i===1 ? 'block' : 'none';
     const dot = document.getElementById(`psi${i}`);
     if(dot){ dot.classList.remove('active','done'); if(i===1) dot.classList.add('active'); }
   }
-  for(let i=1;i<=3;i++){
-    const line = document.getElementById(`psl${i}`);
-    if(line) line.classList.remove('done');
-  }
+  const line = document.getElementById('psl1');
+  if(line) line.classList.remove('done');
 }
 
 function buildDistChecks(containerId){
@@ -1471,6 +1422,17 @@ function addCompTask(containerId){
   taskRows.appendChild(div);
   div.querySelector('.comp-task-input').focus();
   initTaskGeo(div);
+
+  // Show per-task Save button only in the first-time setup wizard
+  if(document.getElementById('comp-task-builder')?.contains(taskRows)){
+    const saveBtn = document.createElement('button');
+    saveBtn.type = 'button';
+    saveBtn.textContent = '💾 Save Task';
+    saveBtn.title = 'Save this activity now';
+    saveBtn.style.cssText = 'margin-top:8px;padding:5px 14px;background:#e8f0fe;color:var(--blue);border:1px solid #c5d5f5;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer';
+    saveBtn.onclick = function(){ saveWizardTask(this); };
+    div.appendChild(saveBtn);
+  }
 }
 
 function addSubActivity(btn){
@@ -1497,6 +1459,9 @@ function addSubActivity(btn){
 function profileNext(step){
   // Validation
   if(step===1){
+    const orgEl  = document.getElementById('pf-org');
+    const org    = orgEl?.value.trim();
+    if(!orgEl?.readOnly && !org){ alert('Organisation name is required'); orgEl?.focus(); return; }
     const person = document.getElementById('pf-person').value.trim();
     const desig  = document.getElementById('pf-desig').value.trim();
     const phone  = document.getElementById('pf-phone').value.trim();
@@ -1504,24 +1469,9 @@ function profileNext(step){
     if(!person){ alert('Nodal person name is required'); document.getElementById('pf-person').focus(); return; }
     if(!desig){  alert('Designation is required'); document.getElementById('pf-desig').focus(); return; }
     if(!phone || !/^\d{10}$/.test(phone)){ alert('Valid 10-digit contact number is required'); document.getElementById('pf-phone').focus(); return; }
-    if(!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ alert('Valid email address is required (must contain @)'); document.getElementById('pf-email').focus(); return; }
-  }
-  if(step===2){
-    const checkedDist = document.querySelectorAll('#dist-checks input:checked');
-    if(!checkedDist.length){ alert('Please select at least one district'); return; }
-    const checkedSchools = document.querySelectorAll('#school-accordion .school-cb:checked');
-    if(!checkedSchools.length){ alert('Please select at least one school from the school section below'); return; }
-  }
-  if(step===3){
-    const checkedComps = document.querySelectorAll('.comp-cb:checked');
-    if(!checkedComps.length){ alert('Please select at least one Major Component'); return; }
-    let hasTask = false;
-    checkedComps.forEach(cb => {
-      cb.closest('.comp-block').querySelectorAll('.comp-task-input').forEach(inp => {
-        if(inp.value.trim()) hasTask = true;
-      });
-    });
-    if(!hasTask){ alert('Please enter at least one task name'); return; }
+    if(!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ alert('Valid email address is required'); document.getElementById('pf-email').focus(); return; }
+    // If org was editable and filled, update currentUser.org so tasks save under the right name
+    if(!orgEl.readOnly && org) currentUser.org = org;
   }
   document.getElementById(`profile-p${step}`).style.display='none';
   document.getElementById(`profile-p${step+1}`).style.display='block';
@@ -1530,8 +1480,6 @@ function profileNext(step){
   const line = document.getElementById(`psl${step}`);
   if(line) line.classList.add('done');
   document.getElementById(`psi${step+1}`).classList.add('active');
-  // Step 3 → Step 4: auto-fill schools + build summary
-  if(step === 3) buildStep4Summary();
 }
 
 function buildStep4Summary(){
@@ -1581,71 +1529,45 @@ function profileBack(step){
   document.getElementById(`psi${step}`).classList.remove('active');
   document.getElementById(`psi${step-1}`).classList.remove('done');
   document.getElementById(`psi${step-1}`).classList.add('active');
+  const line = document.getElementById(`psl${step-1}`);
+  if(line) line.classList.remove('done');
 }
 
 async function saveProfile(){
-  const selDist   = [...document.querySelectorAll('#dist-checks input:checked')].map(c=>c.value).join(', ');
-  const selSchools= [...document.querySelectorAll('#school-accordion .school-cb:checked')].map(c=>c.value).join(' | ');
+  // If org name was editable (new user), pick it up
+  const orgEl = document.getElementById('pf-org');
+  if(orgEl && !orgEl.readOnly && orgEl.value.trim()) currentUser.org = orgEl.value.trim();
 
-  // Collect all checked components
-  const checkedComps = [...document.querySelectorAll('.comp-cb:checked')];
+  const checkedComps  = [...document.querySelectorAll('.comp-cb:checked')];
   const allComponents = checkedComps.map(cb => cb.value).join(', ');
 
   showLoader('Saving profile…');
   try {
     await apiFetch({
-      action:     'saveProfile',
-      email:      currentUser.email,
-      password:   currentUser.password || '',
-      name:       currentUser.name,
-      org:        currentUser.org,
-      person:     document.getElementById('pf-person')?.value || currentUser.name,
-      dist:       selDist,
-      blocks:     '',
-      schools:    selSchools,
-      theme:      allComponents,
-      phone:      document.getElementById('pf-phone')?.value  || '',
-      desig:      document.getElementById('pf-desig')?.value  || '',
-      org_type:   document.getElementById('pf-type')?.value   || '',
-      start_date: document.getElementById('pf-start')?.value  || ''
+      action:    'saveProfile',
+      email:     currentUser.email,
+      password:  currentUser.password || '',
+      name:      currentUser.name,
+      org:       currentUser.org,
+      person:    document.getElementById('pf-person')?.value || currentUser.name,
+      dist:      '',
+      blocks:    '',
+      schools:   '',
+      theme:     allComponents,
+      phone:     document.getElementById('pf-phone')?.value || '',
+      desig:     document.getElementById('pf-desig')?.value || '',
+      org_type:  document.getElementById('pf-type')?.value  || '',
+      start_date:''
     });
-    // Save each task for each checked component
-    const startDate = document.getElementById('pf-start')?.value || '';
-    const endDate   = document.getElementById('pf-end')?.value   || '';
-    const tSchools  = document.getElementById('pf-tschools')?.value  || 0;
-    const tStudents = document.getElementById('pf-tstudents')?.value || 0;
-    const tGirls    = document.getElementById('pf-tgirls')?.value    || 0;
-    const tTeachers = document.getElementById('pf-tteachers')?.value || 0;
-    const tMeetings = document.getElementById('pf-tmeetings')?.value || 0;
-    const tEvents   = document.getElementById('pf-tevents')?.value   || 0;
+    // Save any tasks that haven't been individually saved yet
     for(const cb of checkedComps){
       const comp = cb.value;
       const taskBlocks = cb.closest('.comp-block').querySelectorAll('.task-block');
       for(const block of taskBlocks){
-        const taskName  = block.querySelector('.comp-task-input')?.value.trim();
+        if(block.dataset.savedInWizard) continue; // already saved via Save Task button
+        const taskName = block.querySelector('.comp-task-input')?.value.trim();
         if(!taskName) continue;
-        const taskStart = block.querySelector('.act-start-date')?.value || '';
-        const taskEnd   = block.querySelector('.act-end-date')?.value   || '';
-
-        const geo = getTaskGeo(block);
-        await apiFetch({
-          action:          'saveProject',
-          ngo:             currentUser.org,
-          component:       comp,
-          task_name:       taskName,
-          description:     '',
-          sub_activities:  '[]',
-          target_schools:  tSchools,
-          target_students: tStudents,
-          target_girls:    tGirls,
-          target_teachers: tTeachers,
-          target_meetings: tMeetings,
-          target_events:   tEvents,
-          start_date:      taskStart,
-          end_date:        taskEnd,
-          task_dist:       geo.task_dist,
-          task_schools:    geo.task_schools
-        });
+        await _saveWizardTaskBlock(block, comp);
       }
     }
     currentUser.profileDone = true;
@@ -1659,6 +1581,58 @@ async function saveProfile(){
     showPage('profile-view');
   } else {
     initApp();
+  }
+}
+
+// Save a single task block from the wizard
+async function _saveWizardTaskBlock(block, comp){
+  const taskName  = block.querySelector('.comp-task-input')?.value.trim();
+  if(!taskName) return;
+  const taskStart = block.querySelector('.act-start-date')?.value || '';
+  const taskEnd   = block.querySelector('.act-end-date')?.value   || '';
+  const geo       = getTaskGeo(block);
+  await apiFetch({
+    action:          'saveProject',
+    ngo:             currentUser.org,
+    component:       comp,
+    task_name:       taskName,
+    description:     '',
+    sub_activities:  '[]',
+    target_schools:  0,
+    target_students: 0,
+    target_girls:    0,
+    target_teachers: 0,
+    target_meetings: 0,
+    target_events:   0,
+    start_date:      taskStart,
+    end_date:        taskEnd,
+    task_dist:       geo.task_dist,
+    task_schools:    geo.task_schools
+  });
+}
+
+// Per-task Save button in wizard — saves immediately and marks block as saved
+async function saveWizardTask(btn){
+  const block = btn.closest('.task-block');
+  const compCb = block.closest('.comp-block')?.querySelector('.comp-cb');
+  if(!compCb){ alert('Please select a component first'); return; }
+  const taskName = block.querySelector('.comp-task-input')?.value.trim();
+  if(!taskName){ alert('Please enter an activity name'); block.querySelector('.comp-task-input')?.focus(); return; }
+
+  btn.disabled = true;
+  btn.textContent = 'Saving…';
+  try {
+    await _saveWizardTaskBlock(block, compCb.value);
+    block.dataset.savedInWizard = '1';
+    btn.textContent = '✅ Saved';
+    btn.style.background = '#e8f5e9';
+    btn.style.color = '#2e7d32';
+    btn.style.border = '1px solid #a5d6a7';
+    block.style.borderColor = '#a5d6a7';
+  } catch(e){
+    btn.disabled = false;
+    btn.textContent = '💾 Save Task';
+    alert('Save failed: ' + e.message);
   }
 }
 
