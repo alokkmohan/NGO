@@ -3094,13 +3094,23 @@ function mrOnMonthChange(){
     if(subs.length){
       subs.forEach(sa=>{
         rows.push({
-          component: task.component||'',
-          task:      task.task_name||'',
-          name:      sa.name||'—',
-          from:      fmtDate(sa.from_date||sa.date||''),
-          to:        fmtDate(sa.to_date||sa.date||''),
-          details:   (sa.details||sa.update||'').replace(/</g,'&lt;')
+          component:       task.component||'',
+          task:            task.task_name||'',
+          status:          act.status||'',
+          completion_date: act.completion_date||'',
+          name:            sa.name||'—',
+          from:            fmtDate(sa.from_date||sa.date||''),
+          to:              fmtDate(sa.to_date||sa.date||''),
+          details:         (sa.details||sa.update||'').replace(/</g,'&lt;')
         });
+      });
+    } else if(act.status){
+      rows.push({
+        component:       task.component||'',
+        task:            task.task_name||'',
+        status:          act.status||'',
+        completion_date: act.completion_date||'',
+        name:            '—', from:'—', to:'—', details:'—'
       });
     }
   });
@@ -3115,21 +3125,29 @@ function mrOnMonthChange(){
       <th style="padding:8px 10px;text-align:left;font-weight:700">#</th>
       <th style="padding:8px 10px;text-align:left;font-weight:700">Component</th>
       <th style="padding:8px 10px;text-align:left;font-weight:700">Task</th>
+      <th style="padding:8px 10px;text-align:left;font-weight:700;white-space:nowrap">Task Status</th>
       <th style="padding:8px 10px;text-align:left;font-weight:700">Sub Activity</th>
       <th style="padding:8px 10px;text-align:left;font-weight:700;white-space:nowrap">From</th>
       <th style="padding:8px 10px;text-align:left;font-weight:700;white-space:nowrap">To</th>
       <th style="padding:8px 10px;text-align:left;font-weight:700">Details</th>
     </tr></thead>
     <tbody>
-      ${rows.map((r,i)=>`<tr style="border-bottom:1px solid #eef0f8;${i%2?'background:#fafbff':''}">
-        <td style="padding:8px 10px;color:var(--muted);font-size:11px">${i+1}</td>
-        <td style="padding:8px 10px;font-size:12px;color:var(--blue)">${r.component}</td>
-        <td style="padding:8px 10px;font-size:12px;font-weight:600">${r.task}</td>
-        <td style="padding:8px 10px;font-size:12px">${r.name}</td>
-        <td style="padding:8px 10px;font-size:12px;white-space:nowrap">${r.from||'—'}</td>
-        <td style="padding:8px 10px;font-size:12px;white-space:nowrap">${r.to||'—'}</td>
-        <td style="padding:8px 10px;font-size:12px;color:#444;max-width:300px">${r.details||'—'}</td>
-      </tr>`).join('')}
+      ${rows.map((r,i)=>{
+        const statusColor = r.status==='Completed'?'#1d9e75':r.status==='In progress'?'#b8860b':'#888';
+        const statusHtml = r.status
+          ? `<span style="font-size:11px;font-weight:600;color:${statusColor}">${r.status}${r.status==='Completed'&&r.completion_date?' ('+fmtDate(r.completion_date)+')':''}</span>`
+          : '—';
+        return `<tr style="border-bottom:1px solid #eef0f8;${i%2?'background:#fafbff':''}">
+          <td style="padding:8px 10px;color:var(--muted);font-size:11px">${i+1}</td>
+          <td style="padding:8px 10px;font-size:12px;color:var(--blue)">${r.component}</td>
+          <td style="padding:8px 10px;font-size:12px;font-weight:600">${r.task}</td>
+          <td style="padding:8px 10px">${statusHtml}</td>
+          <td style="padding:8px 10px;font-size:12px">${r.name}</td>
+          <td style="padding:8px 10px;font-size:12px;white-space:nowrap">${r.from||'—'}</td>
+          <td style="padding:8px 10px;font-size:12px;white-space:nowrap">${r.to||'—'}</td>
+          <td style="padding:8px 10px;font-size:12px;color:#444;max-width:300px">${r.details||'—'}</td>
+        </tr>`;
+      }).join('')}
     </tbody>
   </table>`;
 }
@@ -3566,6 +3584,20 @@ function buildReportTaskCards(existingRep){
               <span style="font-weight:700;font-size:13px;color:var(--blue)">${t.task_name}</span>
               ${dateLabel?`<span style="font-size:11px;color:var(--muted);margin-left:8px">${dateLabel}</span>`:''}
             </div>
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+              <label style="font-size:11px;color:var(--muted);font-weight:600">Status:</label>
+              <select id="${tid}_status" onchange="onTaskStatusChange('${tid}')"
+                style="padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:#fff;outline:none">
+                <option value="Not started">Not started</option>
+                <option value="In progress">In progress</option>
+                <option value="Completed">Completed</option>
+              </select>
+              <span id="${tid}_completion_wrap" style="display:none;align-items:center;gap:6px">
+                <label style="font-size:11px;color:var(--muted);font-weight:600">Completion Date:</label>
+                <input type="date" id="${tid}_completion_date"
+                  style="padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;outline:none">
+              </span>
+            </div>
           </div>
           <div style="padding:10px 12px">
             <div class="rse-list" id="${tid}_selist" data-tid="${tid}" data-start="${actStart}" data-end="${actEnd}"></div>
@@ -3595,11 +3627,25 @@ function buildReportTaskCards(existingRep){
     } else {
       addReportSubEntry(tid, actStart, actEnd, null, monthMin, monthMax);
     }
+    // Pre-fill task status
+    const statusSel = document.getElementById(tid + '_status');
+    if(statusSel && lastAct.status){
+      statusSel.value = lastAct.status;
+      onTaskStatusChange(tid);
+      const compEl = document.getElementById(tid + '_completion_date');
+      if(compEl && lastAct.completion_date) compEl.value = lastAct.completion_date;
+    }
   });
   refreshLockBtn();
 }
 
 function onProjectChange(){ /* legacy stub */ }
+
+function onTaskStatusChange(tid){
+  const val  = document.getElementById(tid + '_status')?.value;
+  const wrap = document.getElementById(tid + '_completion_wrap');
+  if(wrap) wrap.style.display = val === 'Completed' ? 'inline-flex' : 'none';
+}
 function reportNext(step){ /* legacy stub */ }
 function reportBack(step){ /* legacy stub */ }
 
@@ -3911,18 +3957,21 @@ async function submitMonthlyReport(silent = false){
       };
     }).filter(e => e.name || e.from_date || e.to_date || e.details); // skip completely empty rows
 
-    // Task has entries → "In progress" or "Complete" (user can set via overall; derive from entries)
-    const taskStatus = sub_activities.length ? 'In progress' : 'Not started';
+    const statusSel    = document.getElementById(tid + '_status');
+    const taskStatus   = statusSel?.value || (sub_activities.length ? 'In progress' : 'Not started');
+    const completionDate = taskStatus === 'Completed'
+      ? (document.getElementById(tid + '_completion_date')?.value || '') : '';
 
     return {
-      task_id:        t.project_id || '',
-      task_name:      t.task_name,
-      component:      t.component,
-      start_date:     t.start_date || '',
-      end_date:       t.end_date   || '',
-      status:         taskStatus,
-      sub_activities: sub_activities,
-      photos:         []
+      task_id:         t.project_id || '',
+      task_name:       t.task_name,
+      component:       t.component,
+      start_date:      t.start_date || '',
+      end_date:        t.end_date   || '',
+      status:          taskStatus,
+      completion_date: completionDate,
+      sub_activities:  sub_activities,
+      photos:          []
     };
   });
 
