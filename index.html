@@ -1021,11 +1021,16 @@ function doLogout(){
 
 function startApp(){
   document.getElementById('auth-screen').style.display='none';
-  // NGO users: show profile prompt only if server says profile is not done
+  // Show the profile-prompt overlay only once (first login ever) when profile is incomplete
+  // After the user has seen it once, go straight to the app
   if(currentUser.role !== 'admin' && !currentUser.profileDone){
-    const overlay = document.getElementById('profile-prompt-overlay');
-    if(overlay) overlay.style.display = 'flex';
-    return;
+    const seenKey = 'profile_prompt_seen_' + (currentUser.email||currentUser.org||'');
+    if(!localStorage.getItem(seenKey)){
+      localStorage.setItem(seenKey, '1');
+      const overlay = document.getElementById('profile-prompt-overlay');
+      if(overlay) overlay.style.display = 'flex';
+      return;
+    }
   }
   initApp();
 }
