@@ -3077,10 +3077,6 @@ function mrOnMonthChange(){
             style="padding:7px 14px;background:#e8f0fe;color:var(--blue);border:1px solid #c5d5f5;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer">👁 View Report</button>
           <button onclick="mrDownloadPDF()"
             style="padding:7px 14px;background:#e8f5e9;color:var(--green);border:1px solid #a5d6a7;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer">⬇ PDF</button>
-          ${!isLocked
-            ? `<button onclick="mrLock()"
-                style="padding:7px 14px;background:#1a3c6e;color:#fff;border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer">🔒 Lock ${label} Report</button>`
-            : ''}
         </div>
       </div>`;
   }
