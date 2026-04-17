@@ -586,8 +586,8 @@ tr:hover td{background:#FAFBFF}
         </div>
       </div>
 
-      <!-- SECTION B: Monthly Summary Numbers -->
-      <div class="card" style="margin-bottom:12px">
+      <!-- SECTION B: Monthly Summary Numbers (hidden until Lock) -->
+      <div id="r-section-b" class="card" style="display:none;margin-bottom:12px">
         <div class="card-title">🔢 Section B — This Month's Numbers
           <span style="font-size:11px;font-weight:400;color:var(--muted);margin-left:8px">Cumulative total shown below</span>
         </div>
@@ -607,8 +607,8 @@ tr:hover td{background:#FAFBFF}
 
       <!-- SECTION C: Photos are now per-task inside each task card -->
 
-      <!-- SECTION E: In-kind / Material Support -->
-      <div class="card" style="margin-bottom:12px">
+      <!-- SECTION D: In-kind / Material Support (hidden until Lock) -->
+      <div id="r-section-d" class="card" style="display:none;margin-bottom:12px">
         <div class="card-title">🎁 Section D — In-kind / Material / Donation Support</div>
         <div style="font-size:12px;color:var(--muted);margin-bottom:10px">Record any equipment, material, training kit, machine or donation provided this month.</div>
         <div class="wform-row">
@@ -637,8 +637,8 @@ tr:hover td{background:#FAFBFF}
         </div>
       </div>
 
-      <!-- SECTION D (was E): Narrative -->
-      <div class="card" style="margin-bottom:12px">
+      <!-- SECTION E: Narrative (hidden until Lock) -->
+      <div id="r-section-e" class="card" style="display:none;margin-bottom:12px">
         <div class="card-title">📋 Section E — Narrative Report</div>
         <div class="wform-group">
           <label>KMI — Key Milestone Indicator (one line) <span style="color:var(--red)">*</span></label>
@@ -662,15 +662,31 @@ tr:hover td{background:#FAFBFF}
         </div>
       </div>
 
+      <!-- Lock confirm panel (shown when Lock button clicked) -->
+      <div id="r-lock-confirm-panel" style="display:none;background:#fff8e1;border:1.5px solid #f9a825;border-radius:10px;padding:14px 16px;margin-bottom:12px">
+        <div style="font-size:13px;font-weight:700;color:#e65100;margin-bottom:6px">🔒 Final lock — please fill in the sections above, then confirm</div>
+        <div style="font-size:12px;color:#795548;margin-bottom:12px">Once locked, this month's report cannot be edited. KMI field is required.</div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <button onclick="confirmAndLock()"
+            style="flex:1;min-width:140px;padding:11px;background:#e65100;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer">
+            ✅ Confirm &amp; Lock
+          </button>
+          <button onclick="hideLockPanel()"
+            style="flex:1;min-width:120px;padding:11px;background:#fff;color:var(--muted);border:1px solid var(--border);border-radius:8px;font-size:13px;cursor:pointer">
+            Cancel
+          </button>
+        </div>
+      </div>
+
       <!-- Submit -->
       <div id="r-submit-area" style="margin-bottom:24px">
         <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px">
           <button id="r-submit-btn" class="btn-grn"
             style="flex:1;min-width:160px;padding:13px;font-size:14px;font-weight:700"
-            onclick="submitMonthlyReport(false)">💾 Save Progress</button>
+            onclick="submitMonthlyReport()">💾 Save Progress</button>
           <button id="r-lock-btn"
             style="flex:1;min-width:160px;padding:13px;font-size:14px;font-weight:700;background:var(--blue);color:#fff;border:none;border-radius:8px;cursor:pointer;opacity:0.45;pointer-events:none"
-            onclick="submitMonthlyReport(true)">🔒 Lock Month Report</button>
+            onclick="showLockPanel()">🔒 Lock Month Report</button>
         </div>
         <div id="r-lock-wrap" style="display:none"></div><!-- stub kept for JS compat -->
         <div id="r-submit-status" style="font-size:12px;color:var(--muted);text-align:center"></div>
@@ -1111,6 +1127,9 @@ function onReportMonthChange(){
   const lockWrap  = document.getElementById('r-lock-wrap');
 
   const lockBtn = document.getElementById('r-lock-btn');
+  // Always reset lock panel and B/D/E visibility first
+  hideLockPanel();
+
   if(existing){
     const isLocked = String(existing.report_locked) === 'true';
     wrap.style.display = 'block';
@@ -1120,12 +1139,18 @@ function onReportMonthChange(){
       submitBtn.disabled = true;
       submitBtn.style.opacity = '0.5';
       if(lockBtn){ lockBtn.textContent='🔒 '+monthLabel+' — Locked'; lockBtn.style.opacity='0.45'; lockBtn.style.pointerEvents='none'; }
+      // Show B/D/E as read-only summary for locked month
+      prefillFromExisting(existing);
+      ['r-section-b','r-section-d','r-section-e'].forEach(id => {
+        const el = document.getElementById(id);
+        if(el){ el.style.display='block'; el.querySelectorAll('input,textarea').forEach(i=>i.disabled=true); }
+      });
     } else {
       stEl.style.cssText = 'padding:8px 12px;border-radius:7px;font-size:12px;font-weight:600;background:#e8f5e9;color:#2e7d32;border:1px solid #a5d6a7';
-      stEl.textContent = '✏ Draft saved — update anytime, or Lock when all entries are final.';
+      stEl.textContent = '✏ Draft saved — add task updates, then Lock when all entries are final.';
       submitBtn.disabled = false;
       submitBtn.style.opacity = '1';
-      submitBtn.textContent = '💾 Update Progress';
+      submitBtn.textContent = '💾 Save Progress';
       if(lockBtn){ lockBtn.textContent='🔒 Lock '+monthLabel+' Report'; lockBtn.style.opacity='1'; lockBtn.style.pointerEvents='auto'; }
       prefillFromExisting(existing);
     }
@@ -3785,7 +3810,7 @@ function renderTaskPhotoPreview(tid){
 function handlePhotos(input){}
 function removePhoto(i){}
 
-async function submitMonthlyReport(doLock = false){
+async function submitMonthlyReport(){
   const monthPick = document.getElementById('r-month-pick');
   if(!monthPick?.value){ alert('Please select a Reporting Month'); monthPick?.focus(); return; }
 
@@ -3933,7 +3958,7 @@ async function submitMonthlyReport(doLock = false){
     lockBtn.style.opacity = '1';
     lockBtn.style.pointerEvents = 'auto';
   }
-  document.getElementById('r-submit-btn').textContent = '💾 Update Progress';
+  document.getElementById('r-submit-btn').textContent = '💾 Save Progress';
 
   const wrap = document.getElementById('r-month-status-wrap');
   const stEl = document.getElementById('r-month-status');
@@ -3950,27 +3975,6 @@ async function submitMonthlyReport(doLock = false){
   if(savedRep) buildReportTaskCards(savedRep);
 
   renderMyReports();
-
-  // If Lock was requested, lock now
-  if(doLock){
-    if(!confirm('Lock report for ' + months + '?\n\nOnce locked it cannot be edited. Lock only when all entries are final.')) return;
-    showLoader('Locking report…');
-    try {
-      await apiFetch({action:'lockReport', ngo:currentUser.org, month:months});
-      const rep = REPORTS.find(r => r.ngo === currentUser.org && r.month === months);
-      if(rep) rep.report_locked = 'true';
-      hideLoader();
-      if(wrap && stEl){
-        stEl.style.cssText = 'padding:8px 12px;border-radius:7px;font-size:12px;font-weight:600;background:#fce4ec;color:#c62828;border:1px solid #ef9a9a';
-        stEl.textContent = '🔒 Locked — this month\'s report is finalised.';
-      }
-      if(lockBtn){ lockBtn.style.opacity='0.45'; lockBtn.style.pointerEvents='none'; }
-      document.getElementById('r-submit-btn').disabled = true;
-      document.getElementById('r-submit-btn').style.opacity = '0.5';
-      renderMyReports();
-    } catch(e){ hideLoader(); alert('Lock failed: ' + e.message); }
-  }
-
   document.getElementById('r-submit-area').scrollIntoView({behavior:'smooth'});
 }
 
@@ -4029,6 +4033,67 @@ function resetMonthlyReport(){
 }
 
 function submitReport(){ submitMonthlyReport(); } // legacy alias
+
+// Show Section B/D/E + lock confirm panel
+function showLockPanel(){
+  const monthPick = document.getElementById('r-month-pick');
+  if(!monthPick?.value){ alert('Please select a Reporting Month first.'); return; }
+  ['r-section-b','r-section-d','r-section-e'].forEach(id => {
+    const el = document.getElementById(id);
+    if(el) el.style.display = 'block';
+  });
+  const panel = document.getElementById('r-lock-confirm-panel');
+  if(panel){ panel.style.display = 'block'; panel.scrollIntoView({behavior:'smooth', block:'start'}); }
+}
+
+function hideLockPanel(){
+  ['r-section-b','r-section-d','r-section-e'].forEach(id => {
+    const el = document.getElementById(id);
+    if(el) el.style.display = 'none';
+  });
+  const panel = document.getElementById('r-lock-confirm-panel');
+  if(panel) panel.style.display = 'none';
+}
+
+async function confirmAndLock(){
+  const kmi = document.getElementById('r-kmi')?.value.trim();
+  if(!kmi){ alert('KMI (Key Milestone Indicator) is required before locking.'); document.getElementById('r-kmi')?.focus(); return; }
+  const monthPick = document.getElementById('r-month-pick');
+  if(!monthPick?.value) return;
+  const [yr, mo] = monthPick.value.split('-').map(Number);
+  const mNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const months = mNames[mo-1] + ' ' + yr;
+  if(!confirm('Lock report for ' + months + '?\n\nOnce locked it cannot be edited.')) return;
+  // Save all sections first, then lock
+  await submitMonthlyReport();
+  // Now lock
+  showLoader('Locking report…');
+  try {
+    await apiFetch({action:'lockReport', ngo:currentUser.org, month:months});
+    const rep = REPORTS.find(r => r.ngo === currentUser.org && r.month === months);
+    if(rep) rep.report_locked = 'true';
+    hideLoader();
+    hideLockPanel();
+    // Update UI for locked state
+    const wrap = document.getElementById('r-month-status-wrap');
+    const stEl = document.getElementById('r-month-status');
+    if(wrap && stEl){
+      wrap.style.display = 'block';
+      stEl.style.cssText = 'padding:8px 12px;border-radius:7px;font-size:12px;font-weight:600;background:#fce4ec;color:#c62828;border:1px solid #ef9a9a';
+      stEl.textContent = '🔒 Locked — this month\'s report is finalised and submitted to PMU.';
+    }
+    const lockBtn = document.getElementById('r-lock-btn');
+    if(lockBtn){ lockBtn.textContent='🔒 '+months+' — Locked'; lockBtn.style.opacity='0.45'; lockBtn.style.pointerEvents='none'; }
+    document.getElementById('r-submit-btn').disabled = true;
+    document.getElementById('r-submit-btn').style.opacity = '0.5';
+    // Show B/D/E as read-only summary after lock
+    ['r-section-b','r-section-d','r-section-e'].forEach(id => {
+      const el = document.getElementById(id);
+      if(el){ el.style.display='block'; el.querySelectorAll('input,textarea').forEach(i=>i.disabled=true); }
+    });
+    renderMyReports();
+  } catch(e){ hideLoader(); alert('Lock failed: ' + e.message); }
+}
 
 // ── Download full report for a single month (print-to-PDF) ──
 function downloadMonthReport(month){
