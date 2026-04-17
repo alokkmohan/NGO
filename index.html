@@ -3515,14 +3515,17 @@ function buildReportTaskCards(existingRep){
   ).join('');
 
   // Pre-fill from existing report data
+  // If it's an existing (saved) report → show locked view cards; user must click Edit to change
+  // If no saved report → show one blank editable entry
+  const isSaved = !!existingRep;
   myProjs.forEach(t => {
     const tid = 'task_' + (t.project_id || t.task_name).toString().replace(/[^a-z0-9]/gi,'_');
     const lastAct = lastTasks.find(a => a.task_name === t.task_name) || {};
     const actStart = t.start_date || '';
     const actEnd   = t.end_date   || '';
     const subs = lastAct.sub_activities || [];
-    if(subs.length){
-      subs.forEach(sa => addReportSubEntry(tid, actStart, actEnd, sa, monthMin, monthMax));
+    if(isSaved && subs.length){
+      subs.forEach(sa => addSubEntryViewCard(tid, sa, monthMin, monthMax));
     } else {
       addReportSubEntry(tid, actStart, actEnd, null, monthMin, monthMax);
     }
@@ -3611,6 +3614,76 @@ function addReportSubEntry(tid, actStart, actEnd, prefill, monthMin, monthMax){
 
 function removeReportSubEntry(btn){
   btn.closest('.report-sub-entry').remove();
+}
+
+// Render a saved sub-activity as a locked view card (read-only)
+function addSubEntryViewCard(tid, sa, monthMin, monthMax){
+  const list = document.getElementById(tid + '_selist');
+  if(!list) return;
+  const fromLabel = sa.from_date ? fmtDate(sa.from_date) : '';
+  const toLabel   = sa.to_date   ? fmtDate(sa.to_date)   : '';
+  const dateRange = fromLabel
+    ? (fromLabel + (toLabel && toLabel !== fromLabel ? ' → ' + toLabel : ''))
+    : '—';
+
+  const div = document.createElement('div');
+  div.className = 'report-sub-entry rse-view-card';
+  div.dataset.name     = sa.name     || '';
+  div.dataset.from     = sa.from_date || sa.date || '';
+  div.dataset.to       = sa.to_date   || sa.date || '';
+  div.dataset.details  = sa.details   || sa.update || '';
+  div.dataset.sid      = sa.photo_key || '';
+  div.dataset.monthMin = monthMin || '';
+  div.dataset.monthMax = monthMax || '';
+  div.style.cssText = 'border:1px solid #c5d5f5;border-radius:7px;padding:10px 12px;margin-bottom:8px;background:#f4f8ff;position:relative';
+  div.innerHTML = `
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:600;font-size:13px;color:var(--blue);margin-bottom:3px">${sa.name || '<em style="color:var(--muted);font-weight:400">Unnamed</em>'}</div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:5px">📅 ${dateRange}</div>
+        <div style="font-size:12px;color:#333;white-space:pre-wrap;word-break:break-word">${sa.details || sa.update || '<em style="color:var(--muted)">No details entered</em>'}</div>
+      </div>
+      <div style="display:flex;gap:6px;flex-shrink:0;margin-top:2px">
+        <button type="button" onclick="editSubEntryCard(this)"
+          style="padding:4px 10px;background:#e8f0fe;color:var(--blue);border:1px solid #c5d5f5;border-radius:5px;font-size:11px;font-weight:600;cursor:pointer">✏ Edit</button>
+        <button type="button" onclick="this.closest('.report-sub-entry').remove()"
+          style="background:none;border:none;font-size:17px;cursor:pointer;color:var(--muted);line-height:1;padding:2px 4px">×</button>
+      </div>
+    </div>`;
+  list.appendChild(div);
+}
+
+// Convert a locked view card into a full editable form in-place
+function editSubEntryCard(btn){
+  const card = btn.closest('.report-sub-entry.rse-view-card');
+  if(!card) return;
+  const list = card.closest('.rse-list');
+  if(!list) return;
+  const tid      = list.dataset.tid;
+  const actStart = list.dataset.start || '';
+  const actEnd   = list.dataset.end   || '';
+  const monthMin = card.dataset.monthMin || '';
+  const monthMax = card.dataset.monthMax || '';
+  const prefill  = {
+    name:      card.dataset.name,
+    from_date: card.dataset.from,
+    to_date:   card.dataset.to,
+    details:   card.dataset.details,
+    photo_key: card.dataset.sid
+  };
+
+  // Build a placeholder at the same position so we can insert the new entry there
+  const placeholder = document.createElement('div');
+  list.insertBefore(placeholder, card);
+  card.remove();
+
+  // addReportSubEntry appends to list; we'll move it to the right spot
+  addReportSubEntry(tid, actStart, actEnd, prefill, monthMin, monthMax);
+  const newEntry = list.lastElementChild;
+  if(newEntry && placeholder.parentNode){
+    list.insertBefore(newEntry, placeholder);
+  }
+  placeholder.remove();
 }
 
 function validateRseFromTo(entry, monthMin, monthMax){
@@ -3711,6 +3784,16 @@ async function submitMonthlyReport(){
     const seList = document.getElementById(tid + '_selist');
     const entries = seList ? Array.from(seList.querySelectorAll('.report-sub-entry')) : [];
     const sub_activities = entries.map(entry => {
+      if(entry.classList.contains('rse-view-card')){
+        // Locked (unedited) saved entry — collect from dataset
+        return {
+          name:      entry.dataset.name    || '',
+          from_date: entry.dataset.from    || '',
+          to_date:   entry.dataset.to      || '',
+          details:   entry.dataset.details || '',
+          photo_key: entry.dataset.sid     || ''
+        };
+      }
       const sid = entry.dataset.sid || '';
       return {
         name:      entry.querySelector('.rse-name')?.value.trim()    || '',
