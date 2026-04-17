@@ -664,13 +664,16 @@ tr:hover td{background:#FAFBFF}
 
       <!-- Submit -->
       <div id="r-submit-area" style="margin-bottom:24px">
-        <button id="r-submit-btn" class="btn-grn" style="width:100%;padding:14px;font-size:15px" onclick="submitMonthlyReport()">✅ Save Report</button>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px">
+          <button id="r-submit-btn" class="btn-grn"
+            style="flex:1;min-width:160px;padding:13px;font-size:14px;font-weight:700"
+            onclick="submitMonthlyReport(false)">💾 Save Progress</button>
+          <button id="r-lock-btn"
+            style="flex:1;min-width:160px;padding:13px;font-size:14px;font-weight:700;background:var(--blue);color:#fff;border:none;border-radius:8px;cursor:pointer;opacity:0.45;pointer-events:none"
+            onclick="submitMonthlyReport(true)">🔒 Lock Month Report</button>
+        </div>
         <div id="r-lock-wrap" style="display:none"></div><!-- stub kept for JS compat -->
-        <div style="font-size:12px;color:var(--muted);text-align:center;margin-top:8px">
-          You can save multiple times. To view, download or lock — go to
-          <a href="#" onclick="showPage('my-reports');return false;" style="color:var(--blue2);font-weight:600">📋 My Reports</a>
-        </div>
-        </div>
+        <div id="r-submit-status" style="font-size:12px;color:var(--muted);text-align:center"></div>
       </div>
 
       <!-- Success message -->
@@ -1107,6 +1110,7 @@ function onReportMonthChange(){
   const submitBtn = document.getElementById('r-submit-btn');
   const lockWrap  = document.getElementById('r-lock-wrap');
 
+  const lockBtn = document.getElementById('r-lock-btn');
   if(existing){
     const isLocked = String(existing.report_locked) === 'true';
     wrap.style.display = 'block';
@@ -1115,25 +1119,22 @@ function onReportMonthChange(){
       stEl.textContent = '🔒 This month is locked — no more changes allowed.';
       submitBtn.disabled = true;
       submitBtn.style.opacity = '0.5';
-      lockWrap.style.display = 'none';
+      if(lockBtn){ lockBtn.textContent='🔒 '+monthLabel+' — Locked'; lockBtn.style.opacity='0.45'; lockBtn.style.pointerEvents='none'; }
     } else {
       stEl.style.cssText = 'padding:8px 12px;border-radius:7px;font-size:12px;font-weight:600;background:#e8f5e9;color:#2e7d32;border:1px solid #a5d6a7';
-      stEl.textContent = '✏ Draft saved — you can update and re-save, or lock when final.';
+      stEl.textContent = '✏ Draft saved — update anytime, or Lock when all entries are final.';
       submitBtn.disabled = false;
       submitBtn.style.opacity = '1';
-      submitBtn.textContent = '💾 Update Report';
-      lockWrap.style.display = 'block';
-      const _lb = document.getElementById('r-lock-btn');
-      if(_lb) _lb.textContent = '🔒 Lock ' + monthLabel + ' Report — finalise & submit to PMU';
-      // Pre-fill form with saved data
+      submitBtn.textContent = '💾 Update Progress';
+      if(lockBtn){ lockBtn.textContent='🔒 Lock '+monthLabel+' Report'; lockBtn.style.opacity='1'; lockBtn.style.pointerEvents='auto'; }
       prefillFromExisting(existing);
     }
   } else {
     wrap.style.display = 'none';
     submitBtn.disabled = false;
     submitBtn.style.opacity = '1';
-    submitBtn.textContent = '✅ Save Report';
-    lockWrap.style.display = 'none';
+    submitBtn.textContent = '💾 Save Progress';
+    if(lockBtn){ lockBtn.textContent='🔒 Lock Month Report'; lockBtn.style.opacity='0.45'; lockBtn.style.pointerEvents='none'; }
     buildReportTaskCards();
   }
 }
@@ -3599,7 +3600,11 @@ function addReportSubEntry(tid, actStart, actEnd, prefill, monthMin, monthMax){
         onchange="handleRsePhoto(this,'${sid}')">
       <div class="photo-preview-grid" id="${sid}_preview" style="margin-top:5px"></div>
       <div style="font-size:10px;color:var(--muted)" id="${sid}_count"></div>
-    </div>`;
+    </div>
+    <button type="button" onclick="collapseSubEntryForm(this)"
+      style="margin-top:8px;width:100%;padding:8px;background:#1a3c6e;color:#fff;border:none;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer">
+      ✓ Save Entry
+    </button>`;
 
   list.appendChild(div);
 
@@ -3620,6 +3625,10 @@ function removeReportSubEntry(btn){
 function addSubEntryViewCard(tid, sa, monthMin, monthMax){
   const list = document.getElementById(tid + '_selist');
   if(!list) return;
+  _insertSubEntryViewCard(list, sa, monthMin, monthMax);
+}
+
+function _insertSubEntryViewCard(list, sa, monthMin, monthMax, insertBefore){
   const fromLabel = sa.from_date ? fmtDate(sa.from_date) : '';
   const toLabel   = sa.to_date   ? fmtDate(sa.to_date)   : '';
   const dateRange = fromLabel
@@ -3636,21 +3645,43 @@ function addSubEntryViewCard(tid, sa, monthMin, monthMax){
   div.dataset.monthMin = monthMin || '';
   div.dataset.monthMax = monthMax || '';
   div.style.cssText = 'border:1px solid #c5d5f5;border-radius:7px;padding:10px 12px;margin-bottom:8px;background:#f4f8ff;position:relative';
+  const nameHtml    = (sa.name    || '').replace(/</g,'&lt;') || '<em style="color:var(--muted);font-weight:400">Unnamed</em>';
+  const detailsHtml = (sa.details || sa.update || '').replace(/</g,'&lt;') || '<em style="color:var(--muted)">No details entered</em>';
   div.innerHTML = `
     <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
       <div style="flex:1;min-width:0">
-        <div style="font-weight:600;font-size:13px;color:var(--blue);margin-bottom:3px">${sa.name || '<em style="color:var(--muted);font-weight:400">Unnamed</em>'}</div>
+        <div style="font-weight:600;font-size:13px;color:var(--blue);margin-bottom:3px">${nameHtml}</div>
         <div style="font-size:11px;color:var(--muted);margin-bottom:5px">📅 ${dateRange}</div>
-        <div style="font-size:12px;color:#333;white-space:pre-wrap;word-break:break-word">${sa.details || sa.update || '<em style="color:var(--muted)">No details entered</em>'}</div>
+        <div style="font-size:12px;color:#444;white-space:pre-wrap;word-break:break-word">${detailsHtml}</div>
       </div>
       <div style="display:flex;gap:6px;flex-shrink:0;margin-top:2px">
-        <button type="button" onclick="editSubEntryCard(this)"
+        <button type="button" class="rse-edit-btn" onclick="editSubEntryCard(this)"
           style="padding:4px 10px;background:#e8f0fe;color:var(--blue);border:1px solid #c5d5f5;border-radius:5px;font-size:11px;font-weight:600;cursor:pointer">✏ Edit</button>
         <button type="button" onclick="this.closest('.report-sub-entry').remove()"
           style="background:none;border:none;font-size:17px;cursor:pointer;color:var(--muted);line-height:1;padding:2px 4px">×</button>
       </div>
     </div>`;
-  list.appendChild(div);
+  if(insertBefore) list.insertBefore(div, insertBefore);
+  else list.appendChild(div);
+}
+
+// Collapse an open sub-entry form into a view card (called by "✓ Save Entry" button)
+function collapseSubEntryForm(btn){
+  const form = btn.closest('.report-sub-entry');
+  if(!form) return;
+  const list = form.closest('.rse-list');
+  if(!list) return;
+  const sa = {
+    name:      form.querySelector('.rse-name')?.value.trim()    || '',
+    from_date: form.querySelector('.rse-from')?.value           || '',
+    to_date:   form.querySelector('.rse-to')?.value             || '',
+    details:   form.querySelector('.rse-details')?.value.trim() || '',
+    photo_key: form.dataset.sid || ''
+  };
+  const monthMin = form.querySelector('.rse-from')?.min || '';
+  const monthMax = form.querySelector('.rse-from')?.max || '';
+  _insertSubEntryViewCard(list, sa, monthMin, monthMax, form);
+  form.remove();
 }
 
 // Convert a locked view card into a full editable form in-place
@@ -3754,7 +3785,7 @@ function renderTaskPhotoPreview(tid){
 function handlePhotos(input){}
 function removePhoto(i){}
 
-async function submitMonthlyReport(){
+async function submitMonthlyReport(doLock = false){
   const monthPick = document.getElementById('r-month-pick');
   if(!monthPick?.value){ alert('Please select a Reporting Month'); monthPick?.focus(); return; }
 
@@ -3895,18 +3926,47 @@ async function submitMonthlyReport(){
   hideLoader();
   uploadedPhotos = [];
 
-  // Show lock button — saved but not yet locked
-  document.getElementById('r-lock-wrap').style.display = 'block';
-  document.getElementById('r-submit-btn').textContent = '💾 Update Report';
-  // Update lock button to show month name
-  const _lockBtn = document.getElementById('r-lock-btn');
-  if(_lockBtn) _lockBtn.textContent = '🔒 Lock ' + months + ' Report — finalise & submit to PMU';
+  // Enable lock button now that report is saved
+  const lockBtn = document.getElementById('r-lock-btn');
+  if(lockBtn){
+    lockBtn.textContent = '🔒 Lock ' + months + ' Report';
+    lockBtn.style.opacity = '1';
+    lockBtn.style.pointerEvents = 'auto';
+  }
+  document.getElementById('r-submit-btn').textContent = '💾 Update Progress';
+
   const wrap = document.getElementById('r-month-status-wrap');
   const stEl = document.getElementById('r-month-status');
-  wrap.style.display = 'block';
-  stEl.style.cssText = 'padding:8px 12px;border-radius:7px;font-size:12px;font-weight:600;background:#e8f5e9;color:#2e7d32;border:1px solid #a5d6a7';
-  stEl.textContent = '✅ Saved! You can update again or Lock to finalise.';
+  if(wrap && stEl){
+    wrap.style.display = 'block';
+    stEl.style.cssText = 'padding:8px 12px;border-radius:7px;font-size:12px;font-weight:600;background:#e8f5e9;color:#2e7d32;border:1px solid #a5d6a7';
+    stEl.textContent = '✅ Saved! Update anytime, or Lock when all entries are final.';
+  }
+  const statusDiv = document.getElementById('r-submit-status');
+  if(statusDiv) statusDiv.textContent = '';
+
   renderMyReports();
+
+  // If Lock was requested, lock now
+  if(doLock){
+    if(!confirm('Lock report for ' + months + '?\n\nOnce locked it cannot be edited. Lock only when all entries are final.')) return;
+    showLoader('Locking report…');
+    try {
+      await apiFetch({action:'lockReport', ngo:currentUser.org, month:months});
+      const rep = REPORTS.find(r => r.ngo === currentUser.org && r.month === months);
+      if(rep) rep.report_locked = 'true';
+      hideLoader();
+      if(wrap && stEl){
+        stEl.style.cssText = 'padding:8px 12px;border-radius:7px;font-size:12px;font-weight:600;background:#fce4ec;color:#c62828;border:1px solid #ef9a9a';
+        stEl.textContent = '🔒 Locked — this month\'s report is finalised.';
+      }
+      if(lockBtn){ lockBtn.style.opacity='0.45'; lockBtn.style.pointerEvents='none'; }
+      document.getElementById('r-submit-btn').disabled = true;
+      document.getElementById('r-submit-btn').style.opacity = '0.5';
+      renderMyReports();
+    } catch(e){ hideLoader(); alert('Lock failed: ' + e.message); }
+  }
+
   document.getElementById('r-submit-area').scrollIntoView({behavior:'smooth'});
 }
 
