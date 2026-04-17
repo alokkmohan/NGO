@@ -3515,17 +3515,17 @@ function buildReportTaskCards(existingRep){
     </div>`
   ).join('');
 
-  // Pre-fill from existing report data
-  // If it's an existing (saved) report → show locked view cards; user must click Edit to change
-  // If no saved report → show one blank editable entry
-  const isSaved = !!existingRep;
+  // Pre-fill from saved report: if saved sub-activities exist → show view cards
+  // otherwise → show one blank editable entry
   myProjs.forEach(t => {
     const tid = 'task_' + (t.project_id || t.task_name).toString().replace(/[^a-z0-9]/gi,'_');
-    const lastAct = lastTasks.find(a => a.task_name === t.task_name) || {};
+    // Case-insensitive trimmed match to handle any whitespace/case differences
+    const tName = (t.task_name || '').trim().toLowerCase();
+    const lastAct = lastTasks.find(a => (a.task_name||'').trim().toLowerCase() === tName) || {};
     const actStart = t.start_date || '';
     const actEnd   = t.end_date   || '';
     const subs = lastAct.sub_activities || [];
-    if(isSaved && subs.length){
+    if(subs.length){
       subs.forEach(sa => addSubEntryViewCard(tid, sa, monthMin, monthMax));
     } else {
       addReportSubEntry(tid, actStart, actEnd, null, monthMin, monthMax);
@@ -3944,6 +3944,10 @@ async function submitMonthlyReport(doLock = false){
   }
   const statusDiv = document.getElementById('r-submit-status');
   if(statusDiv) statusDiv.textContent = '';
+
+  // Rebuild task cards so all open forms collapse to view cards immediately
+  const savedRep = REPORTS.find(r => r.ngo === currentUser.org && r.month === months);
+  if(savedRep) buildReportTaskCards(savedRep);
 
   renderMyReports();
 
