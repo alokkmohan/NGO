@@ -683,7 +683,7 @@ tr:hover td{background:#FAFBFF}
       <!-- Submit -->
       <div id="r-submit-area" style="margin-bottom:24px">
         <button id="r-lock-btn"
-          style="width:100%;padding:14px;font-size:15px;font-weight:700;background:var(--blue);color:#fff;border:none;border-radius:8px;cursor:pointer"
+          style="display:none;width:100%;padding:14px;font-size:15px;font-weight:700;background:var(--blue);color:#fff;border:none;border-radius:8px;cursor:pointer"
           onclick="showLockPanel()">🔒 Lock Month Report</button>
         <div id="r-lock-wrap" style="display:none"></div><!-- stub kept for JS compat -->
         <div style="font-size:11px;color:var(--muted);margin-top:8px;text-align:center;line-height:1.5">
@@ -1133,7 +1133,7 @@ function onReportMonthChange(){
     if(isLocked){
       stEl.style.cssText = 'padding:8px 12px;border-radius:7px;font-size:12px;font-weight:600;background:#fce4ec;color:#c62828;border:1px solid #ef9a9a';
       stEl.textContent = '🔒 This month is locked — no more changes allowed.';
-      if(lockBtn){ lockBtn.textContent='🔒 '+monthLabel+' — Locked'; lockBtn.disabled=true; lockBtn.style.opacity='0.5'; }
+      if(lockBtn){ lockBtn.textContent='🔒 '+monthLabel+' — Locked'; lockBtn.disabled=true; lockBtn.style.display='block'; lockBtn.style.opacity='0.5'; }
       // Show B/D/E as read-only summary for locked month
       prefillFromExisting(existing);
       ['r-section-b','r-section-d','r-section-e'].forEach(id => {
@@ -1143,12 +1143,12 @@ function onReportMonthChange(){
     } else {
       wrap.style.display = 'none';
       if(lockBtn){ lockBtn.textContent='🔒 Lock '+monthLabel+' Report'; lockBtn.disabled=false; lockBtn.style.opacity='1'; }
-      prefillFromExisting(existing);
+      prefillFromExisting(existing); // buildReportTaskCards inside will call refreshLockBtn
     }
   } else {
     wrap.style.display = 'none';
-    if(lockBtn){ lockBtn.textContent='🔒 Lock Month Report'; lockBtn.disabled=false; lockBtn.style.opacity='1'; }
-    buildReportTaskCards();
+    if(lockBtn){ lockBtn.style.display='none'; lockBtn.disabled=false; lockBtn.style.opacity='1'; }
+    buildReportTaskCards(); // refreshLockBtn called inside
   }
 }
 
@@ -3421,6 +3421,15 @@ function fillFormFromData(data){
   reportStep=0; updateReportSteps();
 }
 
+// Show Lock button only when at least one sub-entry exists across all tasks
+function refreshLockBtn(){
+  const lockBtn = document.getElementById('r-lock-btn');
+  if(!lockBtn) return;
+  if(lockBtn.disabled) return; // already locked — keep as-is
+  const hasEntries = document.querySelectorAll('#r-task-cards .report-sub-entry').length > 0;
+  lockBtn.style.display = hasEntries ? 'block' : 'none';
+}
+
 function populateReportMonthPicker(){
   const sel = document.getElementById('r-month-pick');
   if(!sel) return;
@@ -3575,6 +3584,7 @@ function buildReportTaskCards(existingRep){
       addReportSubEntry(tid, actStart, actEnd, null, monthMin, monthMax);
     }
   });
+  refreshLockBtn();
 }
 
 function onProjectChange(){ /* legacy stub */ }
@@ -3726,6 +3736,7 @@ function collapseSubEntryForm(btn){
   const monthMax = form.querySelector('.rse-from')?.max || '';
   _insertSubEntryViewCard(list, sa, monthMin, monthMax, form);
   form.remove();
+  refreshLockBtn();
   // Auto-save silently so data is not lost if user switches month
   _autoSaveReport();
 }
@@ -3982,6 +3993,7 @@ async function submitMonthlyReport(silent = false){
   if(!silent){
     const lockBtn = document.getElementById('r-lock-btn');
     if(lockBtn){ lockBtn.textContent = '🔒 Lock ' + months + ' Report'; lockBtn.disabled = false; lockBtn.style.opacity = '1'; }
+    refreshLockBtn();
     // Rebuild task cards so open forms collapse to view cards
     const savedRep = REPORTS.find(r => r.ngo === currentUser.org && r.month === months);
     if(savedRep) buildReportTaskCards(savedRep);
@@ -4095,7 +4107,7 @@ async function confirmAndLock(){
       stEl.textContent = '🔒 Locked — this month\'s report is finalised and submitted to PMU.';
     }
     const lockBtn = document.getElementById('r-lock-btn');
-    if(lockBtn){ lockBtn.textContent='🔒 '+months+' — Locked'; lockBtn.style.opacity='0.45'; lockBtn.style.pointerEvents='none'; }
+    if(lockBtn){ lockBtn.textContent='🔒 '+months+' — Locked'; lockBtn.disabled=true; lockBtn.style.display='block'; lockBtn.style.opacity='0.5'; }
     
     
     // Show B/D/E as read-only summary after lock
