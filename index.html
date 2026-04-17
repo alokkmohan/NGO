@@ -556,7 +556,9 @@ tr:hover td{background:#FAFBFF}
         <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
           <div class="wform-group" style="margin:0;flex:1;min-width:180px">
             <label style="font-size:11px">Reporting Month <span style="color:var(--red)">*</span></label>
-            <input type="month" id="r-month-pick" onchange="onReportMonthChange()" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:7px;font-size:13px">
+            <select id="r-month-pick" onchange="onReportMonthChange()" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:7px;font-size:13px;background:#fff">
+              <option value="">— Select Reporting Month —</option>
+            </select>
           </div>
           <div id="r-month-status-wrap" style="flex:1;min-width:200px;display:none">
             <div id="r-month-status" style="padding:8px 12px;border-radius:7px;font-size:12px;font-weight:600"></div>
@@ -3419,6 +3421,41 @@ function fillFormFromData(data){
   reportStep=0; updateReportSteps();
 }
 
+function populateReportMonthPicker(){
+  const sel = document.getElementById('r-month-pick');
+  if(!sel) return;
+
+  const mNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+  // Reporting year: April 2026 → March 2027
+  const reportingMonths = [
+    {y:2026,m:4},{y:2026,m:5},{y:2026,m:6},{y:2026,m:7},
+    {y:2026,m:8},{y:2026,m:9},{y:2026,m:10},{y:2026,m:11},
+    {y:2026,m:12},{y:2027,m:1},{y:2027,m:2},{y:2027,m:3}
+  ];
+
+  // Only months up to the current month are available (1st of that month = available)
+  const now = new Date();
+  const curY = now.getFullYear(), curM = now.getMonth() + 1;
+
+  const prevValue = sel.value; // preserve selection if re-populating
+  sel.innerHTML = '<option value="">— Select Reporting Month —</option>';
+
+  let defaultVal = '';
+  reportingMonths.forEach(({y, m}) => {
+    if(y > curY || (y === curY && m > curM)) return; // future month — skip
+    const val = y + '-' + String(m).padStart(2,'0');
+    const opt = document.createElement('option');
+    opt.value = val;
+    opt.textContent = mNames[m-1] + ' ' + y;
+    sel.appendChild(opt);
+    defaultVal = val; // last available = current month
+  });
+
+  // Restore previous selection or default to current month
+  sel.value = prevValue && sel.querySelector(`option[value="${prevValue}"]`) ? prevValue : defaultVal;
+}
+
 function prefillReportForm(){
   const myNGO = SAMPLE_NGOS.find(n => n.name === currentUser.org) || {};
 
@@ -3431,12 +3468,8 @@ function prefillReportForm(){
   set('rh-phone', myNGO.phone);
   set('rh-email', currentUser.email);
 
-  // Auto-set current month
-  const now = new Date();
-  const monthPick = document.getElementById('r-month-pick');
-  if(monthPick && !monthPick.value){
-    monthPick.value = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0');
-  }
+  // Populate month dropdown and auto-select current month
+  populateReportMonthPicker();
   onReportMonthChange();
 
   // Show cumulative totals from past reports
