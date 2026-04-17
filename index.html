@@ -702,7 +702,7 @@ tr:hover td{background:#FAFBFF}
               <option value="">— All months —</option>
             </select>
           </div>
-          <div id="mr-actions" style="display:none;display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;padding-top:16px">
+          <div id="mr-actions" style="display:none;gap:8px;flex-wrap:wrap;align-items:flex-end;padding-top:16px">
             <button onclick="mrView()"
               style="padding:8px 16px;background:#e8f0fe;color:var(--blue);border:1px solid #c5d5f5;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer">
               👁 View
@@ -3563,6 +3563,11 @@ function addReportSubEntry(tid, actStart, actEnd, prefill, monthMin, monthMax){
     <button type="button" onclick="removeReportSubEntry(this)"
       title="Remove this entry"
       style="position:absolute;top:6px;right:8px;background:none;border:none;font-size:16px;cursor:pointer;color:var(--muted);line-height:1">×</button>
+    <div style="margin-bottom:8px">
+      <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:3px">Sub Activity name</label>
+      <input type="text" class="rse-name" placeholder="e.g. School visit, Parent meeting, Training session…"
+        style="width:100%;padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;outline:none">
+    </div>
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap">
       <label style="font-size:11px;color:var(--muted);white-space:nowrap">From:</label>
       <input type="date" class="rse-from"${minAttr}${maxAttr}
@@ -3592,6 +3597,7 @@ function addReportSubEntry(tid, actStart, actEnd, prefill, monthMin, monthMax){
 
   // Pre-fill if data provided
   if(prefill){
+    div.querySelector('.rse-name').value    = prefill.name      || '';
     div.querySelector('.rse-from').value    = prefill.from_date || prefill.date || '';
     div.querySelector('.rse-to').value      = prefill.to_date   || prefill.date || '';
     div.querySelector('.rse-details').value = prefill.details   || prefill.update || '';
@@ -3702,12 +3708,13 @@ async function submitMonthlyReport(){
     const sub_activities = entries.map(entry => {
       const sid = entry.dataset.sid || '';
       return {
-        from_date: entry.querySelector('.rse-from')?.value        || '',
-        to_date:   entry.querySelector('.rse-to')?.value          || '',
+        name:      entry.querySelector('.rse-name')?.value.trim()    || '',
+        from_date: entry.querySelector('.rse-from')?.value           || '',
+        to_date:   entry.querySelector('.rse-to')?.value             || '',
         details:   entry.querySelector('.rse-details')?.value.trim() || '',
         photo_key: sid
       };
-    }).filter(e => e.from_date || e.to_date || e.details); // skip completely empty rows
+    }).filter(e => e.name || e.from_date || e.to_date || e.details); // skip completely empty rows
 
     // Task has entries → "In progress" or "Complete" (user can set via overall; derive from entries)
     const taskStatus = sub_activities.length ? 'In progress' : 'Not started';
@@ -4374,26 +4381,20 @@ function buildReportRows(ngoName, taskActs, myProjs){
       (a.task_name||'').trim().toLowerCase() === (t.task_name||'').trim().toLowerCase()
     ) || {};
 
-    // Sub-activities defined in profile
-    let subActDefs = [];
-    try { subActDefs = JSON.parse(t.sub_activities||'[]'); } catch(e){}
-
-    // Sub-activity updates submitted in monthly report
+    // Sub-activity entries submitted in monthly report (new flat format)
     const savedSubs = act.sub_activities || [];
 
-    if(subActDefs.length){
-      subActDefs.forEach((sa, si) => {
-        const saved = savedSubs[si] || {};
-        const status = saved.status || 'Not started';
+    if(savedSubs.length){
+      savedSubs.forEach(sa => {
         rows.push({
           component:      t.component   || '',
           activity:       t.task_name   || '',
           subActivity:    sa.name       || '',
-          startDate:      fmtDate(sa.start_date),
-          endDate:        fmtDate(sa.end_date),
-          update:         saved.update  || '',
-          status:         status,
-          completionDate: (status==='Complete'||status==='Completed') ? (saved.done_date||'') : ''
+          startDate:      fmtDate(sa.from_date || sa.date || ''),
+          endDate:        fmtDate(sa.to_date   || sa.date || ''),
+          update:         sa.details    || sa.update || '',
+          status:         'In progress',
+          completionDate: ''
         });
       });
     } else {
