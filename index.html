@@ -3693,6 +3693,15 @@ function collapseSubEntryForm(btn){
   const monthMax = form.querySelector('.rse-from')?.max || '';
   _insertSubEntryViewCard(list, sa, monthMin, monthMax, form);
   form.remove();
+  // Auto-save silently so data is not lost if user switches month
+  _autoSaveReport();
+}
+
+// Silent background save — called after each "✓ Save Entry" so data survives month switching
+async function _autoSaveReport(){
+  const monthPick = document.getElementById('r-month-pick');
+  if(!monthPick?.value) return;
+  try { await submitMonthlyReport(true); } catch(e){ /* silent fail — data still in view cards */ }
 }
 
 // Convert a locked view card into a full editable form in-place
@@ -3796,7 +3805,7 @@ function renderTaskPhotoPreview(tid){
 function handlePhotos(input){}
 function removePhoto(i){}
 
-async function submitMonthlyReport(){
+async function submitMonthlyReport(silent = false){
   const monthPick = document.getElementById('r-month-pick');
   if(!monthPick?.value){ alert('Please select a Reporting Month'); monthPick?.focus(); return; }
 
@@ -3920,7 +3929,7 @@ async function submitMonthlyReport(){
     alert(`⚠️ ${photoFailCount} photo(s) could not be uploaded (network or size issue).\nThe report will still be saved without those photos.`);
   }
 
-  showLoader('Saving report to Google Sheets…');
+  if(!silent) showLoader('Saving report to Google Sheets…');
   let driveDocUrl = '';
   try {
     const res = await apiFetch({action:'submitReport', report: JSON.stringify(report)});
@@ -3934,28 +3943,18 @@ async function submitMonthlyReport(){
   if(ngo){ ngo.schools=report.schools||ngo.schools; ngo.students=report.students||ngo.students; ngo.month=months; }
   renderPartnerTable(); renderMap(activeFilter);
 
-  hideLoader();
+  if(!silent) hideLoader();
   uploadedPhotos = [];
 
-  const lockBtn = document.getElementById('r-lock-btn');
-  if(lockBtn){ lockBtn.textContent = '🔒 Lock ' + months + ' Report'; lockBtn.disabled = false; lockBtn.style.opacity = '1'; }
-
-  const wrap = document.getElementById('r-month-status-wrap');
-  const stEl = document.getElementById('r-month-status');
-  if(wrap && stEl){
-    wrap.style.display = 'block';
-    stEl.style.cssText = 'padding:8px 12px;border-radius:7px;font-size:12px;font-weight:600;background:#e8f5e9;color:#2e7d32;border:1px solid #a5d6a7';
-    stEl.textContent = '✅ Saved! Update anytime, or Lock when all entries are final.';
+  if(!silent){
+    const lockBtn = document.getElementById('r-lock-btn');
+    if(lockBtn){ lockBtn.textContent = '🔒 Lock ' + months + ' Report'; lockBtn.disabled = false; lockBtn.style.opacity = '1'; }
+    // Rebuild task cards so open forms collapse to view cards
+    const savedRep = REPORTS.find(r => r.ngo === currentUser.org && r.month === months);
+    if(savedRep) buildReportTaskCards(savedRep);
+    renderMyReports();
+    document.getElementById('r-submit-area').scrollIntoView({behavior:'smooth'});
   }
-  const statusDiv = document.getElementById('r-submit-status');
-  if(statusDiv) statusDiv.textContent = '';
-
-  // Rebuild task cards so all open forms collapse to view cards immediately
-  const savedRep = REPORTS.find(r => r.ngo === currentUser.org && r.month === months);
-  if(savedRep) buildReportTaskCards(savedRep);
-
-  renderMyReports();
-  document.getElementById('r-submit-area').scrollIntoView({behavior:'smooth'});
 }
 
 // View the currently selected month's report in a print window
