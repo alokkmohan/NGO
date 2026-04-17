@@ -711,39 +711,19 @@ tr:hover td{background:#FAFBFF}
       <div class="card" style="margin-bottom:14px">
         <div class="card-title">📋 My Reports</div>
 
-        <!-- Month filter + action buttons -->
-        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:16px;padding:12px 14px;background:#f8faff;border:1px solid var(--border);border-radius:10px">
-          <div style="flex:1;min-width:180px">
-            <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px">Select Month</label>
-            <select id="mr-month-filter" onchange="mrOnMonthChange()"
-              style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:7px;font-size:13px;background:#fff;outline:none">
-              <option value="">— All months —</option>
-            </select>
-          </div>
-          <div id="mr-actions" style="display:none;gap:8px;flex-wrap:wrap;align-items:flex-end;padding-top:16px">
-            <button onclick="mrView()"
-              style="padding:8px 16px;background:#e8f0fe;color:var(--blue);border:1px solid #c5d5f5;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer">
-              👁 View
-            </button>
-            <button onclick="mrDownloadPDF()"
-              style="padding:8px 16px;background:#e8f5e9;color:var(--green);border:1px solid #a5d6a7;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer">
-              ⬇ PDF
-            </button>
-            <button onclick="mrDownloadCSV()"
-              style="padding:8px 16px;background:#f3e5f5;color:#7b1fa2;border:1px solid #ce93d8;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer">
-              ⬇ CSV
-            </button>
-            <button id="mr-lock-btn" onclick="mrLock()"
-              style="padding:8px 16px;background:#fff8e1;color:#b8860b;border:2px solid #ffe082;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer">
-              🔒 Lock Report
-            </button>
-          </div>
+        <!-- Month selector -->
+        <div style="max-width:320px;margin-bottom:16px">
+          <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px">Select Month</label>
+          <select id="mr-month-filter" onchange="mrOnMonthChange()"
+            style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:14px;background:#fff;outline:none">
+            <option value="">— Select Month —</option>
+          </select>
         </div>
 
-        <!-- Status of selected month -->
-        <div id="mr-status" style="display:none;margin-bottom:12px"></div>
+        <!-- Month summary panel (shown after month selected) -->
+        <div id="mr-status" style="display:none;margin-bottom:14px"></div>
 
-        <!-- Reports table -->
+        <!-- Sub-activity entries table -->
         <div id="mr-table-wrap" style="overflow-x:auto"></div>
       </div>
     </div>
@@ -3032,97 +3012,133 @@ function renderMyReports(){
 // ════════════════════════════════════
 function renderReportsPage(){
   if(currentUser.role === 'admin') return;
+  const sel = document.getElementById('mr-month-filter');
+  if(!sel) return;
   const myReports = REPORTS.filter(r => r.ngo === currentUser.org)
     .sort((a,b) => (+b.id||0) - (+a.id||0));
 
-  // Populate month filter
-  const sel = document.getElementById('mr-month-filter');
-  if(sel){
-    const months = [...new Set(myReports.map(r => r.month).filter(Boolean))];
-    sel.innerHTML = '<option value="">— All months —</option>'
-      + months.map(m => `<option value="${m}">${m}</option>`).join('');
-  }
+  // Build month options — proper names, no duplicates
+  const seen = new Set();
+  sel.innerHTML = '<option value="">— Select Month —</option>';
+  myReports.forEach(r => {
+    const label = _mrMonthLabel(r.month);
+    if(!label || seen.has(r.month)) return;
+    seen.add(r.month);
+    sel.appendChild(Object.assign(document.createElement('option'), {value: r.month, textContent: label}));
+  });
 
-  // Show table
-  mrRenderTable(myReports);
-  document.getElementById('mr-actions').style.display = 'none';
-  document.getElementById('mr-status').style.display  = 'none';
+  // Auto-select most recent month
+  if(myReports.length) sel.value = myReports[0].month;
+  mrOnMonthChange();
+}
+
+// Format month value to readable label, handling ISO timestamps from old data
+function _mrMonthLabel(val){
+  if(!val) return '';
+  if(/^[A-Za-z]/.test(val)) return val; // already "April 2026"
+  try { const d=new Date(val); return d.toLocaleDateString('en-IN',{month:'long',year:'numeric'}); } catch(e){ return val; }
 }
 
 function mrOnMonthChange(){
-  const sel = document.getElementById('mr-month-filter');
-  const month = sel?.value || '';
-  const myReports = REPORTS.filter(r => r.ngo === currentUser.org)
-    .sort((a,b) => (+b.id||0) - (+a.id||0));
-  const filtered = month ? myReports.filter(r => r.month === month) : myReports;
-  mrRenderTable(filtered);
-
-  const actDiv = document.getElementById('mr-actions');
+  const month = document.getElementById('mr-month-filter')?.value || '';
   const stDiv  = document.getElementById('mr-status');
-  if(!month){ actDiv.style.display='none'; stDiv.style.display='none'; return; }
-
-  // Show actions
-  actDiv.style.display = 'flex';
-  const rep = myReports.find(r => r.month === month);
-  const isLocked = rep && String(rep.report_locked) === 'true';
-  const lockBtn = document.getElementById('mr-lock-btn');
-  if(lockBtn){
-    lockBtn.textContent = '🔒 Lock ' + month + ' Report';
-    lockBtn.style.display = isLocked ? 'none' : '';
-  }
-  if(stDiv){
-    stDiv.style.display = 'block';
-    stDiv.innerHTML = isLocked
-      ? `<div style="padding:8px 12px;border-radius:7px;background:#fce4ec;color:#c62828;border:1px solid #ef9a9a;font-size:12px;font-weight:600">🔒 ${month} — Locked and submitted to PMU. No further changes allowed.</div>`
-      : `<div style="padding:8px 12px;border-radius:7px;background:#e8f5e9;color:#2e7d32;border:1px solid #a5d6a7;font-size:12px;font-weight:600">✏ ${month} — Draft saved. Review, then lock to submit to PMU.</div>`;
-  }
-}
-
-function mrRenderTable(reports){
-  const wrap = document.getElementById('mr-table-wrap');
-  if(!wrap) return;
-  if(!reports.length){
-    wrap.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:20px;text-align:center">No reports found.</div>';
+  const wrap   = document.getElementById('mr-table-wrap');
+  if(!month){
+    if(stDiv) stDiv.style.display='none';
+    if(wrap)  wrap.innerHTML='';
     return;
   }
-  const rows = reports.map((r,i) => {
-    const isLocked = String(r.report_locked) === 'true';
-    const rid = r.report_from || r.month;
-    const period = r.report_from && r.report_to
-      ? fmtDate(r.report_from) + ' → ' + fmtDate(r.report_to)
-      : r.month || '—';
-    return `<tr style="border-bottom:1px solid var(--border)">
-      <td style="padding:8px 10px;color:var(--muted);font-size:12px">${i+1}</td>
-      <td style="padding:8px 10px;font-size:12px;font-weight:600;white-space:nowrap">${r.month||'—'}</td>
-      <td style="padding:8px 10px;font-size:11px;color:var(--muted);white-space:nowrap">${period}</td>
-      <td style="padding:8px 10px;text-align:right">${(+r.schools||0).toLocaleString('en-IN')}</td>
-      <td style="padding:8px 10px;text-align:right">${(+r.students||0).toLocaleString('en-IN')}</td>
-      <td style="padding:8px 10px;text-align:center">
-        ${isLocked
-          ? '<span style="font-size:11px;color:#2e7d32;background:#e8f5e9;border:1px solid #a5d6a7;border-radius:10px;padding:2px 8px;font-weight:700">🔒 Locked</span>'
-          : '<span style="font-size:11px;color:#b8860b;background:#fff8e1;border:1px solid #ffe082;border-radius:10px;padding:2px 8px">Draft</span>'}
-      </td>
-      <td style="padding:8px 10px;text-align:center;white-space:nowrap">
-        <button onclick="mrViewRep('${rid}')"
-          style="padding:3px 10px;background:#e8f0fe;color:var(--blue);border:1px solid #c5d5f5;border-radius:5px;font-size:11px;cursor:pointer;margin-right:4px">👁 View</button>
-        <button onclick="mrDownloadPDFRep('${rid}')"
-          style="padding:3px 10px;background:#e8f5e9;color:var(--green);border:1px solid #a5d6a7;border-radius:5px;font-size:11px;cursor:pointer">⬇ PDF</button>
-      </td>
-    </tr>`;
-  }).join('');
-  wrap.innerHTML = `<table style="width:100%;border-collapse:collapse;font-size:13px">
+
+  const rep = REPORTS.find(r => r.ngo === currentUser.org && r.month === month);
+  if(!rep){
+    if(stDiv) stDiv.style.display='none';
+    if(wrap)  wrap.innerHTML=`<div style="color:var(--muted);font-size:13px;padding:20px;text-align:center">No saved report found for ${_mrMonthLabel(month)}.</div>`;
+    return;
+  }
+
+  const isLocked = String(rep.report_locked) === 'true';
+  const label    = _mrMonthLabel(month);
+
+  // ── Month summary panel ──
+  if(stDiv){
+    stDiv.style.display='block';
+    const statusBadge = isLocked
+      ? `<span style="background:#fce4ec;color:#c62828;border:1px solid #ef9a9a;border-radius:10px;padding:3px 10px;font-size:12px;font-weight:700">🔒 Locked</span>`
+      : `<span style="background:#fff8e1;color:#b8860b;border:1px solid #ffe082;border-radius:10px;padding:3px 10px;font-size:12px;font-weight:600">✏ Draft</span>`;
+    stDiv.innerHTML=`
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;
+        padding:12px 16px;background:#f4f8ff;border:1px solid #c5d5f5;border-radius:10px">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font-size:15px;font-weight:700;color:var(--blue)">${label}</span>
+          ${statusBadge}
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button onclick="mrView()"
+            style="padding:7px 14px;background:#e8f0fe;color:var(--blue);border:1px solid #c5d5f5;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer">👁 View Report</button>
+          <button onclick="mrDownloadPDF()"
+            style="padding:7px 14px;background:#e8f5e9;color:var(--green);border:1px solid #a5d6a7;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer">⬇ PDF</button>
+          ${!isLocked
+            ? `<button onclick="mrLock()"
+                style="padding:7px 14px;background:#1a3c6e;color:#fff;border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer">🔒 Lock ${label} Report</button>`
+            : ''}
+        </div>
+      </div>`;
+  }
+
+  // ── Sub-activity entries table ──
+  let taskActs=[];
+  try { taskActs=JSON.parse(rep.tasks||rep.tasks_json||'[]'); } catch(e){}
+  const myProjs=PROJECTS.filter(p=>p.ngo===currentUser.org&&p.status!=='deleted');
+
+  const rows=[];
+  myProjs.forEach(task=>{
+    const tName=(task.task_name||'').trim().toLowerCase();
+    const act=taskActs.find(a=>(a.task_name||'').trim().toLowerCase()===tName)||{};
+    const subs=act.sub_activities||[];
+    if(subs.length){
+      subs.forEach(sa=>{
+        rows.push({
+          component: task.component||'',
+          task:      task.task_name||'',
+          name:      sa.name||'—',
+          from:      fmtDate(sa.from_date||sa.date||''),
+          to:        fmtDate(sa.to_date||sa.date||''),
+          details:   (sa.details||sa.update||'').replace(/</g,'&lt;')
+        });
+      });
+    }
+  });
+
+  if(!rows.length){
+    wrap.innerHTML=`<div style="color:var(--muted);font-size:13px;padding:20px;text-align:center">No activity entries recorded for ${label}.</div>`;
+    return;
+  }
+
+  wrap.innerHTML=`<table style="width:100%;border-collapse:collapse;font-size:13px;margin-top:4px">
     <thead><tr style="background:#f0f6ff;color:var(--blue)">
-      <th style="padding:8px 10px;text-align:left">#</th>
-      <th style="padding:8px 10px;text-align:left">Month</th>
-      <th style="padding:8px 10px;text-align:left">Period</th>
-      <th style="padding:8px 10px;text-align:right">Schools</th>
-      <th style="padding:8px 10px;text-align:right">Students</th>
-      <th style="padding:8px 10px;text-align:center">Status</th>
-      <th style="padding:8px 10px;text-align:center">Actions</th>
+      <th style="padding:8px 10px;text-align:left;font-weight:700">#</th>
+      <th style="padding:8px 10px;text-align:left;font-weight:700">Component</th>
+      <th style="padding:8px 10px;text-align:left;font-weight:700">Task</th>
+      <th style="padding:8px 10px;text-align:left;font-weight:700">Sub Activity</th>
+      <th style="padding:8px 10px;text-align:left;font-weight:700;white-space:nowrap">From</th>
+      <th style="padding:8px 10px;text-align:left;font-weight:700;white-space:nowrap">To</th>
+      <th style="padding:8px 10px;text-align:left;font-weight:700">Details</th>
     </tr></thead>
-    <tbody>${rows}</tbody>
+    <tbody>
+      ${rows.map((r,i)=>`<tr style="border-bottom:1px solid #eef0f8;${i%2?'background:#fafbff':''}">
+        <td style="padding:8px 10px;color:var(--muted);font-size:11px">${i+1}</td>
+        <td style="padding:8px 10px;font-size:12px;color:var(--blue)">${r.component}</td>
+        <td style="padding:8px 10px;font-size:12px;font-weight:600">${r.task}</td>
+        <td style="padding:8px 10px;font-size:12px">${r.name}</td>
+        <td style="padding:8px 10px;font-size:12px;white-space:nowrap">${r.from||'—'}</td>
+        <td style="padding:8px 10px;font-size:12px;white-space:nowrap">${r.to||'—'}</td>
+        <td style="padding:8px 10px;font-size:12px;color:#444;max-width:300px">${r.details||'—'}</td>
+      </tr>`).join('')}
+    </tbody>
   </table>`;
 }
+
+function mrRenderTable(){ /* legacy stub — replaced by mrOnMonthChange */ }
 
 function mrView(){
   const month = document.getElementById('mr-month-filter')?.value;
