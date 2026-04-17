@@ -416,6 +416,7 @@ tr:hover td{background:#FAFBFF}
       <div class="topbar-right">
         <span class="badge badge-blue" id="tb-role-badge">NGO Partner</span>
         <span id="tb-date" style="font-size:11px;color:var(--muted)"></span>
+        <button id="dev-seed-btn" onclick="seedSampleData()" style="display:none;padding:5px 12px;background:#f59e0b;color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">⚡ Load Sample Data</button>
       </div>
     </div>
 
@@ -1793,6 +1794,8 @@ function initApp(){
   document.getElementById('sb-avatar').textContent = currentUser.name[0].toUpperCase();
   document.getElementById('tb-role-badge').textContent = currentUser.role==='admin'?'PMU Admin':'NGO Partner';
   document.getElementById('tb-date').textContent = new Date().toLocaleDateString('en-IN',{day:'numeric',month:'long',year:'numeric'});
+  if(currentUser.email === 'alokmohann@gmail.com')
+    document.getElementById('dev-seed-btn').style.display = 'inline-block';
 
   if(currentUser.role==='admin'){
     // Admin: show admin tools, hide NGO submission items
@@ -3640,6 +3643,100 @@ function buildReportTaskCards(existingRep){
 }
 
 function onProjectChange(){ /* legacy stub */ }
+
+// ── DEV: Seed sample data for test account alokmohann@gmail.com ──
+async function seedSampleData(){
+  if(!currentUser) return;
+  if(!confirm('This will add 3 sample tasks + an April 2026 report for your account.\n\nProceed?')) return;
+  showLoader('Creating sample tasks…');
+  try {
+    const ngo = currentUser.org;
+    // 3 sample tasks
+    const tasks = [
+      { component:'Access & Retention', task_name:'Remedial Education Classes',
+        description:'Conduct remedial classes for academically weak students',
+        target_schools:10, target_students:200, target_girls:100,
+        start_date:'2026-04-01', end_date:'2027-03-31' },
+      { component:'Access & Retention', task_name:'Dropout Prevention Drive',
+        description:'Identify and re-enrol dropout students',
+        target_schools:8, target_students:80, target_girls:40,
+        start_date:'2026-04-01', end_date:'2026-09-30' },
+      { component:'Inclusion', task_name:'Divyang Student Support',
+        description:'Special support and materials for differently-abled students',
+        target_schools:5, target_students:30, target_girls:15,
+        start_date:'2026-04-01', end_date:'2027-03-31' }
+    ];
+
+    const savedIds = [];
+    for(const t of tasks){
+      const res = await apiFetch({ action:'saveProject', ngo, ...t });
+      if(res.success) savedIds.push(res.project_id);
+    }
+
+    // Lock all three
+    showLoader('Locking sample tasks…');
+    for(const pid of savedIds){
+      await apiFetch({ action:'lockProject', project_id: pid, ngo });
+    }
+
+    // Reload projects
+    const pRes = await apiFetch({ action:'getProjects', ngo });
+    if(pRes.success){ PROJECTS.length=0; pRes.data.forEach(p=>PROJECTS.push(p)); }
+
+    // Build sample April 2026 report
+    showLoader('Creating April 2026 sample report…');
+    const aprilTasks = [
+      { task_name:'Remedial Education Classes', component:'Access & Retention',
+        start_date:'2026-04-01', end_date:'2027-03-31', status:'In progress',
+        completion_date:'',
+        sub_activities:[
+          { name:'Baseline assessment of weak students', from_date:'2026-04-03', to_date:'2026-04-03', details:'Assessed 85 students across 4 schools. Identified 40 needing intensive support.' },
+          { name:'Batch 1 remedial classes started', from_date:'2026-04-08', to_date:'2026-04-25', details:'Daily 1-hour sessions for Class 9 students. 38 students attended regularly in Lucknow cluster.' },
+          { name:'Progress review with teachers', from_date:'2026-04-28', to_date:'2026-04-28', details:'Meeting held with 6 teachers. Noted 20% improvement in test scores for regular attendees.' }
+        ]
+      },
+      { task_name:'Dropout Prevention Drive', component:'Access & Retention',
+        start_date:'2026-04-01', end_date:'2026-09-30', status:'In progress',
+        completion_date:'',
+        sub_activities:[
+          { name:'Door-to-door survey in target villages', from_date:'2026-04-10', to_date:'2026-04-15', details:'Surveyed 3 villages. Found 12 dropout students aged 14-17.' },
+          { name:'Re-enrolment counselling sessions', from_date:'2026-04-18', to_date:'2026-04-22', details:'Counselled families of 10 students. 7 families agreed to re-enrol children.' }
+        ]
+      },
+      { task_name:'Divyang Student Support', component:'Inclusion',
+        start_date:'2026-04-01', end_date:'2027-03-31', status:'In progress',
+        completion_date:'',
+        sub_activities:[
+          { name:'Identification and needs assessment', from_date:'2026-04-05', to_date:'2026-04-12', details:'Identified 18 divyang students in 5 schools. Categorised needs: mobility aids (6), learning materials (12).' }
+        ]
+      }
+    ];
+
+    const report = {
+      ngo, month:'April 2026', report_from:'2026-04-01', report_to:'2026-04-30',
+      status:'60', kmi:'7 dropout students re-enrolled; 38 students in remedial batches across 4 schools',
+      achieve:'Successfully launched remedial batches; completed dropout survey in 3 villages',
+      challenges:'Irregular attendance due to harvest season; limited space in some schools',
+      support:'Need additional workbooks for remedial students',
+      plans:'Expand remedial to 3 more schools in May; follow up on 3 pending re-enrolments',
+      tasks_json: JSON.stringify(aprilTasks),
+      girls:'100', scst:'45', divyang:'18', budget:'0', dropout:'7', tasks:'3',
+      report_locked:'false'
+    };
+    await apiFetch({ action:'submitReport', report: JSON.stringify(report) });
+
+    // Reload reports
+    const rRes = await apiFetch({ action:'getReports' });
+    if(rRes.success){ REPORTS.length=0; rRes.data.forEach(r=>REPORTS.push(r)); }
+
+    hideLoader();
+    alert('✅ Sample data loaded!\n\n• 3 tasks created & locked\n• April 2026 report saved with 6 sub-activity entries\n\nGo to "Monthly Report" to see the tasks, or "My Reports" to view the saved report.');
+    renderDashboard();
+  } catch(e){
+    hideLoader();
+    alert('Error seeding data: ' + e.message);
+  }
+}
 
 function onTaskStatusChange(tid){
   const val  = document.getElementById(tid + '_status')?.value;
