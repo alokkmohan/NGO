@@ -1835,7 +1835,10 @@ function initApp(){
   }
 
   if(document.getElementById('r-dist-checks')) buildDistChecks('r-dist-checks');
-  renderMap('all');
+  const isNGO = currentUser?.role !== 'admin';
+  document.getElementById('theme-filter-bar').style.display = isNGO ? 'none' : '';
+  document.querySelector('.map-container').style.display    = isNGO ? 'none' : '';
+  if(!isNGO) renderMap('all');
   renderPartnerTable();
   updateDashboardStats();
   showFirstLoginBannerIfNeeded();
