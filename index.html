@@ -2442,25 +2442,15 @@ function renderProfileView(){
         <button onclick="pvEdit(1)" style="padding:3px 12px;background:#fff;color:var(--blue);border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">✏ Edit</button>
       </div>
 
-      <!-- NGO Name row — editable once, then locked -->
-      ${(()=>{
-        const locked = !!localStorage.getItem('org_name_locked_'+(u.email||''));
-        const orgName = u.org || '';
-        if(locked || orgName){
-          return `<div style="background:#EFF6FF;border-bottom:1px solid #BFDBFE;padding:10px 14px;display:flex;align-items:center;gap:10px">
-            <span style="font-size:18px;font-weight:700;color:#1E40AF;flex:1">${orgName||'—'}</span>
-            <span style="font-size:11px;color:#6B7280;background:#E5E7EB;border-radius:10px;padding:2px 10px">🔒 Locked</span>
-          </div>`;
-        } else {
-          return `<div style="background:#FFFBEB;border-bottom:1px solid #FDE68A;padding:10px 14px">
-            <div style="font-size:11px;color:#92400E;font-weight:600;margin-bottom:6px">🏢 Enter your NGO / Organisation name (once saved it will be permanently locked)</div>
-            <div style="display:flex;gap:8px;align-items:center">
-              <input id="pve-orgname" placeholder="Full organisation name" style="flex:1;padding:8px 12px;border:1px solid #FCD34D;border-radius:7px;font-size:13px;outline:none;font-weight:600">
-              <button onclick="saveOrgName()" style="padding:8px 16px;background:#1D4ED8;color:#fff;border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer">💾 Save & Lock</button>
-            </div>
-          </div>`;
-        }
-      })()}
+      <!-- NGO Name row — always editable -->
+      <div style="background:#EFF6FF;border-bottom:1px solid #BFDBFE;padding:10px 14px">
+        <div style="font-size:11px;color:#1E40AF;font-weight:600;margin-bottom:6px">🏢 Organisation Name</div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input id="pve-orgname" value="${u.org||''}" placeholder="Full organisation name"
+            style="flex:1;padding:8px 12px;border:1px solid #BFDBFE;border-radius:7px;font-size:14px;font-weight:700;color:#1E40AF;outline:none">
+          <button onclick="saveOrgName()" style="padding:8px 16px;background:#1D4ED8;color:#fff;border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer">💾 Update</button>
+        </div>
+      </div>
 
       <div id="pv-sec1-view" style="padding:12px 14px">
         <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
@@ -2581,18 +2571,22 @@ async function saveOrgName(){
   const inp = document.getElementById('pve-orgname');
   const name = (inp?.value||'').trim();
   if(!name){ alert('Please enter your organisation name'); inp?.focus(); return; }
-  if(!confirm(`Save and lock "${name}" as your organisation name? This cannot be changed later.`)) return;
   showLoader('Saving…');
   try {
+    const myNGO = SAMPLE_NGOS.find(n=>n.name===currentUser.org)||{};
     await apiPost({
       action:'saveProfile', email:currentUser.email,
       org: name, name: currentUser.name||name,
-      person: currentUser.name||'', dist:'', blocks:'', schools:'', theme:'', phone:'', desig:'', org_type:'', start_date:''
+      person: myNGO.person||currentUser.name||'',
+      dist: myNGO.dist||'', blocks: myNGO.blocks||'',
+      schools: myNGO.schools_list||'', theme: myNGO.theme||'',
+      phone: myNGO.phone||'', desig: myNGO.desig||'',
+      org_type: myNGO.org_type||'', start_date: myNGO.start_date||''
     });
     currentUser.org = name;
     sessionStorage.setItem('ngo_session', JSON.stringify(currentUser));
-    localStorage.setItem('org_name_locked_'+(currentUser.email||''), '1');
     hideLoader();
+    await loadSheetData();
     renderProfileView();
   } catch(e){ hideLoader(); alert('Error: '+e.message); }
 }
