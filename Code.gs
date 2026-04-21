@@ -49,6 +49,10 @@ function doPost(e) {
   try {
     const data   = JSON.parse(e.postData.contents);
     const action = data.action;
+    if (action === 'getNGOs')      return respond(getNGOs());
+    if (action === 'getReports')   return respond(getReports());
+    if (action === 'getProjects')  return respond(getProjects(data));
+    if (action === 'getNGOList')   return respond(getNGOList());
     if (action === 'sendOTP')      return respond(sendOTP(data));
     if (action === 'verifyOTP')    return respond(verifyOTP(data));
     if (action === 'login')        return respond(login(data));

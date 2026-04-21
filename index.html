@@ -1764,9 +1764,9 @@ async function apiPost(body, timeoutMs=60000){
 async function loadSheetData(){
   try {
     const [ngoRes, repRes, projRes] = await Promise.all([
-      apiFetch({action:'getNGOs'}),
-      apiFetch({action:'getReports'}),
-      apiFetch({action:'getProjects', ngo: currentUser?.role==='admin' ? 'all' : (currentUser?.org||'')})
+      apiPost({action:'getNGOs'}),
+      apiPost({action:'getReports'}),
+      apiPost({action:'getProjects', ngo: currentUser?.role==='admin' ? 'all' : (currentUser?.org||'')})
     ]);
     if(ngoRes.success && ngoRes.data.length){
       SAMPLE_NGOS.length = 0;
@@ -2546,31 +2546,6 @@ function renderProfileView(){
       </div>
     </div>
 
-    <!-- ── SECTION 2: Geographic Coverage (read-only, derived from tasks) ── -->
-    <div id="pv-sec2" style="border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:12px">
-      <div style="background:var(--blue);color:#fff;padding:8px 14px;font-size:12px;font-weight:700">
-        📍 Geographic Coverage
-        <span style="font-size:10px;font-weight:400;opacity:.7;margin-left:8px">— derived from Major Components &amp; Tasks</span>
-      </div>
-      <div id="pv-sec2-view" style="padding:12px 14px">
-        <div style="margin-bottom:10px">
-          <div style="font-size:11px;color:var(--muted);margin-bottom:6px">Districts covered (${taskDists.length})</div>
-          <div style="display:flex;flex-wrap:wrap;gap:4px">
-            ${taskDists.length ? taskDists.map(d=>`<span style="background:#e8f0fe;color:var(--blue);border:1px solid #c5d5f5;border-radius:20px;padding:3px 10px;font-size:12px">${d}</span>`).join('') : '<span style="color:var(--muted);font-size:12px">—</span>'}
-          </div>
-        </div>
-        <div>
-          <div style="font-size:11px;color:var(--muted);margin-bottom:6px">Schools covered</div>
-          <div style="display:flex;flex-wrap:wrap;gap:4px">
-            ${anyAllSchools
-              ? `<span style="background:#e8f5e9;color:var(--green);border:1px solid #a5d6a7;border-radius:20px;padding:3px 12px;font-size:12px;font-weight:600">All Schools in covered districts</span>`
-              : taskSchools.length
-                ? taskSchools.slice(0,12).map(s=>`<span style="background:#fef9e7;color:var(--amber);border:1px solid #f5d48a;border-radius:20px;padding:3px 10px;font-size:11px">${s}</span>`).join('')+(taskSchools.length>12?`<span style="font-size:11px;color:var(--muted);padding:3px 6px">+${taskSchools.length-12} more</span>`:'')
-                : '<span style="color:var(--muted);font-size:12px">—</span>'}
-          </div>
-        </div>
-      </div>
-    </div>
   `;
 }
 
