@@ -525,7 +525,7 @@ tr:hover td{background:#FAFBFF}
       </div>
       <!-- ── END ADMIN ANALYTICS ── -->
 
-      <div class="card">
+      <div class="card" id="partner-summary-card">
         <div class="card-title">📋 Partner summary — all NGOs</div>
         <table id="partner-table">
           <thead><tr><th>Organisation</th><th>Theme</th><th>Districts</th><th>Schools</th><th>Students</th><th>Progress</th><th>Last Report</th><th>Status</th></tr></thead>
@@ -1841,8 +1841,9 @@ function initApp(){
 
   if(document.getElementById('r-dist-checks')) buildDistChecks('r-dist-checks');
   const isNGO = currentUser?.role !== 'admin';
-  document.getElementById('theme-filter-bar').style.display = isNGO ? 'none' : '';
-  document.querySelector('.map-container').style.display    = isNGO ? 'none' : '';
+  document.getElementById('theme-filter-bar').style.display    = isNGO ? 'none' : '';
+  document.querySelector('.map-container').style.display        = isNGO ? 'none' : '';
+  document.getElementById('partner-summary-card').style.display = isNGO ? 'none' : '';
   if(!isNGO) renderMap('all');
   renderPartnerTable();
   updateDashboardStats();
