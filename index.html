@@ -950,8 +950,9 @@ async function doVerifyOTP(){
     if(res.success){
       currentUser = res.user;
       sessionStorage.setItem('ngo_session', JSON.stringify(currentUser));
-      hideLoader();
+      showLoader('Loading dashboard…');
       await loadSheetData();
+      hideLoader();
       startApp();
     } else {
       hideLoader();
