@@ -2451,9 +2451,9 @@ function renderProfileView(){
           </div>`;
         } else {
           return `<div style="background:#FFFBEB;border-bottom:1px solid #FDE68A;padding:10px 14px">
-            <div style="font-size:11px;color:#92400E;font-weight:600;margin-bottom:6px">🏢 Apni NGO / Organisation ka naam darj karen (ek baar save karne ke baad lock ho jaayega)</div>
+            <div style="font-size:11px;color:#92400E;font-weight:600;margin-bottom:6px">🏢 Enter your NGO / Organisation name (once saved it will be permanently locked)</div>
             <div style="display:flex;gap:8px;align-items:center">
-              <input id="pve-orgname" placeholder="Organisation ka poora naam" style="flex:1;padding:8px 12px;border:1px solid #FCD34D;border-radius:7px;font-size:13px;outline:none;font-weight:600">
+              <input id="pve-orgname" placeholder="Full organisation name" style="flex:1;padding:8px 12px;border:1px solid #FCD34D;border-radius:7px;font-size:13px;outline:none;font-weight:600">
               <button onclick="saveOrgName()" style="padding:8px 16px;background:#1D4ED8;color:#fff;border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer">💾 Save & Lock</button>
             </div>
           </div>`;
@@ -2578,11 +2578,11 @@ function renderProfileView(){
 async function saveOrgName(){
   const inp = document.getElementById('pve-orgname');
   const name = (inp?.value||'').trim();
-  if(!name){ alert('Kripya organisation ka naam darj karen'); inp?.focus(); return; }
-  if(!confirm(`"${name}" — yeh naam save karke lock kar diya jaayega. Kya aap sure hain?`)) return;
+  if(!name){ alert('Please enter your organisation name'); inp?.focus(); return; }
+  if(!confirm(`Save and lock "${name}" as your organisation name? This cannot be changed later.`)) return;
   showLoader('Saving…');
   try {
-    await apiFetch({
+    await apiPost({
       action:'saveProfile', email:currentUser.email,
       org: name, name: currentUser.name||name,
       person: currentUser.name||'', dist:'', blocks:'', schools:'', theme:'', phone:'', desig:'', org_type:'', start_date:''
