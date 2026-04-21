@@ -1632,6 +1632,13 @@ async function saveProfile(){
       }
     }
     currentUser.profileDone = true;
+    const newName = document.getElementById('pf-person')?.value.trim();
+    if(newName) {
+      currentUser.name = newName;
+      sessionStorage.setItem('ngo_session', JSON.stringify(currentUser));
+      document.getElementById('sb-name').textContent = newName;
+      document.getElementById('sb-avatar').textContent = newName[0].toUpperCase();
+    }
     await loadSheetData();
   } catch(e){ console.warn('Profile save error:', e.message); }
   hideLoader();
@@ -2806,6 +2813,13 @@ async function pvSave(sec){
       if(myNGO.name){
         myNGO.person=data.person; myNGO.desig=data.desig;
         myNGO.phone=data.phone;   myNGO.org_type=data.org_type;
+      }
+      // Update sidebar name if person name changed
+      if(data.person){
+        currentUser.name = data.person;
+        sessionStorage.setItem('ngo_session', JSON.stringify(currentUser));
+        document.getElementById('sb-name').textContent = data.person;
+        document.getElementById('sb-avatar').textContent = data.person[0].toUpperCase();
       }
     }
 
