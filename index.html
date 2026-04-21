@@ -953,7 +953,7 @@ async function doAdminLogin(){
   if(!pass){ alert('Please enter password'); return; }
   showLoader('Signing in…');
   try {
-    const res = await apiFetch({action:'login', email, password: pass});
+    const res = await apiPost({action:'login', email, password: pass});
     hideLoader();
     if(res.success){
       currentUser = res.user;
@@ -1016,9 +1016,9 @@ async function doChangePwdModal(){
   if(np !== cp){ alert('New passwords do not match'); return; }
   showLoader('Saving password…');
   try {
-    const check = await apiFetch({action:'login', email: currentUser.email, password: cur});
+    const check = await apiPost({action:'login', email: currentUser.email, password: cur});
     if(!check.success){ hideLoader(); alert('Current password is incorrect'); return; }
-    const res = await apiFetch({action:'changePassword', email: currentUser.email, newPassword: np});
+    const res = await apiPost({action:'changePassword', email: currentUser.email, newPassword: np});
     hideLoader();
     if(res.success){
       document.getElementById('change-pwd-modal').style.display = 'none';
@@ -1608,7 +1608,7 @@ async function saveProfile(){
 
   showLoader('Saving profile…');
   try {
-    await apiFetch({
+    await apiPost({
       action:    'saveProfile',
       email:     currentUser.email,
       password:  currentUser.password || '',
@@ -1663,7 +1663,7 @@ async function _saveWizardTaskBlock(block, comp){
   const taskStart = block.querySelector('.act-start-date')?.value || '';
   const taskEnd   = block.querySelector('.act-end-date')?.value   || '';
   const geo       = getTaskGeo(block);
-  await apiFetch({
+  await apiPost({
     action:          'saveProject',
     ngo:             currentUser.org,
     component:       comp,
@@ -2948,7 +2948,7 @@ async function pvSave(sec){
             task_dist:geo.task_dist, task_schools:geo.task_schools
           };
           if(block.dataset.projectId) payload.project_id=block.dataset.projectId;
-          const res=await apiFetch(payload);
+          const res=await apiPost(payload);
           if(res?.project_id) block.dataset.projectId=String(res.project_id);
         }
       }

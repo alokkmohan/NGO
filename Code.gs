@@ -52,6 +52,7 @@ function doPost(e) {
     if (action === 'sendOTP')      return respond(sendOTP(data));
     if (action === 'verifyOTP')    return respond(verifyOTP(data));
     if (action === 'login')        return respond(login(data));
+    if (action === 'changePassword') return respond(changePassword(data));
     if (action === 'uploadPhoto')  return respond(uploadPhoto(data));
     if (action === 'saveProfile')  return respond(saveProfile(data));
     if (action === 'saveProject')  return respond(saveProject(data));
