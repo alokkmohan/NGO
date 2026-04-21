@@ -2942,9 +2942,10 @@ async function pvSave(sec){
       return; // don't fall through to pvCancel below
     }
 
-    hideLoader();
     pvCancel(sec);
+    showLoader('Updating profile…');
     await loadSheetData();
+    hideLoader();
     renderProfileView();
     renderMyReports();
   }catch(e){ hideLoader(); alert('Save failed: '+e.message); }
