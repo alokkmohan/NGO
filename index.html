@@ -2568,8 +2568,9 @@ async function saveOrgName(){
     });
     currentUser.org = name;
     sessionStorage.setItem('ngo_session', JSON.stringify(currentUser));
-    hideLoader();
+    showLoader('Updating profile…');
     await loadSheetData();
+    hideLoader();
     renderProfileView();
   } catch(e){ hideLoader(); alert('Error: '+e.message); }
 }
