@@ -2757,7 +2757,7 @@ async function lockTask(btn){
   if(!confirm('Lock "'+taskName+'"?\n\nOnce locked it cannot be edited or deleted.\nIt will appear in the Monthly Report form.')) return;
   showLoader('Locking…');
   try{
-    await apiFetch({action:'lockProject', project_id:block.dataset.projectId});
+    await apiPost({action:'lockProject', project_id:block.dataset.projectId});
     block.dataset.locked='true';
     lockTaskBlock(block);
     // Show inline locked confirmation inside the block
@@ -2802,7 +2802,7 @@ async function lockAllSaved(){
   showLoader('Locking…');
   try{
     for(const block of blocks){
-      await apiFetch({action:'lockProject', project_id:block.dataset.projectId});
+      await apiPost({action:'lockProject', project_id:block.dataset.projectId});
       block.dataset.locked='true';
       lockTaskBlock(block);
     }
@@ -2848,7 +2848,7 @@ async function pvSave(sec){
         blocks:myNGO.blocks||'',
         schools:myNGO.schools_list||''
       };
-      await apiFetch(data);
+      await apiPost(data);
       // Update local cache
       if(myNGO.name){
         myNGO.person=data.person; myNGO.desig=data.desig;
@@ -2881,7 +2881,7 @@ async function pvSave(sec){
         blocks:'',
         schools:selSchools.join(' | ')
       };
-      await apiFetch(data);
+      await apiPost(data);
       if(myNGO.name){ myNGO.dist=data.dist; myNGO.schools_list=data.schools; }
     }
 
@@ -3286,7 +3286,7 @@ async function mrLock(){
   if(!confirm('Lock report for ' + month + '?\n\nOnce locked it cannot be edited. Lock only when all entries are final.')) return;
   showLoader('Locking report…');
   try {
-    await apiFetch({action:'lockReport', ngo:currentUser.org, month});
+    await apiPost({action:'lockReport', ngo:currentUser.org, month});
     rep.report_locked = 'true';
     hideLoader();
     mrOnMonthChange();
@@ -3412,7 +3412,7 @@ async function saveProfileDistricts(){
   const distStr = checked.join(', ');
   showLoader('Saving districts…');
   try {
-    await apiFetch({action:'saveProfile', email:currentUser.email, password:currentUser.password||'', name:currentUser.name, org:currentUser.org, dist:distStr});
+    await apiPost({action:'saveProfile', email:currentUser.email, password:currentUser.password||'', name:currentUser.name, org:currentUser.org, dist:distStr});
     // Update local NGO data
     const myNGO = SAMPLE_NGOS.find(n=>n.name===currentUser.org);
     if(myNGO) myNGO.dist = distStr;
@@ -3759,14 +3759,14 @@ async function seedSampleData(){
 
     const savedIds = [];
     for(const t of tasks){
-      const res = await apiFetch({ action:'saveProject', ngo, ...t });
+      const res = await apiPost({ action:'saveProject', ngo, ...t });
       if(res.success) savedIds.push(res.project_id);
     }
 
     // Lock all three
     showLoader('Locking sample tasks…');
     for(const pid of savedIds){
-      await apiFetch({ action:'lockProject', project_id: pid, ngo });
+      await apiPost({ action:'lockProject', project_id: pid, ngo });
     }
 
     // Reload projects
@@ -3813,7 +3813,7 @@ async function seedSampleData(){
       girls:'100', scst:'45', divyang:'18', budget:'0', dropout:'7', tasks:'3',
       report_locked:'false'
     };
-    await apiFetch({ action:'submitReport', report: JSON.stringify(report) });
+    await apiPost({ action:'submitReport', report: JSON.stringify(report) });
 
     // Reload reports
     const rRes = await apiFetch({ action:'getReports' });
@@ -4224,7 +4224,7 @@ async function submitMonthlyReport(silent = false){
   if(!silent) showLoader('Saving report to Google Sheets…');
   let driveDocUrl = '';
   try {
-    const res = await apiFetch({action:'submitReport', report: JSON.stringify(report)});
+    const res = await apiPost({action:'submitReport', report: JSON.stringify(report)});
     if(res && res.docUrl) driveDocUrl = res.docUrl;
   } catch(e){ console.warn('Sync error:', e.message); }
 
@@ -4276,7 +4276,7 @@ async function lockMonthReport(){
   if(!confirm('Lock report for ' + months + '?\n\nOnce locked it cannot be edited. Lock only when all entries are final.')) return;
   showLoader('Locking report…');
   try {
-    await apiFetch({action:'lockReport', ngo:currentUser.org, month:months});
+    await apiPost({action:'lockReport', ngo:currentUser.org, month:months});
     const rep = REPORTS.find(r => r.ngo===currentUser.org && r.month===months);
     if(rep) rep.report_locked = 'true';
     hideLoader();
@@ -4341,7 +4341,7 @@ async function confirmAndLock(){
   // Now lock
   showLoader('Locking report…');
   try {
-    await apiFetch({action:'lockReport', ngo:currentUser.org, month:months});
+    await apiPost({action:'lockReport', ngo:currentUser.org, month:months});
     const rep = REPORTS.find(r => r.ngo === currentUser.org && r.month === months);
     if(rep) rep.report_locked = 'true';
     hideLoader();

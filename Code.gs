@@ -54,6 +54,11 @@ function doPost(e) {
     if (action === 'login')        return respond(login(data));
     if (action === 'uploadPhoto')  return respond(uploadPhoto(data));
     if (action === 'saveProfile')  return respond(saveProfile(data));
+    if (action === 'saveProject')  return respond(saveProject(data));
+    if (action === 'lockProject')  return respond(lockProject(data));
+    if (action === 'deleteUnlockedProjects') return respond(deleteUnlockedProjects(data));
+    if (action === 'lockReport')   return respond(lockReport(data));
+    if (action === 'submitReport') return respond(submitReport({ report: JSON.parse(data.report) }));
     return respond({ error: 'Unknown action' });
   } catch (err) {
     return respond({ error: err.message });
