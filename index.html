@@ -446,13 +446,13 @@ tr:hover td{background:#FAFBFF}
         <!-- First-login welcome banner (shown once, dismissed on close) -->
         <div id="first-login-banner" style="display:none;background:#EFF6FF;border:1px solid #BFDBFE;border-radius:10px;padding:14px 16px;margin-bottom:12px;position:relative">
           <button onclick="dismissFirstLoginBanner()" style="position:absolute;top:8px;right:10px;background:none;border:none;font-size:16px;cursor:pointer;color:#6B7280">✕</button>
-          <div style="font-size:14px;font-weight:700;color:#1E40AF;margin-bottom:6px">👋 Portal mein aapka swagat hai!</div>
+          <div style="font-size:14px;font-weight:700;color:#1E40AF;margin-bottom:6px">👋 Welcome to the Portal!</div>
           <div style="font-size:13px;color:#1E3A8A;line-height:1.7">
-            Shuru karne ke liye yeh steps follow karen:<br>
-            <b>1.</b> 🏢 <b>My Profile</b> mein jakar apni organisation ki basic jaankari bharen.<br>
-            <b>2.</b> 🎯 <b>Major Components &amp; Tasks</b> update karen — apni activities define karen.<br>
-            <b>3.</b> Sab sahi hone par tasks ko <b>Lock</b> karen.<br>
-            <b>4.</b> Lock karne ke baad <b>Monthly Report</b> bhar sakte hain.
+            Please follow these steps to get started:<br>
+            <b>1.</b> 🏢 Go to <b>My Profile</b> and fill in your organisation's basic details.<br>
+            <b>2.</b> 🎯 Update <b>Major Components &amp; Tasks</b> — define your activities.<br>
+            <b>3.</b> Once everything is correct, <b>Lock</b> your tasks.<br>
+            <b>4.</b> After locking, you can submit your <b>Monthly Report</b>.
           </div>
         </div>
         <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:12px">
@@ -548,11 +548,10 @@ tr:hover td{background:#FAFBFF}
 
       <!-- Tasks-not-locked warning banner -->
       <div id="report-lock-warning" style="display:none;background:#FFF8E1;border:1px solid #FFD54F;border-radius:10px;padding:14px 16px;margin-bottom:14px">
-        <div style="font-size:14px;font-weight:700;color:#E65100;margin-bottom:4px">⚠️ Report bharne se pehle tasks lock karen</div>
+        <div style="font-size:14px;font-weight:700;color:#E65100;margin-bottom:4px">⚠️ Please lock your tasks before submitting a report</div>
         <div style="font-size:13px;color:#7F4F00;line-height:1.6">
-          🎯 <b>Major Components &amp; Tasks</b> abhi tak lock nahi hain.<br>
-          Pehle <a href="#" onclick="showPage('profile-view');return false;" style="color:#1D4ED8;font-weight:600">My Profile → Section 3</a> mein jakar tasks save karen aur lock karen,
-          uske baad monthly report bhar saken.
+          🎯 <b>Major Components &amp; Tasks</b> are not locked yet.<br>
+          Please go to <a href="#" onclick="showPage('profile-view');return false;" style="color:#1D4ED8;font-weight:600">My Profile → Section 3</a>, save your activities and lock them before submitting a monthly report.
         </div>
       </div>
 
