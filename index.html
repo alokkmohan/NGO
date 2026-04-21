@@ -2846,8 +2846,15 @@ async function pvSave(sec){
         schools:myNGO.schools_list||''
       };
       await apiPost(data);
-      // Update local cache
-      if(myNGO.name){
+      // Update local SAMPLE_NGOS cache immediately
+      if(!myNGO.name){
+        // New NGO — add to SAMPLE_NGOS
+        const newEntry = {id:0,name:currentUser.org,theme:'',person:data.person,dist:'',x:300,y:300,
+          schools:0,students:0,girls:0,teachers:0,progress:0,month:'',kmi:'',
+          phone:data.phone,desig:data.desig,org_type:data.org_type,start_date:'',blocks:'',schools_list:''};
+        SAMPLE_NGOS.push(newEntry);
+        Object.assign(myNGO, newEntry);
+      } else {
         myNGO.person=data.person; myNGO.desig=data.desig;
         myNGO.phone=data.phone;   myNGO.org_type=data.org_type;
       }
