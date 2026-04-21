@@ -1804,7 +1804,7 @@ function initApp(){
   document.getElementById('main-screen').style.display='block';
   document.getElementById('sb-name').textContent = currentUser.name;
   document.getElementById('sb-role').textContent = currentUser.role==='admin'?'PMU Administrator':'NGO Partner';
-  document.getElementById('sb-avatar').textContent = currentUser.name[0].toUpperCase();
+  document.getElementById('sb-avatar').textContent = (currentUser.name||currentUser.email||'?')[0].toUpperCase();
   document.getElementById('tb-role-badge').textContent = currentUser.role==='admin'?'PMU Admin':'NGO Partner';
   document.getElementById('tb-date').textContent = new Date().toLocaleDateString('en-IN',{day:'numeric',month:'long',year:'numeric'});
   if(currentUser.email === 'alokmohann@gmail.com')
