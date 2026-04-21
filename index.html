@@ -443,6 +443,18 @@ tr:hover td{background:#FAFBFF}
 
       <!-- ── NGO PERSONAL DASHBOARD (only for NGO role) ── -->
       <div id="ngo-dashboard" style="display:none;margin-bottom:14px">
+        <!-- First-login welcome banner (shown once, dismissed on close) -->
+        <div id="first-login-banner" style="display:none;background:#EFF6FF;border:1px solid #BFDBFE;border-radius:10px;padding:14px 16px;margin-bottom:12px;position:relative">
+          <button onclick="dismissFirstLoginBanner()" style="position:absolute;top:8px;right:10px;background:none;border:none;font-size:16px;cursor:pointer;color:#6B7280">✕</button>
+          <div style="font-size:14px;font-weight:700;color:#1E40AF;margin-bottom:6px">👋 Portal mein aapka swagat hai!</div>
+          <div style="font-size:13px;color:#1E3A8A;line-height:1.7">
+            Shuru karne ke liye yeh steps follow karen:<br>
+            <b>1.</b> 🏢 <b>My Profile</b> mein jakar apni organisation ki basic jaankari bharen.<br>
+            <b>2.</b> 🎯 <b>Major Components &amp; Tasks</b> update karen — apni activities define karen.<br>
+            <b>3.</b> Sab sahi hone par tasks ko <b>Lock</b> karen.<br>
+            <b>4.</b> Lock karne ke baad <b>Monthly Report</b> bhar sakte hain.
+          </div>
+        </div>
         <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:12px">
           <div class="stat-card mini" style="border-left:4px solid var(--blue)"><div class="stat-val" id="nd-schools">0</div><div class="stat-label">Schools covered</div><div class="stat-sub">Cumulative total</div></div>
           <div class="stat-card mini" style="border-left:4px solid var(--green)"><div class="stat-val" id="nd-students">0</div><div class="stat-label">Students benefited</div><div class="stat-sub" id="nd-girls"></div></div>
@@ -533,6 +545,16 @@ tr:hover td{background:#FAFBFF}
 
     <!-- ── PAGE: MONTHLY REPORT ── -->
     <div class="page" id="page-monthly-report">
+
+      <!-- Tasks-not-locked warning banner -->
+      <div id="report-lock-warning" style="display:none;background:#FFF8E1;border:1px solid #FFD54F;border-radius:10px;padding:14px 16px;margin-bottom:14px">
+        <div style="font-size:14px;font-weight:700;color:#E65100;margin-bottom:4px">⚠️ Report bharne se pehle tasks lock karen</div>
+        <div style="font-size:13px;color:#7F4F00;line-height:1.6">
+          🎯 <b>Major Components &amp; Tasks</b> abhi tak lock nahi hain.<br>
+          Pehle <a href="#" onclick="showPage('profile-view');return false;" style="color:#1D4ED8;font-weight:600">My Profile → Section 3</a> mein jakar tasks save karen aur lock karen,
+          uske baad monthly report bhar saken.
+        </div>
+      </div>
 
       <!-- Report Header (auto-filled) -->
       <div class="card" style="margin-bottom:12px">
@@ -1022,17 +1044,6 @@ function doLogout(){
 
 function startApp(){
   document.getElementById('auth-screen').style.display='none';
-  // Show the profile-prompt overlay only once (first login ever) when profile is incomplete
-  // After the user has seen it once, go straight to the app
-  if(currentUser.role !== 'admin' && !currentUser.profileDone){
-    const seenKey = 'profile_prompt_seen_' + (currentUser.email||currentUser.org||'');
-    if(!localStorage.getItem(seenKey)){
-      localStorage.setItem(seenKey, '1');
-      const overlay = document.getElementById('profile-prompt-overlay');
-      if(overlay) overlay.style.display = 'flex';
-      return;
-    }
-  }
   initApp();
 }
 
@@ -1821,7 +1832,23 @@ function initApp(){
   renderMap('all');
   renderPartnerTable();
   updateDashboardStats();
+  showFirstLoginBannerIfNeeded();
   showPage('dashboard');
+}
+
+function showFirstLoginBannerIfNeeded(){
+  if(currentUser?.role === 'admin') return;
+  const key = 'first_login_banner_' + (currentUser.email||'');
+  if(localStorage.getItem(key)) return;
+  const banner = document.getElementById('first-login-banner');
+  if(banner) banner.style.display = 'block';
+}
+
+function dismissFirstLoginBanner(){
+  const key = 'first_login_banner_' + (currentUser.email||'');
+  localStorage.setItem(key, '1');
+  const banner = document.getElementById('first-login-banner');
+  if(banner) banner.style.display = 'none';
 }
 
 function updateDashboardStats(){
@@ -2166,7 +2193,14 @@ function showPage(p){
 
   if(p==='profile-view'){ renderProfileView(); renderMyReports(); }
   if(p==='ngo-list') renderAdminNGOList();
-  if(p==='monthly-report'){reportStep=0;updateReportSteps();prefillReportForm();}
+  if(p==='monthly-report'){
+    reportStep=0;updateReportSteps();prefillReportForm();
+    const warn = document.getElementById('report-lock-warning');
+    if(warn && currentUser?.role !== 'admin'){
+      const hasLocked = PROJECTS.some(pr => pr.ngo === currentUser.org && isTaskLocked(pr.locked));
+      warn.style.display = hasLocked ? 'none' : 'block';
+    }
+  }
   if(p==='my-reports') renderReportsPage();
   if(p==='dashboard' && _lmap){ setTimeout(()=>_lmap.invalidateSize(), 100); }
 }
