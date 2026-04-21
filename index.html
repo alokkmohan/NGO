@@ -896,7 +896,7 @@ async function doSendOTP(isResend){
   if(!email){ alert('Please enter your email address'); return; }
   showLoader(isResend ? 'Resending OTP…' : 'Checking email…');
   try {
-    const res = await apiFetch({action:'sendOTP', email});
+    const res = await apiPost({action:'sendOTP', email});
     hideLoader();
     if(res.success){
       // NGO user — show OTP entry step
@@ -946,7 +946,7 @@ async function doVerifyOTP(){
   if(!otp || otp.length !== 6){ alert('Please enter the 6-digit OTP'); return; }
   showLoader('Verifying OTP…');
   try {
-    const res = await apiFetch({action:'verifyOTP', email, otp});
+    const res = await apiPost({action:'verifyOTP', email, otp});
     if(res.success){
       currentUser = res.user;
       sessionStorage.setItem('ngo_session', JSON.stringify(currentUser));

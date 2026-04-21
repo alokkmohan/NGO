@@ -49,6 +49,9 @@ function doPost(e) {
   try {
     const data   = JSON.parse(e.postData.contents);
     const action = data.action;
+    if (action === 'sendOTP')      return respond(sendOTP(data));
+    if (action === 'verifyOTP')    return respond(verifyOTP(data));
+    if (action === 'login')        return respond(login(data));
     if (action === 'uploadPhoto')  return respond(uploadPhoto(data));
     if (action === 'saveProfile')  return respond(saveProfile(data));
     return respond({ error: 'Unknown action' });
