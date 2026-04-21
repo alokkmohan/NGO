@@ -443,6 +443,11 @@ tr:hover td{background:#FAFBFF}
 
       <!-- ── NGO PERSONAL DASHBOARD (only for NGO role) ── -->
       <div id="ngo-dashboard" style="display:none;margin-bottom:14px">
+        <!-- NGO greeting header -->
+        <div id="ngo-greeting" style="margin-bottom:12px">
+          <div style="font-size:22px;font-weight:700;color:var(--blue)">Hi, <span id="ngo-greeting-name"></span> 👋</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:2px">Samagra Shiksha, Secondary Education Programme — Uttar Pradesh</div>
+        </div>
         <!-- First-login welcome banner (shown once, dismissed on close) -->
         <div id="first-login-banner" style="display:none;background:#EFF6FF;border:1px solid #BFDBFE;border-radius:10px;padding:14px 16px;margin-bottom:12px;position:relative">
           <button onclick="dismissFirstLoginBanner()" style="position:absolute;top:8px;right:10px;background:none;border:none;font-size:16px;cursor:pointer;color:#6B7280">✕</button>
@@ -1866,6 +1871,9 @@ function updateDashboardStats(){
   // ─── NGO personal dashboard ───────────────────────
   if(!isAdmin){
     document.getElementById('ngo-dashboard').style.display = 'block';
+    const greetName = currentUser.org || currentUser.name || '';
+    const greetEl = document.getElementById('ngo-greeting-name');
+    if(greetEl) greetEl.textContent = greetName;
     const myNGO  = SAMPLE_NGOS.find(n=>n.name===currentUser.org)||{};
     const myReps = REPORTS.filter(r=>r.ngo===currentUser.org).sort((a,b)=>(+a.id||0)-(+b.id||0));
     const myProjs= PROJECTS.filter(p=>p.ngo===currentUser.org);
