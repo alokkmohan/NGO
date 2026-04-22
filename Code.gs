@@ -690,15 +690,35 @@ function lockProject(data) {
 function saveProfile(data) {
   const ss = getSS();
 
-  // 1. Add to Users sheet (if not already there)
+  // 1. Add to Users sheet (if not already there), and update org name for all users sharing old org
   const uSheet = ss.getSheetByName('Users');
   const uRows  = uSheet.getDataRange().getValues();
   let userExists = false;
+  let oldOrg = '';
   for (let i = 1; i < uRows.length; i++) {
-    if (uRows[i][0] === data.email) { userExists = true; break; }
+    if (String(uRows[i][0]).trim().toLowerCase() === String(data.email).trim().toLowerCase()) {
+      userExists = true;
+      oldOrg = String(uRows[i][4] || '').trim();
+      break;
+    }
   }
   if (!userExists) {
     uSheet.appendRow([data.email, data.password || '', 'ngo', data.name, data.org]);
+  } else if (data.org && oldOrg && oldOrg !== data.org) {
+    // Org name changed — update ALL users who had the old org name
+    for (let i = 1; i < uRows.length; i++) {
+      if (String(uRows[i][4] || '').trim() === oldOrg) {
+        uSheet.getRange(i + 1, 5).setValue(data.org);
+      }
+    }
+  } else if (data.org && !oldOrg) {
+    // Org was empty — just update this user's org
+    for (let i = 1; i < uRows.length; i++) {
+      if (String(uRows[i][0]).trim().toLowerCase() === String(data.email).trim().toLowerCase()) {
+        uSheet.getRange(i + 1, 5).setValue(data.org);
+        break;
+      }
+    }
   }
 
   // 2. Add / update NGO in NGOs sheet
