@@ -2451,14 +2451,9 @@ function renderProfileView(){
         <button onclick="pvEdit(1)" style="padding:3px 12px;background:#fff;color:var(--blue);border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">✏ Edit</button>
       </div>
 
-      <!-- NGO Name row — always editable -->
-      <div style="background:#EFF6FF;border-bottom:1px solid #BFDBFE;padding:10px 14px">
-        <div style="font-size:11px;color:#1E40AF;font-weight:600;margin-bottom:6px">🏢 Organisation Name</div>
-        <div style="display:flex;gap:8px;align-items:center">
-          <input id="pve-orgname" value="${u.org||''}" placeholder="Full organisation name"
-            style="flex:1;padding:8px 12px;border:1px solid #BFDBFE;border-radius:7px;font-size:14px;font-weight:700;color:#1E40AF;outline:none">
-          <button onclick="saveOrgName()" style="padding:8px 16px;background:#1D4ED8;color:#fff;border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer">💾 Update</button>
-        </div>
+      <!-- NGO Name row — read only, set from Users sheet -->
+      <div style="background:#EFF6FF;border-bottom:1px solid #BFDBFE;padding:10px 14px;display:flex;align-items:center;gap:10px">
+        <span style="font-size:18px;font-weight:700;color:#1E40AF;flex:1">${u.org||'—'}</span>
       </div>
 
       <div id="pv-sec1-view" style="padding:12px 14px">
