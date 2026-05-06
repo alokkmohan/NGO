@@ -32,6 +32,8 @@ function doGet(e) {
     else if (action === 'getProjects')          result = getProjects(p);
     else if (action === 'deleteUnlockedProjects') result = deleteUnlockedProjects(p);
     else if (action === 'lockProject')          result = lockProject(p);
+    else if (action === 'unlockProject')        result = unlockProject(p);
+    else if (action === 'unlockProjectsByComponent') result = unlockProjectsByComponent(p);
     else if (action === 'lockReport')           result = lockReport(p);
     else if (action === 'submitReport')  result = submitReport({ report: JSON.parse(p.report) });
     // legacy — kept for backward compat
@@ -60,7 +62,9 @@ function doPost(e) {
     if (action === 'uploadPhoto')  return respond(uploadPhoto(data));
     if (action === 'saveProfile')  return respond(saveProfile(data));
     if (action === 'saveProject')  return respond(saveProject(data));
-    if (action === 'lockProject')  return respond(lockProject(data));
+    if (action === 'lockProject')   return respond(lockProject(data));
+    if (action === 'unlockProject') return respond(unlockProject(data));
+    if (action === 'unlockProjectsByComponent') return respond(unlockProjectsByComponent(data));
     if (action === 'deleteUnlockedProjects') return respond(deleteUnlockedProjects(data));
     if (action === 'lockReport')   return respond(lockReport(data));
     if (action === 'submitReport') return respond(submitReport({ report: JSON.parse(data.report) }));
@@ -680,6 +684,46 @@ function lockProject(data) {
   for (let i = 1; i < rows.length; i++) {
     if (String(rows[i][pidIdx]) === String(data.project_id)) {
       sheet.getRange(i + 1, lockedIdx + 1).setValue('true');
+      return { success: true };
+    }
+  }
+  return { success: false, error: 'Project not found' };
+}
+
+// Unlock ALL tasks in a component for an NGO (admin only)
+function unlockProjectsByComponent(data) {
+  const sheet = getSS().getSheetByName('Projects');
+  if (!sheet) return { success: false, error: 'No Projects sheet' };
+  const rows = sheet.getDataRange().getValues();
+  const h = rows[0];
+  const ngoIdx    = h.indexOf('ngo');
+  const compIdx   = h.indexOf('component');
+  const statusIdx = h.indexOf('status');
+  const lockedIdx = h.indexOf('locked');
+  if (lockedIdx < 0) return { success: false, error: 'No locked column' };
+  let count = 0;
+  for (let i = 1; i < rows.length; i++) {
+    if (rows[i][ngoIdx] !== data.ngo) continue;
+    if (rows[i][compIdx] !== data.component) continue;
+    if (rows[i][statusIdx] === 'deleted') continue;
+    sheet.getRange(i + 1, lockedIdx + 1).setValue('false');
+    count++;
+  }
+  return { success: true, count };
+}
+
+// Unlock a project (admin only) so NGO can edit/delete it again
+function unlockProject(data) {
+  const sheet = getSS().getSheetByName('Projects');
+  if (!sheet) return { success: false, error: 'No Projects sheet' };
+  const rows = sheet.getDataRange().getValues();
+  const h = rows[0];
+  const pidIdx    = h.indexOf('project_id');
+  const lockedIdx = h.indexOf('locked');
+  if (lockedIdx < 0) return { success: false, error: 'No locked column' };
+  for (let i = 1; i < rows.length; i++) {
+    if (String(rows[i][pidIdx]) === String(data.project_id)) {
+      sheet.getRange(i + 1, lockedIdx + 1).setValue('false');
       return { success: true };
     }
   }
