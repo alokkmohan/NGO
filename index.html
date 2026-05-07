@@ -767,7 +767,8 @@ tr:hover td{background:#FAFBFF}
               <th>Organisation</th>
               <th>Name of POC</th>
               <th>Email</th>
-              <th>MOU Date</th>
+              <th>MOU From</th>
+              <th>MOU To</th>
               <th>Reports</th>
               <th>Tasks</th>
               <th>Status</th>
@@ -4895,7 +4896,7 @@ function renderAdminNGOList(){
 
   // Merge ADMIN_PARTNERS (Users sheet) with SAMPLE_NGOS (profile sheet)
   const rows = ADMIN_PARTNERS.length ? ADMIN_PARTNERS : SAMPLE_NGOS.map(n=>({
-    org: n.name, name: n.person||'', email:'', status: n.ngo_status||'active', mou_date:''
+    org: n.name, name: n.person||'', email:'', status: n.ngo_status||'active', mou_from:'', mou_to:''
   }));
 
   tbody.innerHTML = rows.map((p, i) => {
@@ -4913,12 +4914,19 @@ function renderAdminNGOList(){
       <td style="font-size:12px">${p.name || ngoProfile.person || '—'}</td>
       <td style="font-size:11px;color:var(--muted)">${p.email||'—'}</td>
       <td style="font-size:11px;white-space:nowrap">
-        <span id="mou-display-${i}">${p.mou_date ? fmtDate(p.mou_date) : '—'}</span>
-        <input type="date" id="mou-input-${i}" value="${p.mou_date||''}"
-          onchange="saveMouDate('${ngoEsc}', this.value, ${i})"
-          style="display:none;padding:3px 6px;border:1px solid var(--border);border-radius:5px;font-size:11px">
+        <span id="mouf-display-${i}">${p.mou_from ? fmtDate(p.mou_from) : '—'}</span>
+        <input type="date" id="mouf-input-${i}" value="${p.mou_from||''}"
+          style="display:none;padding:3px 6px;border:1px solid var(--border);border-radius:5px;font-size:11px;width:110px">
         <button onclick="toggleMouEdit(${i})"
           style="margin-left:4px;padding:2px 6px;font-size:10px;background:#f0f6ff;border:1px solid #c5d5f5;border-radius:4px;cursor:pointer;color:var(--blue)">✏</button>
+      </td>
+      <td style="font-size:11px;white-space:nowrap">
+        <span id="mout-display-${i}">${p.mou_to ? fmtDate(p.mou_to) : '—'}</span>
+        <input type="date" id="mout-input-${i}" value="${p.mou_to||''}"
+          style="display:none;padding:3px 6px;border:1px solid var(--border);border-radius:5px;font-size:11px;width:110px">
+        <button onclick="saveMouDates('${ngoEsc}', ${i})"
+          id="mou-save-${i}"
+          style="display:none;margin-left:4px;padding:2px 8px;font-size:10px;background:var(--green);color:#fff;border:none;border-radius:4px;cursor:pointer">Save</button>
       </td>
       <td style="text-align:center">${repCount}</td>
       <td>
@@ -4945,19 +4953,28 @@ function renderAdminNGOList(){
 }
 
 function toggleMouEdit(i){
-  const disp  = document.getElementById('mou-display-'+i);
-  const input = document.getElementById('mou-input-'+i);
-  const show  = input.style.display === 'none';
-  disp.style.display  = show ? 'none'   : 'inline';
-  input.style.display = show ? 'inline' : 'none';
+  const fDisp = document.getElementById('mouf-display-'+i);
+  const fInp  = document.getElementById('mouf-input-'+i);
+  const tDisp = document.getElementById('mout-display-'+i);
+  const tInp  = document.getElementById('mout-input-'+i);
+  const saveBtn = document.getElementById('mou-save-'+i);
+  const show  = fInp.style.display === 'none';
+  fDisp.style.display   = show ? 'none'   : 'inline';
+  fInp.style.display    = show ? 'inline' : 'none';
+  tDisp.style.display   = show ? 'none'   : 'inline';
+  tInp.style.display    = show ? 'inline' : 'none';
+  saveBtn.style.display = show ? 'inline' : 'none';
 }
 
-async function saveMouDate(ngo, date, i){
+async function saveMouDates(ngo, i){
+  const mou_from = document.getElementById('mouf-input-'+i)?.value || '';
+  const mou_to   = document.getElementById('mout-input-'+i)?.value || '';
   try {
-    await apiPost({ action:'setNGOStatus', ngo, mou_date: date });
+    await apiPost({ action:'setNGOStatus', ngo, mou_from, mou_to });
     const p = ADMIN_PARTNERS.find(x => x.org === ngo);
-    if(p) p.mou_date = date;
-    document.getElementById('mou-display-'+i).textContent = date ? fmtDate(date) : '—';
+    if(p){ p.mou_from = mou_from; p.mou_to = mou_to; }
+    document.getElementById('mouf-display-'+i).textContent = mou_from ? fmtDate(mou_from) : '—';
+    document.getElementById('mout-display-'+i).textContent = mou_to   ? fmtDate(mou_to)   : '—';
     toggleMouEdit(i);
   } catch(e){ alert('Save failed: ' + e.message); }
 }

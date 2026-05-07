@@ -892,24 +892,26 @@ function forgotPassword(data) {
   return { success: false, error: 'Email not found in system' };
 }
 
-// ── ADMIN: Get all NGO partners with status & MOU date ───────
+// ── ADMIN: Get all NGO partners with status & MOU from/to dates ──
 function getAdminPartners() {
   const ss = getSS();
 
-  // Read NGO_List: sr_no | name | status | mou_date
+  // Read NGO_List: sr_no | name | status | mou_from | mou_to
   const listSheet = ss.getSheetByName('NGO_List');
-  const listMap   = {}; // name.lower → { status, mou_date }
+  const listMap   = {}; // name.lower → { status, mou_from, mou_to }
   if (listSheet) {
     const lRows = listSheet.getDataRange().getValues();
     const lH    = lRows[0];
     const sIdx  = lH.indexOf('status');
-    const mIdx  = lH.indexOf('mou_date');
+    const fIdx  = lH.indexOf('mou_from');
+    const tIdx  = lH.indexOf('mou_to');
     for (let i = 1; i < lRows.length; i++) {
       const name = String(lRows[i][1]||'').trim().toLowerCase();
       if (!name) continue;
       listMap[name] = {
         status:   String(lRows[i][sIdx >= 0 ? sIdx : 2]||'active').trim().toLowerCase(),
-        mou_date: mIdx >= 0 ? String(lRows[i][mIdx]||'') : ''
+        mou_from: fIdx >= 0 ? String(lRows[i][fIdx]||'') : '',
+        mou_to:   tIdx >= 0 ? String(lRows[i][tIdx]||'') : ''
       };
     }
   }
@@ -932,38 +934,46 @@ function getAdminPartners() {
       const email = String(uRows[i][eIdx]||'').trim();
       if (!org || seen.has(org)) continue;
       seen.add(org);
-      const info = listMap[org.toLowerCase()] || { status:'active', mou_date:'' };
-      partners.push({ org, email, name: String(uRows[i][nIdx]||'').trim(), status: info.status, mou_date: info.mou_date });
+      const info = listMap[org.toLowerCase()] || { status:'active', mou_from:'', mou_to:'' };
+      partners.push({
+        org, email,
+        name:     String(uRows[i][nIdx]||'').trim(),
+        status:   info.status,
+        mou_from: info.mou_from,
+        mou_to:   info.mou_to
+      });
     }
   }
   return { success: true, data: partners };
 }
 
-// ── ADMIN: Set NGO status (active/inactive) in NGO_List ──────
+// ── ADMIN: Set NGO status / MOU dates in NGO_List ────────────
 function setNGOStatus(data) {
   const ngo    = String(data.ngo||'').trim();
-  const status = String(data.status||'active').trim().toLowerCase();
+  const status = String(data.status||'').trim().toLowerCase();
   if (!ngo) return { success: false, error: 'NGO name required' };
 
   const sheet = getSS().getSheetByName('NGO_List');
   if (!sheet) return { success: false, error: 'NGO_List sheet not found' };
 
-  const rows  = sheet.getDataRange().getValues();
-  const h     = rows[0];
-  let   sIdx  = h.indexOf('status');
-  let   mIdx  = h.indexOf('mou_date');
+  const rows = sheet.getDataRange().getValues();
+  const h    = rows[0];
 
   // Ensure columns exist
-  if (sIdx < 0) { sIdx = h.length;   sheet.getRange(1, sIdx+1).setValue('status'); }
-  if (mIdx < 0) { mIdx = h.length+1 > sIdx+1 ? h.length+1 : sIdx+1;
-                  sheet.getRange(1, mIdx+1).setValue('mou_date'); }
+  function ensureCol(name) {
+    let idx = h.indexOf(name);
+    if (idx < 0) { idx = h.length; sheet.getRange(1, idx+1).setValue(name); h.push(name); }
+    return idx;
+  }
+  const sIdx = ensureCol('status');
+  const fIdx = ensureCol('mou_from');
+  const tIdx = ensureCol('mou_to');
 
   for (let i = 1; i < rows.length; i++) {
     if (String(rows[i][1]||'').trim().toLowerCase() === ngo.toLowerCase()) {
-      sheet.getRange(i+1, sIdx+1).setValue(status);
-      // Save mou_date if provided
-      if (data.mou_date !== undefined)
-        sheet.getRange(i+1, mIdx+1).setValue(data.mou_date||'');
+      if (status) sheet.getRange(i+1, sIdx+1).setValue(status);
+      if (data.mou_from !== undefined) sheet.getRange(i+1, fIdx+1).setValue(data.mou_from||'');
+      if (data.mou_to   !== undefined) sheet.getRange(i+1, tIdx+1).setValue(data.mou_to||'');
       return { success: true };
     }
   }
