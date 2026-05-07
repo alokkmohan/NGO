@@ -469,10 +469,54 @@ function lockReport(data) {
   for (let i = 1; i < rows.length; i++) {
     if (String(rows[i][ngoIdx]) === String(data.ngo) && String(rows[i][monthIdx]) === String(data.month)) {
       sheet.getRange(i + 1, lockedIdx + 1).setValue('true');
+      // Send thank-you email to NGO users
+      try { sendLockThankYouEmail(data.ngo, data.month); } catch(e) { Logger.log('Thank-you email error: ' + e.message); }
       return { success: true };
     }
   }
   return { success: false, error: 'Report not found' };
+}
+
+function sendLockThankYouEmail(org, monthLabel) {
+  const users = getActiveNGOUsers().filter(u => u.org === org);
+  const done  = new Set();
+  users.forEach(u => {
+    if (done.has(u.email)) return;
+    done.add(u.email);
+    MailApp.sendEmail({
+      to: u.email,
+      subject: `Thank You: ${monthLabel} Report Submitted Successfully`,
+      htmlBody: `
+<div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;border:1px solid #dde3ee;border-radius:10px;overflow:hidden">
+  <div style="background:#1A3C6E;padding:18px 24px">
+    <h2 style="color:#fff;margin:0;font-size:16px">Samagra Shiksha — NGO Partner Portal</h2>
+    <p style="color:rgba(255,255,255,0.7);margin:4px 0 0;font-size:12px">Madhyamik Shiksha Vibhag, Uttar Pradesh, PMU</p>
+  </div>
+  <div style="padding:24px">
+    <p style="font-size:14px;color:#1a1a2e">Dear <strong>${u.name}</strong>,</p>
+    <div style="background:#e8f5e9;border-left:4px solid #1D9E75;border-radius:6px;padding:14px 16px;margin:16px 0">
+      <p style="margin:0;font-size:15px;color:#1b5e20;font-weight:700">
+        ✅ Your ${monthLabel} Monthly Report has been locked and submitted successfully!
+      </p>
+    </div>
+    <p style="font-size:14px;color:#444;line-height:1.6">
+      Thank you, <strong>${u.name}</strong>. Your report for <strong>${org}</strong> has been
+      received by the PMU team and is now part of the official record.
+    </p>
+    <div style="background:#f4f6fa;border-radius:8px;padding:14px;margin:16px 0;font-size:13px;color:#555">
+      <strong>📋 Submission Details</strong><br>
+      Organisation: <strong>${org}</strong><br>
+      Reporting Period: <strong>${monthLabel}</strong><br>
+      Status: <strong style="color:#1D9E75">🔒 Locked & Submitted</strong>
+    </div>
+    <p style="font-size:12px;color:#888;border-top:1px solid #eee;padding-top:14px;margin-top:14px">
+      You can view your submitted report anytime by logging into the portal under <em>My Reports</em>.<br><br>
+      Samagra Shiksha, Secondary, Uttar Pradesh, PMU Office
+    </p>
+  </div>
+</div>`
+    });
+  });
 }
 
 // ── DRIVE FOLDER HELPERS ─────────────────────────────────────
@@ -498,7 +542,7 @@ function saveReportDoc(r, ngoFolder) {
   // Header
   body.appendParagraph('Monthly KPI Progress Report')
       .setHeading(DocumentApp.ParagraphHeading.HEADING1);
-  body.appendParagraph('Samagra Shiksha, Secondary, Uttar Pradesh | PMU')
+  body.appendParagraph('Samagra Shiksha, Secondary, Uttar Pradesh, PMU')
       .setHeading(DocumentApp.ParagraphHeading.HEADING3);
 
   body.appendParagraph('');
@@ -912,7 +956,7 @@ function isReportLocked(repRows, repHeaders, org, monthLabel) {
   return false; // no report found = not locked
 }
 
-// ── 1. Last-day-of-month: Send reminder to unlock NGOs ───────
+// ── 1. 30th of month: Send 3 types of emails based on report status ──
 function sendMonthEndReminders() {
   const today      = new Date();
   const monthLabel = MONTH_NAMES[today.getMonth()] + ' ' + today.getFullYear();
@@ -921,156 +965,150 @@ function sendMonthEndReminders() {
   const repSheet   = ss.getSheetByName('Reports');
   const repRows    = repSheet ? repSheet.getDataRange().getValues() : [[]];
   const repHeaders = repRows[0] || [];
+  const ngoIdx     = repHeaders.indexOf('ngo');
+  const monthIdx   = repHeaders.indexOf('month');
+  const lockedIdx  = repHeaders.indexOf('report_locked');
+
+  // Build a map: org → { hasReport, isLocked }
+  function getRepStatus(org) {
+    for (let i = 1; i < repRows.length; i++) {
+      if (String(repRows[i][ngoIdx]||'').trim() !== org) continue;
+      if (normalizeMonthLabel(repRows[i][monthIdx]) !== monthLabel) continue;
+      return {
+        hasReport: true,
+        isLocked:  String(repRows[i][lockedIdx]||'').toLowerCase() === 'true'
+      };
+    }
+    return { hasReport: false, isLocked: false };
+  }
 
   const users = getActiveNGOUsers();
-  // One email per org (avoid duplicates if multiple logins)
-  const done = new Set();
+  const done  = new Set();
 
   users.forEach(u => {
     if (done.has(u.org)) return;
-    if (isReportLocked(repRows, repHeaders, u.org, monthLabel)) return; // already locked
     done.add(u.org);
+
+    const { hasReport, isLocked } = getRepStatus(u.org);
+
     try {
-      MailApp.sendEmail({
-        to: u.email,
-        subject: `Action Required: Lock your ${monthLabel} Monthly Report by 30th`,
-        htmlBody: `
+      if (isLocked) {
+        // ── Already locked → Thank you email ──
+        MailApp.sendEmail({
+          to: u.email,
+          subject: `Thank You: ${monthLabel} Report Submitted to PMU`,
+          htmlBody: `
 <div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;border:1px solid #dde3ee;border-radius:10px;overflow:hidden">
   <div style="background:#1A3C6E;padding:18px 24px">
     <h2 style="color:#fff;margin:0;font-size:16px">Samagra Shiksha — NGO Partner Portal</h2>
-    <p style="color:rgba(255,255,255,0.7);margin:4px 0 0;font-size:12px">Madhyamik Shiksha Vibhag, Uttar Pradesh | PMU</p>
+    <p style="color:rgba(255,255,255,0.7);margin:4px 0 0;font-size:12px">Madhyamik Shiksha Vibhag, Uttar Pradesh, PMU</p>
+  </div>
+  <div style="padding:24px">
+    <p style="font-size:14px;color:#1a1a2e">Dear <strong>${u.name}</strong>,</p>
+    <div style="background:#e8f5e9;border-left:4px solid #1D9E75;border-radius:6px;padding:14px 16px;margin:16px 0">
+      <p style="margin:0;font-size:15px;color:#1b5e20;font-weight:700">
+        ✅ Your ${monthLabel} report is locked and submitted to PMU. Thank you!
+      </p>
+    </div>
+    <p style="font-size:14px;color:#444;line-height:1.6">
+      Great work, <strong>${u.name}</strong>! Your monthly report for <strong>${u.org}</strong>
+      has been received. You can view it anytime under <em>My Reports</em>.
+    </p>
+    <p style="font-size:12px;color:#888;border-top:1px solid #eee;padding-top:14px;margin-top:14px">
+      Samagra Shiksha, Secondary, Uttar Pradesh, PMU Office
+    </p>
+  </div>
+</div>`
+        });
+        Logger.log('Thanks email → ' + u.email + ' (' + u.org + ') — already locked');
+
+      } else if (hasReport) {
+        // ── Report saved but not locked → Lock reminder ──
+        MailApp.sendEmail({
+          to: u.email,
+          subject: `Action Required: Lock your ${monthLabel} Report by Today`,
+          htmlBody: `
+<div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;border:1px solid #dde3ee;border-radius:10px;overflow:hidden">
+  <div style="background:#1A3C6E;padding:18px 24px">
+    <h2 style="color:#fff;margin:0;font-size:16px">Samagra Shiksha — NGO Partner Portal</h2>
+    <p style="color:rgba(255,255,255,0.7);margin:4px 0 0;font-size:12px">Madhyamik Shiksha Vibhag, Uttar Pradesh, PMU</p>
   </div>
   <div style="padding:24px">
     <p style="font-size:14px;color:#1a1a2e">Dear <strong>${u.name}</strong>,</p>
     <p style="font-size:14px;color:#444;line-height:1.6">
-      This is a reminder that your <strong>${monthLabel}</strong> Monthly Report for
-      <strong>${u.org}</strong> has <span style="color:#E24B4A;font-weight:700">not been locked yet</span>.
+      Your <strong>${monthLabel}</strong> report for <strong>${u.org}</strong> has been saved
+      but is <span style="color:#E24B4A;font-weight:700">not locked yet</span>.
     </p>
     <div style="background:#fff3e0;border-left:4px solid #E24B4A;border-radius:6px;padding:14px 16px;margin:16px 0">
       <p style="margin:0;font-size:14px;color:#b71c1c;font-weight:700">
-        ⚠️ Important: Your report will NOT reach the PMU / Department unless it is locked.
+        ⚠️ Your report will NOT reach the PMU / Department unless it is locked.
       </p>
       <p style="margin:6px 0 0;font-size:13px;color:#7f4f00">
-        Please complete your monthly update and click <strong>Lock Month Report</strong> today.
-        Reports auto-lock on the 5th of next month if not locked manually.
+        Please log in and click <strong>Lock Month Report</strong> to submit it.
       </p>
     </div>
-    <div style="text-align:center;margin:28px 0">
+    <div style="text-align:center;margin:24px 0">
       <a href="${PORTAL_URL}" style="background:#1A3C6E;color:#fff;padding:12px 28px;border-radius:8px;
-        text-decoration:none;font-size:14px;font-weight:700;display:inline-block">
-        🔒 Lock My Report Now
-      </a>
+        text-decoration:none;font-size:14px;font-weight:700;display:inline-block">🔒 Lock My Report Now</a>
     </div>
     <p style="font-size:12px;color:#888;border-top:1px solid #eee;padding-top:14px;margin-top:14px">
-      Steps: Log in → Monthly Report → fill all activities → click <em>Lock Month Report</em>.<br><br>
       For help, contact your PMU coordinator.
     </p>
   </div>
 </div>`
-      });
-      Logger.log('Reminder sent to: ' + u.email + ' (' + u.org + ')');
-    } catch(e) {
-      Logger.log('Reminder email failed for ' + u.email + ': ' + e.message);
-    }
-  });
-}
+        });
+        Logger.log('Lock reminder → ' + u.email + ' (' + u.org + ') — saved but not locked');
 
-// ── 2. 5th of month: Auto-lock previous month's unlocked reports ──
-function autoLockUnlockedReports() {
-  const today    = new Date();
-  const prevM    = today.getMonth() === 0 ? 11 : today.getMonth() - 1;
-  const prevY    = today.getMonth() === 0 ? today.getFullYear() - 1 : today.getFullYear();
-  const monthLabel = MONTH_NAMES[prevM] + ' ' + prevY;
-
-  const ss       = getSS();
-  const repSheet = ss.getSheetByName('Reports');
-  if (!repSheet) return;
-
-  const repRows    = repSheet.getDataRange().getValues();
-  const repHeaders = repRows[0];
-  const ngoIdx     = repHeaders.indexOf('ngo');
-  const monthIdx   = repHeaders.indexOf('month');
-  let   lockedIdx  = repHeaders.indexOf('report_locked');
-  if (lockedIdx < 0) {
-    lockedIdx = repHeaders.length;
-    repSheet.getRange(1, lockedIdx + 1).setValue('report_locked');
-  }
-
-  const lockedOrgs = new Set();
-
-  for (let i = 1; i < repRows.length; i++) {
-    const rowMonth = normalizeMonthLabel(repRows[i][monthIdx]);
-    if (rowMonth !== monthLabel) continue;
-    if (String(repRows[i][lockedIdx]).toLowerCase() === 'true') continue;
-
-    // Auto-lock this row
-    repSheet.getRange(i + 1, lockedIdx + 1).setValue('true');
-    lockedOrgs.add(String(repRows[i][ngoIdx]).trim());
-    Logger.log('Auto-locked report: ' + repRows[i][ngoIdx] + ' — ' + monthLabel);
-  }
-
-  if (!lockedOrgs.size) { Logger.log('No reports to auto-lock for ' + monthLabel); return; }
-
-  // Send notification emails
-  const users  = getActiveNGOUsers();
-  const mailed = new Set();
-
-  users.forEach(u => {
-    if (!lockedOrgs.has(u.org)) return;
-    if (mailed.has(u.org)) return;
-    mailed.add(u.org);
-    try {
-      MailApp.sendEmail({
-        to: u.email,
-        subject: `Your ${monthLabel} Report has been Auto-Locked`,
-        htmlBody: `
+      } else {
+        // ── No report at all → Fill & lock reminder ──
+        MailApp.sendEmail({
+          to: u.email,
+          subject: `Action Required: Submit your ${monthLabel} Monthly Report Today`,
+          htmlBody: `
 <div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;border:1px solid #dde3ee;border-radius:10px;overflow:hidden">
   <div style="background:#1A3C6E;padding:18px 24px">
     <h2 style="color:#fff;margin:0;font-size:16px">Samagra Shiksha — NGO Partner Portal</h2>
-    <p style="color:rgba(255,255,255,0.7);margin:4px 0 0;font-size:12px">Madhyamik Shiksha Vibhag, Uttar Pradesh | PMU</p>
+    <p style="color:rgba(255,255,255,0.7);margin:4px 0 0;font-size:12px">Madhyamik Shiksha Vibhag, Uttar Pradesh, PMU</p>
   </div>
   <div style="padding:24px">
     <p style="font-size:14px;color:#1a1a2e">Dear <strong>${u.name}</strong>,</p>
     <p style="font-size:14px;color:#444;line-height:1.6">
-      Your <strong>${monthLabel}</strong> Monthly Report for <strong>${u.org}</strong> has been
-      <span style="color:#C8960C;font-weight:700">auto-locked by the system</span>
-      as the submission deadline (5th of the month) has passed.
+      We have not received your <strong>${monthLabel}</strong> Monthly Report for
+      <strong>${u.org}</strong> yet.
     </p>
-    <p style="font-size:14px;color:#444;line-height:1.6">
-      Your report is now visible to the PMU team. If you need to make corrections,
-      please contact your PMU coordinator.
-    </p>
-    <div style="background:#fff8e1;border:1px solid #ffe082;border-radius:8px;padding:14px;margin:20px 0">
-      <p style="margin:0;font-size:13px;color:#795548">
-        <strong>📋 Report Details</strong><br>
-        Organisation: <strong>${u.org}</strong><br>
-        Period: <strong>${monthLabel}</strong><br>
-        Status: <strong style="color:#2e7d32">🔒 Locked</strong>
+    <div style="background:#fff3e0;border-left:4px solid #E24B4A;border-radius:6px;padding:14px 16px;margin:16px 0">
+      <p style="margin:0;font-size:14px;color:#b71c1c;font-weight:700">
+        ⚠️ Today is the last date. Please fill and lock your report immediately.
+      </p>
+      <p style="margin:6px 0 0;font-size:13px;color:#7f4f00">
+        Without locking, your report will NOT reach the PMU / Department.
       </p>
     </div>
+    <div style="text-align:center;margin:24px 0">
+      <a href="${PORTAL_URL}" style="background:#E24B4A;color:#fff;padding:12px 28px;border-radius:8px;
+        text-decoration:none;font-size:14px;font-weight:700;display:inline-block">📝 Fill & Lock Report Now</a>
+    </div>
     <p style="font-size:12px;color:#888;border-top:1px solid #eee;padding-top:14px;margin-top:14px">
-      To avoid auto-locking in future months, please lock your report yourself before the 5th.<br>
       For help, contact your PMU coordinator.
     </p>
   </div>
 </div>`
-      });
-      Logger.log('Auto-lock email sent to: ' + u.email + ' (' + u.org + ')');
+        });
+        Logger.log('Fill reminder → ' + u.email + ' (' + u.org + ') — no report');
+      }
     } catch(e) {
-      Logger.log('Auto-lock email failed for ' + u.email + ': ' + e.message);
+      Logger.log('Email failed for ' + u.email + ': ' + e.message);
     }
   });
 }
 
-// ── 3. One-time setup: two monthly triggers ───────────────────
+
+// ── 3. One-time setup: monthly reminder trigger ───────────────
 // Run ONCE manually: Extensions → Apps Script → select setupMonthlyTriggers → Run
 function setupMonthlyTriggers() {
-  // Remove any existing triggers for these functions
+  // Remove any existing trigger for this function
   ScriptApp.getProjectTriggers().forEach(t => {
-    const fn = t.getHandlerFunction();
-    if (fn === 'sendMonthEndReminders' || fn === 'autoLockUnlockedReports') {
-      ScriptApp.deleteTrigger(t);
-    }
+    if (t.getHandlerFunction() === 'sendMonthEndReminders') ScriptApp.deleteTrigger(t);
   });
 
   // Reminder on 30th of every month at 10 AM
@@ -1080,12 +1118,5 @@ function setupMonthlyTriggers() {
     .atHour(10)
     .create();
 
-  // Auto-lock on 5th of every month at 10 AM
-  ScriptApp.newTrigger('autoLockUnlockedReports')
-    .timeBased()
-    .onMonthDay(5)
-    .atHour(10)
-    .create();
-
-  Logger.log('Triggers set: sendMonthEndReminders on 30th, autoLockUnlockedReports on 5th — both at 10 AM');
+  Logger.log('Trigger set: sendMonthEndReminders runs on 30th of every month at 10 AM');
 }
