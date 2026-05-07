@@ -68,8 +68,10 @@ function doPost(e) {
     if (action === 'unlockProject') return respond(unlockProject(data));
     if (action === 'unlockProjectsByComponent') return respond(unlockProjectsByComponent(data));
     if (action === 'deleteUnlockedProjects') return respond(deleteUnlockedProjects(data));
-    if (action === 'lockReport')   return respond(lockReport(data));
-    if (action === 'submitReport') return respond(submitReport({ report: JSON.parse(data.report) }));
+    if (action === 'lockReport')        return respond(lockReport(data));
+    if (action === 'submitReport')      return respond(submitReport({ report: JSON.parse(data.report) }));
+    if (action === 'getAdminPartners')  return respond(getAdminPartners());
+    if (action === 'setNGOStatus')      return respond(setNGOStatus(data));
     return respond({ error: 'Unknown action' });
   } catch (err) {
     return respond({ error: err.message });
