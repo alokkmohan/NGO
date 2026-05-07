@@ -817,7 +817,9 @@ tr:hover td{background:#FAFBFF}
           <select id="rep-month">
             <option value="all">All months</option>
             <option>April 2026</option><option>May 2026</option><option>June 2026</option>
-            <option>March 2026</option><option>February 2026</option><option>January 2026</option>
+            <option>July 2026</option><option>August 2026</option><option>September 2026</option>
+            <option>October 2026</option><option>November 2026</option><option>December 2026</option>
+            <option>January 2027</option><option>February 2027</option><option>March 2027</option>
           </select>
           <button class="btn-report" onclick="generateReport()">⬇ Generate Report</button>
           <button class="btn-report" style="background:var(--green)" onclick="window.print()">🖨 Print / PDF</button>
@@ -4622,7 +4624,7 @@ function downloadAllNGOsSummary(){
   rows.push([]);
 
   // ── Overall totals ─────────────────────────────────────
-  const allReps = filterMonth === 'all' ? REPORTS : REPORTS.filter(r => r.month === filterMonth);
+  const allReps = filterMonth === 'all' ? REPORTS : REPORTS.filter(r => _normalizeMonth(r.month) === filterMonth);
   const totSchools   = allReps.reduce((a,r)=>a+(+r.schools||0),0);
   const totStudents  = allReps.reduce((a,r)=>a+(+r.students||0),0);
   const totGirls     = allReps.reduce((a,r)=>a+(+r.girls||0),0);
@@ -4645,7 +4647,7 @@ function downloadAllNGOsSummary(){
   SAMPLE_NGOS.forEach(ngo => {
     const ngoReps = filterMonth === 'all'
       ? REPORTS.filter(r => r.ngo === ngo.name).sort((a,b)=>(+a.id||0)-(+b.id||0))
-      : REPORTS.filter(r => r.ngo === ngo.name && r.month === filterMonth);
+      : REPORTS.filter(r => r.ngo === ngo.name && _normalizeMonth(r.month) === filterMonth);
 
     if(!ngoReps.length){
       // NGO has no report for selected period
@@ -5064,9 +5066,19 @@ function buildReportRows(ngoName, taskActs, myProjs){
   return rows;
 }
 
+function _normalizeMonth(val){
+  if(!val) return '';
+  if(/^[A-Za-z]/.test(val)) return val.trim(); // already "April 2026"
+  try {
+    const d = new Date(val);
+    if(!isNaN(d)) return d.toLocaleDateString('en-IN',{month:'long',year:'numeric'});
+  } catch(e){}
+  return val.trim();
+}
+
 function buildOfficialReport(n, selMonth){
   const ngoReps = REPORTS.filter(rep => rep.ngo === n.name &&
-    (selMonth==='all' || rep.month === selMonth))
+    (selMonth==='all' || _normalizeMonth(rep.month) === selMonth))
     .sort((a,b)=>(+b.id||0)-(+a.id||0));
   const r = ngoReps[0] || {};
 
