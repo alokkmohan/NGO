@@ -767,7 +767,6 @@ tr:hover td{background:#FAFBFF}
               <th>Organisation</th>
               <th>Email</th>
               <th>Reports</th>
-              <th>Tasks</th>
               <th>Status</th>
               <th>Action</th>
             </tr></thead>
@@ -4896,24 +4895,16 @@ function renderAdminNGOList(){
   }));
 
   tbody.innerHTML = rows.map((p, i) => {
-    const ngoName     = p.org || '';
-    const taskCount   = PROJECTS.filter(t => t.ngo===ngoName && t.status!=='deleted').length;
-    const lockedCount = PROJECTS.filter(t => t.ngo===ngoName && t.status!=='deleted' && isTaskLocked(t.locked)).length;
-    const repCount    = REPORTS.filter(r => r.ngo===ngoName).length;
-    const isActive    = (p.status||'active') === 'active';
-    const ngoEsc      = ngoName.replace(/'/g,"\\'");
+    const ngoName  = p.org || '';
+    const repCount = REPORTS.filter(r => r.ngo===ngoName).length;
+    const isActive = (p.status||'active') === 'active';
+    const ngoEsc   = ngoName.replace(/'/g,"\\'");
 
     return `<tr style="${isActive?'':'background:#fff5f5;opacity:.85'}">
       <td style="color:var(--muted);font-size:11px">${i+1}</td>
       <td><strong style="color:var(--blue)">${ngoName}</strong></td>
       <td style="font-size:11px;color:var(--muted)">${p.email||'—'}</td>
       <td style="text-align:center">${repCount}</td>
-      <td>
-        <button onclick="openAdminTaskModal('${ngoEsc}')"
-          style="padding:3px 8px;font-size:11px;background:var(--blue);color:#fff;border:none;border-radius:5px;cursor:pointer;white-space:nowrap">
-          ${taskCount ? `${lockedCount}/${taskCount} 🔒` : '—'}
-        </button>
-      </td>
       <td>
         <span style="padding:3px 10px;border-radius:12px;font-size:11px;font-weight:700;
           background:${isActive?'#e8f5e9':'#fce4ec'};color:${isActive?'#2e7d32':'#c62828'}">
