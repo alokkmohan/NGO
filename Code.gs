@@ -281,10 +281,24 @@ function getNGOs() {
   const rows  = sheet.getDataRange().getValues();
   if (rows.length < 2) return { success: true, data: [] };
   const headers = rows[0];
-  const data    = rows.slice(1).map(row => {
+  // Build active NGO set from NGO_List
+  const activeNames = new Set();
+  const listSheet = getSS().getSheetByName('NGO_List');
+  if (listSheet) {
+    const lRows = listSheet.getDataRange().getValues();
+    for (let i = 1; i < lRows.length; i++) {
+      if (String(lRows[i][2]).toLowerCase().trim() === 'active')
+        activeNames.add(String(lRows[i][1]).trim().toLowerCase());
+    }
+  }
+  const data = rows.slice(1).map(row => {
     const obj = {};
     headers.forEach((h, i) => obj[h] = row[i]);
     return obj;
+  }).filter(obj => {
+    // If NGO_List has entries, only return active NGOs; otherwise return all
+    if (activeNames.size === 0) return true;
+    return activeNames.has(String(obj.name||'').trim().toLowerCase());
   });
   return { success: true, data };
 }
