@@ -1062,33 +1062,30 @@ function autoLockUnlockedReports() {
   });
 }
 
-// ── 3. Daily trigger function (checks date & calls above) ─────
-function dailyMonthlyCheck() {
-  const today = new Date();
-  const day   = today.getDate();
-
-  if (day === 30) {
-    Logger.log('30th of month — sending lock reminders');
-    sendMonthEndReminders();
-  }
-  if (day === 5) {
-    Logger.log('5th of month — auto-locking previous month reports');
-    autoLockUnlockedReports();
-  }
-}
-
-// ── 4. One-time setup: creates daily trigger at 7 AM ──────────
-// Run this ONCE manually from Apps Script editor: Extensions → Apps Script → Run setupDailyTrigger
-function setupDailyTrigger() {
-  // Remove existing triggers for this function to avoid duplicates
+// ── 3. One-time setup: two monthly triggers ───────────────────
+// Run ONCE manually: Extensions → Apps Script → select setupMonthlyTriggers → Run
+function setupMonthlyTriggers() {
+  // Remove any existing triggers for these functions
   ScriptApp.getProjectTriggers().forEach(t => {
-    if (t.getHandlerFunction() === 'dailyMonthlyCheck') ScriptApp.deleteTrigger(t);
+    const fn = t.getHandlerFunction();
+    if (fn === 'sendMonthEndReminders' || fn === 'autoLockUnlockedReports') {
+      ScriptApp.deleteTrigger(t);
+    }
   });
-  // Create new daily trigger at 7:00 AM
-  ScriptApp.newTrigger('dailyMonthlyCheck')
+
+  // Reminder on 30th of every month at 10 AM
+  ScriptApp.newTrigger('sendMonthEndReminders')
     .timeBased()
-    .everyDays(1)
-    .atHour(7)
+    .onMonthDay(30)
+    .atHour(10)
     .create();
-  Logger.log('Daily trigger set: dailyMonthlyCheck runs at 7 AM every day');
+
+  // Auto-lock on 5th of every month at 10 AM
+  ScriptApp.newTrigger('autoLockUnlockedReports')
+    .timeBased()
+    .onMonthDay(5)
+    .atHour(10)
+    .create();
+
+  Logger.log('Triggers set: sendMonthEndReminders on 30th, autoLockUnlockedReports on 5th — both at 10 AM');
 }
