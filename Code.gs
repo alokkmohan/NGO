@@ -894,194 +894,76 @@ function forgotPassword(data) {
   return { success: false, error: 'Email not found in system' };
 }
 
-// ── ADMIN: Get all NGO partners ──
-// Primary source: NGO_List (all partner orgs, even without accounts)
-// Supplement: Users sheet — if a user exists for that org, use their name/email
+// ── ADMIN: Get all NGO partners — org name + email from Users sheet ──
 function getAdminPartners() {
-  const ss = getSS();
-
-  // Build users map: org.lower → { name, email }
-  const usersMap   = {};
+  const ss         = getSS();
   const usersSheet = ss.getSheetByName('Users');
-  if (usersSheet) {
-    const uRows = usersSheet.getDataRange().getValues();
-    const uH    = uRows[0];
-    const eIdx  = uH.indexOf('email');
-    const rIdx  = uH.indexOf('role');
-    const nIdx  = uH.indexOf('name');
-    const oIdx  = uH.indexOf('org');
-    for (let i = 1; i < uRows.length; i++) {
-      const role = String(uRows[i][rIdx]||'').toLowerCase();
-      if (role === 'admin') continue;
-      const org = String(uRows[i][oIdx]||'').trim();
-      if (!org || usersMap[org.toLowerCase()]) continue;
-      usersMap[org.toLowerCase()] = {
-        name:  String(uRows[i][nIdx]||'').trim(),
-        email: String(uRows[i][eIdx]||'').trim()
-      };
-    }
-  }
+  if (!usersSheet) return { success: true, data: [] };
 
-  // Read NGO_List as primary — every row is a partner org
-  const listSheet = ss.getSheetByName('NGO_List');
-  if (!listSheet) return { success: true, data: [] };
+  const uRows = usersSheet.getDataRange().getValues();
+  const uH    = uRows[0];
+  const eIdx  = uH.indexOf('email');
+  const rIdx  = uH.indexOf('role');
+  const oIdx  = uH.indexOf('org');
+  const sIdx  = uH.indexOf('status');
 
-  const lRows  = listSheet.getDataRange().getValues();
-  const lH     = lRows[0];
-  const pnIdx  = lH.indexOf('poc_name');
-  const peIdx  = lH.indexOf('poc_email');
-  const sIdx   = lH.indexOf('status');
-  const fIdx   = lH.indexOf('mou_from');
-  const tIdx   = lH.indexOf('mou_to');
-
+  const seen     = new Set();
   const partners = [];
-  for (let i = 1; i < lRows.length; i++) {
-    const org = String(lRows[i][1]||'').trim();
-    if (!org) continue;
-    const u = usersMap[org.toLowerCase()] || {};
+  for (let i = 1; i < uRows.length; i++) {
+    const role = String(uRows[i][rIdx]||'').toLowerCase();
+    if (role === 'admin') continue;
+    const org = String(uRows[i][oIdx]||'').trim();
+    if (!org || seen.has(org.toLowerCase())) continue;
+    seen.add(org.toLowerCase());
     partners.push({
       org,
-      name:     u.name  || (pnIdx >= 0 ? String(lRows[i][pnIdx]||'') : ''),
-      email:    u.email || (peIdx >= 0 ? String(lRows[i][peIdx]||'') : ''),
-      status:   sIdx >= 0 ? String(lRows[i][sIdx]||'active').trim().toLowerCase() : 'active',
-      mou_from: fIdx >= 0 ? String(lRows[i][fIdx]||'') : '',
-      mou_to:   tIdx >= 0 ? String(lRows[i][tIdx]||'') : ''
+      email:  String(uRows[i][eIdx]||'').trim(),
+      status: sIdx >= 0 ? String(uRows[i][sIdx]||'active').trim().toLowerCase() : 'active'
     });
   }
   return { success: true, data: partners };
 }
 
-// ── ADMIN: Set NGO status / MOU dates ──
-// Primary store: NGO_List (status, mou_from, mou_to, poc_name, poc_email auto-created)
-// Secondary sync: Users sheet status column (controls login access via isNGOActive)
+// ── ADMIN: Set NGO active/inactive status ──
+// Updates Users sheet (login access) + NGO_List status column
 function setNGOStatus(data) {
   const ngo    = String(data.ngo||'').trim();
   const status = String(data.status||'').trim().toLowerCase();
-  if (!ngo) return { success: false, error: 'NGO name required' };
+  if (!ngo || !status) return { success: false, error: 'NGO name and status required' };
 
-  const ss        = getSS();
+  const ss = getSS();
+
+  // Update Users sheet — status column (auto-created if missing)
+  const usersSheet = ss.getSheetByName('Users');
+  if (usersSheet) {
+    const uRows = usersSheet.getDataRange().getValues();
+    const uH    = uRows[0];
+    const oIdx  = uH.indexOf('org');
+    let   sIdx  = uH.indexOf('status');
+    if (sIdx < 0) { sIdx = uH.length; usersSheet.getRange(1, sIdx+1).setValue('status'); }
+    for (let i = 1; i < uRows.length; i++) {
+      if (String(uRows[i][oIdx]||'').trim().toLowerCase() === ngo.toLowerCase()) {
+        usersSheet.getRange(i+1, sIdx+1).setValue(status);
+      }
+    }
+  }
+
+  // Sync to NGO_List for isNGOActive() login check
   const listSheet = ss.getSheetByName('NGO_List');
-  if (!listSheet) return { success: false, error: 'NGO_List sheet not found' };
-
-  const lRows = listSheet.getDataRange().getValues();
-  const lH    = lRows[0];
-
-  function ensureCol(name) {
-    let idx = lH.indexOf(name);
-    if (idx < 0) { idx = lH.length; listSheet.getRange(1, idx+1).setValue(name); lH.push(name); }
-    return idx;
-  }
-  const sIdx  = ensureCol('status');
-  const fIdx  = ensureCol('mou_from');
-  const tIdx  = ensureCol('mou_to');
-  const pnIdx = ensureCol('poc_name');
-  const peIdx = ensureCol('poc_email');
-
-  let found = false;
-  for (let i = 1; i < lRows.length; i++) {
-    if (String(lRows[i][1]||'').trim().toLowerCase() !== ngo.toLowerCase()) continue;
-    found = true;
-    if (status)                       listSheet.getRange(i+1, sIdx+1).setValue(status);
-    if (data.mou_from !== undefined)  listSheet.getRange(i+1, fIdx+1).setValue(data.mou_from||'');
-    if (data.mou_to   !== undefined)  listSheet.getRange(i+1, tIdx+1).setValue(data.mou_to||'');
-    break;
-  }
-  if (!found && status) {
-    const row = new Array(lH.length).fill('');
-    row[0] = lRows.length; row[1] = ngo; row[sIdx] = status;
-    if (data.mou_from !== undefined) row[fIdx] = data.mou_from||'';
-    if (data.mou_to   !== undefined) row[tIdx] = data.mou_to||'';
-    listSheet.appendRow(row);
-  }
-
-  // Sync status to Users sheet for login access control
-  if (status) {
-    const usersSheet = ss.getSheetByName('Users');
-    if (usersSheet) {
-      const uRows = usersSheet.getDataRange().getValues();
-      const uH    = uRows[0];
-      const oIdx  = uH.indexOf('org');
-      let   usIdx = uH.indexOf('status');
-      if (usIdx < 0) { usIdx = uH.length; usersSheet.getRange(1, usIdx+1).setValue('status'); }
-      for (let i = 1; i < uRows.length; i++) {
-        if (String(uRows[i][oIdx]||'').trim().toLowerCase() === ngo.toLowerCase()) {
-          usersSheet.getRange(i+1, usIdx+1).setValue(status);
-        }
+  if (listSheet) {
+    const lRows = listSheet.getDataRange().getValues();
+    const lH    = lRows[0];
+    let   lsIdx = lH.indexOf('status');
+    if (lsIdx < 0) { lsIdx = lH.length; listSheet.getRange(1, lsIdx+1).setValue('status'); }
+    for (let i = 1; i < lRows.length; i++) {
+      if (String(lRows[i][1]||'').trim().toLowerCase() === ngo.toLowerCase()) {
+        listSheet.getRange(i+1, lsIdx+1).setValue(status);
+        break;
       }
     }
   }
 
   return { success: true };
-}
-
-// ── One-time setup: populate NGO_List with all 18 partners from PDF ──
-// Run manually from Apps Script editor once. Safe to re-run — skips existing rows.
-function initializePartners() {
-  const ss        = getSS();
-  const listSheet = ss.getSheetByName('NGO_List');
-  if (!listSheet) { Logger.log('NGO_List sheet not found'); return; }
-
-  const PARTNERS = [
-    { name: 'Khan Academy',                      poc_name: 'Swati Vasudevan',      poc_email: 'swati@khanacademy.org',                mou_from: '13 Apr 2026', mou_to: '13 Apr 2029' },
-    { name: 'I-Dream',                           poc_name: 'Shivendra Vikram Singh', poc_email: 'shivendra@idreamcareer.com',          mou_from: '15 Apr 2026', mou_to: '15 Apr 2027' },
-    { name: 'Swami Vivekanand Shiksha Mission',  poc_name: 'Pratyush Kumar Sharma', poc_email: 'sharma.pratyush10@gmail.com',          mou_from: '15 Apr 2026', mou_to: '15 Apr 2027' },
-    { name: 'Studyeasy Foundation',              poc_name: 'Mitesh Telgade',        poc_email: '',                                     mou_from: '15 Apr 2026', mou_to: '15 Apr 2027' },
-    { name: 'SEED',                              poc_name: 'Utkarsh Dixit',         poc_email: '',                                     mou_from: '10 Apr 2026', mou_to: '10 Apr 2027' },
-    { name: 'America India Foundation',          poc_name: 'Manisha Tripathi',      poc_email: 'manisha.tripathi@aif.org',             mou_from: '',            mou_to: ''            },
-    { name: 'Next Leap.ai',                      poc_name: 'Devvrat Arya',          poc_email: '',                                     mou_from: '15 Apr 2026', mou_to: '15 Apr 2027' },
-    { name: 'The Hans Foundation',               poc_name: 'Riya Singh',            poc_email: 'pm.education@thfmail.com',             mou_from: '15 Apr 2026', mou_to: '15 Apr 2027' },
-    { name: 'Central Square Foundation',         poc_name: 'Akhand Pratap Singh',   poc_email: '',                                     mou_from: '15 Apr 2026', mou_to: '15 Apr 2027' },
-    { name: 'Educate Girls',                     poc_name: 'Aditya Pratap Singh',   poc_email: 'adityapratap.singh1@educategirls.ngo', mou_from: '15 Apr 2026', mou_to: '15 Apr 2029' },
-    { name: 'Prachand Prayas',                   poc_name: 'Rimpi Singh',           poc_email: 'prachandprayas.india@gmail.com',       mou_from: '18 Dec 2025', mou_to: '18 Dec 2026' },
-    { name: 'Shashwat Shabhagi Sansthan',        poc_name: 'Devendra Mishra',       poc_email: 'shashwatindia02@gmail.com',            mou_from: '03 Dec 2025', mou_to: '03 Dec 2026' },
-    { name: 'Ed Tech Tulna - IIT Delhi',         poc_name: '',                      poc_email: '',                                     mou_from: '17 Dec 2025', mou_to: '17 Dec 2026' },
-    { name: 'Udhyam Learning Foundation',        poc_name: 'Harish Manwani',        poc_email: '',                                     mou_from: '17 Dec 2025', mou_to: '17 Dec 2026' },
-    { name: 'G-Cap',                             poc_name: 'Himanshu Vaish',        poc_email: 'scholarplanet@gcapworld.com',          mou_from: '14 Feb 2025', mou_to: '14 Feb 2027' },
-    { name: 'HCL TSS',                           poc_name: 'Sandeep Verma',         poc_email: 'sandeep_verma@hcltech.com',            mou_from: '09 Feb 2023', mou_to: '09 Feb 2028' },
-    { name: 'Lend A Hand',                       poc_name: 'Saurabh Shukla',        poc_email: 'saurabh.shukla@lendahandindia.org',   mou_from: '12 Sep 2023', mou_to: ''            },
-    { name: 'Medha',                             poc_name: 'Rohit Srivass',         poc_email: 'rohit.srivass@medha.org.in',           mou_from: '08 Feb 2023', mou_to: '08 Feb 2028' }
-  ];
-
-  const rows = listSheet.getDataRange().getValues();
-  const h    = rows[0];
-
-  function ensureCol(name) {
-    let idx = h.indexOf(name);
-    if (idx < 0) { idx = h.length; listSheet.getRange(1, idx+1).setValue(name); h.push(name); }
-    return idx;
-  }
-  const pnIdx  = ensureCol('poc_name');
-  const peIdx  = ensureCol('poc_email');
-  const sIdx   = ensureCol('status');
-  const fIdx   = ensureCol('mou_from');
-  const tIdx   = ensureCol('mou_to');
-
-  // Build existing name set and update missing fields on existing rows
-  const existing = new Set();
-  for (let i = 1; i < rows.length; i++) {
-    const org = String(rows[i][1]||'').trim();
-    if (!org) continue;
-    existing.add(org.toLowerCase());
-    const match = PARTNERS.find(p => p.name.toLowerCase() === org.toLowerCase());
-    if (!match) continue;
-    if (!String(rows[i][pnIdx]||'').trim() && match.poc_name)  listSheet.getRange(i+1, pnIdx+1).setValue(match.poc_name);
-    if (!String(rows[i][peIdx]||'').trim() && match.poc_email) listSheet.getRange(i+1, peIdx+1).setValue(match.poc_email);
-    if (!String(rows[i][fIdx ]||'').trim() && match.mou_from)  listSheet.getRange(i+1, fIdx+1 ).setValue(match.mou_from);
-    if (!String(rows[i][tIdx ]||'').trim() && match.mou_to)    listSheet.getRange(i+1, tIdx+1 ).setValue(match.mou_to);
-  }
-
-  // Append NGOs not yet in the list
-  let added = 0;
-  for (const p of PARTNERS) {
-    if (existing.has(p.name.toLowerCase())) continue;
-    const row = new Array(h.length).fill('');
-    row[0] = rows.length + added; row[1] = p.name;
-    row[pnIdx] = p.poc_name;  row[peIdx] = p.poc_email;
-    row[sIdx]  = 'active';    row[fIdx]  = p.mou_from;  row[tIdx] = p.mou_to;
-    listSheet.appendRow(row);
-    added++;
-  }
-  Logger.log('initializePartners: ' + added + ' new rows added, existing rows updated.');
 }
 
 // ── PERMISSION TEST — run this once manually to authorize MailApp ──
