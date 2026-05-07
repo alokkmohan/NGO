@@ -933,7 +933,7 @@ function sendMonthEndReminders() {
     try {
       MailApp.sendEmail({
         to: u.email,
-        subject: `Action Required: Lock your ${monthLabel} Monthly Report`,
+        subject: `Action Required: Lock your ${monthLabel} Monthly Report by 30th`,
         htmlBody: `
 <div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;border:1px solid #dde3ee;border-radius:10px;overflow:hidden">
   <div style="background:#1A3C6E;padding:18px 24px">
@@ -946,10 +946,15 @@ function sendMonthEndReminders() {
       This is a reminder that your <strong>${monthLabel}</strong> Monthly Report for
       <strong>${u.org}</strong> has <span style="color:#E24B4A;font-weight:700">not been locked yet</span>.
     </p>
-    <p style="font-size:14px;color:#444;line-height:1.6">
-      Please log in to the portal, review your report and <strong>lock it today</strong> to ensure
-      timely submission to PMU.
-    </p>
+    <div style="background:#fff3e0;border-left:4px solid #E24B4A;border-radius:6px;padding:14px 16px;margin:16px 0">
+      <p style="margin:0;font-size:14px;color:#b71c1c;font-weight:700">
+        ⚠️ Important: Your report will NOT reach the PMU / Department unless it is locked.
+      </p>
+      <p style="margin:6px 0 0;font-size:13px;color:#7f4f00">
+        Please complete your monthly update and click <strong>Lock Month Report</strong> today.
+        Reports auto-lock on the 5th of next month if not locked manually.
+      </p>
+    </div>
     <div style="text-align:center;margin:28px 0">
       <a href="${PORTAL_URL}" style="background:#1A3C6E;color:#fff;padding:12px 28px;border-radius:8px;
         text-decoration:none;font-size:14px;font-weight:700;display:inline-block">
@@ -957,8 +962,7 @@ function sendMonthEndReminders() {
       </a>
     </div>
     <p style="font-size:12px;color:#888;border-top:1px solid #eee;padding-top:14px;margin-top:14px">
-      If you have already submitted your activities, simply click <em>Lock Month Report</em> on the
-      Monthly Report page. Once locked, your report will be visible to the PMU team.<br><br>
+      Steps: Log in → Monthly Report → fill all activities → click <em>Lock Month Report</em>.<br><br>
       For help, contact your PMU coordinator.
     </p>
   </div>
@@ -1060,14 +1064,11 @@ function autoLockUnlockedReports() {
 
 // ── 3. Daily trigger function (checks date & calls above) ─────
 function dailyMonthlyCheck() {
-  const today   = new Date();
-  const day     = today.getDate();
-  const month   = today.getMonth();
-  const year    = today.getFullYear();
-  const lastDay = new Date(year, month + 1, 0).getDate();
+  const today = new Date();
+  const day   = today.getDate();
 
-  if (day === lastDay) {
-    Logger.log('Last day of month — sending reminders');
+  if (day === 30) {
+    Logger.log('30th of month — sending lock reminders');
     sendMonthEndReminders();
   }
   if (day === 5) {
