@@ -855,3 +855,239 @@ function authorizeMailPermission() {
   });
   Logger.log('Mail sent OK to: ' + Session.getActiveUser().getEmail());
 }
+
+// ══════════════════════════════════════════════════════════════
+// AUTO MONTHLY EMAILS & TRIGGERS
+// ══════════════════════════════════════════════════════════════
+
+const MONTH_NAMES = ['January','February','March','April','May','June',
+                     'July','August','September','October','November','December'];
+const PORTAL_URL  = 'https://samsecup.dataimpact.in/';
+
+// ── Helpers ──────────────────────────────────────────────────
+
+// Normalize month value (handles ISO date strings or "April 2026" format)
+function normalizeMonthLabel(val) {
+  if (!val) return '';
+  const s = String(val).trim();
+  if (/^[A-Za-z]/.test(s)) return s; // already "April 2026"
+  try {
+    const d = new Date(s);
+    if (!isNaN(d)) return MONTH_NAMES[d.getMonth()] + ' ' + d.getFullYear();
+  } catch(e) {}
+  return s;
+}
+
+// Get all active NGO users: [{email, name, org}]
+function getActiveNGOUsers() {
+  const sheet = getSS().getSheetByName('Users');
+  if (!sheet) return [];
+  const rows    = sheet.getDataRange().getValues();
+  const h       = rows[0];
+  const eIdx    = h.indexOf('email');
+  const rIdx    = h.indexOf('role');
+  const nIdx    = h.indexOf('name');
+  const oIdx    = h.indexOf('org');
+  const users   = [];
+  for (let i = 1; i < rows.length; i++) {
+    if (String(rows[i][rIdx]||'').toLowerCase() === 'admin') continue;
+    const email = String(rows[i][eIdx]||'').trim();
+    const org   = String(rows[i][oIdx]||'').trim();
+    if (!email || !org) continue;
+    users.push({ email, name: String(rows[i][nIdx]||'').trim() || org, org });
+  }
+  return users;
+}
+
+// Check if a report is locked for NGO + monthLabel
+function isReportLocked(repRows, repHeaders, org, monthLabel) {
+  const ngoIdx    = repHeaders.indexOf('ngo');
+  const monthIdx  = repHeaders.indexOf('month');
+  const lockedIdx = repHeaders.indexOf('report_locked');
+  for (let i = 1; i < repRows.length; i++) {
+    if (String(repRows[i][ngoIdx]).trim() !== org) continue;
+    if (normalizeMonthLabel(repRows[i][monthIdx]) !== monthLabel) continue;
+    return String(repRows[i][lockedIdx]).toLowerCase() === 'true';
+  }
+  return false; // no report found = not locked
+}
+
+// ── 1. Last-day-of-month: Send reminder to unlock NGOs ───────
+function sendMonthEndReminders() {
+  const today      = new Date();
+  const monthLabel = MONTH_NAMES[today.getMonth()] + ' ' + today.getFullYear();
+
+  const ss         = getSS();
+  const repSheet   = ss.getSheetByName('Reports');
+  const repRows    = repSheet ? repSheet.getDataRange().getValues() : [[]];
+  const repHeaders = repRows[0] || [];
+
+  const users = getActiveNGOUsers();
+  // One email per org (avoid duplicates if multiple logins)
+  const done = new Set();
+
+  users.forEach(u => {
+    if (done.has(u.org)) return;
+    if (isReportLocked(repRows, repHeaders, u.org, monthLabel)) return; // already locked
+    done.add(u.org);
+    try {
+      MailApp.sendEmail({
+        to: u.email,
+        subject: `Action Required: Lock your ${monthLabel} Monthly Report`,
+        htmlBody: `
+<div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;border:1px solid #dde3ee;border-radius:10px;overflow:hidden">
+  <div style="background:#1A3C6E;padding:18px 24px">
+    <h2 style="color:#fff;margin:0;font-size:16px">Samagra Shiksha — NGO Partner Portal</h2>
+    <p style="color:rgba(255,255,255,0.7);margin:4px 0 0;font-size:12px">Madhyamik Shiksha Vibhag, Uttar Pradesh | PMU</p>
+  </div>
+  <div style="padding:24px">
+    <p style="font-size:14px;color:#1a1a2e">Dear <strong>${u.name}</strong>,</p>
+    <p style="font-size:14px;color:#444;line-height:1.6">
+      This is a reminder that your <strong>${monthLabel}</strong> Monthly Report for
+      <strong>${u.org}</strong> has <span style="color:#E24B4A;font-weight:700">not been locked yet</span>.
+    </p>
+    <p style="font-size:14px;color:#444;line-height:1.6">
+      Please log in to the portal, review your report and <strong>lock it today</strong> to ensure
+      timely submission to PMU.
+    </p>
+    <div style="text-align:center;margin:28px 0">
+      <a href="${PORTAL_URL}" style="background:#1A3C6E;color:#fff;padding:12px 28px;border-radius:8px;
+        text-decoration:none;font-size:14px;font-weight:700;display:inline-block">
+        🔒 Lock My Report Now
+      </a>
+    </div>
+    <p style="font-size:12px;color:#888;border-top:1px solid #eee;padding-top:14px;margin-top:14px">
+      If you have already submitted your activities, simply click <em>Lock Month Report</em> on the
+      Monthly Report page. Once locked, your report will be visible to the PMU team.<br><br>
+      For help, contact your PMU coordinator.
+    </p>
+  </div>
+</div>`
+      });
+      Logger.log('Reminder sent to: ' + u.email + ' (' + u.org + ')');
+    } catch(e) {
+      Logger.log('Reminder email failed for ' + u.email + ': ' + e.message);
+    }
+  });
+}
+
+// ── 2. 5th of month: Auto-lock previous month's unlocked reports ──
+function autoLockUnlockedReports() {
+  const today    = new Date();
+  const prevM    = today.getMonth() === 0 ? 11 : today.getMonth() - 1;
+  const prevY    = today.getMonth() === 0 ? today.getFullYear() - 1 : today.getFullYear();
+  const monthLabel = MONTH_NAMES[prevM] + ' ' + prevY;
+
+  const ss       = getSS();
+  const repSheet = ss.getSheetByName('Reports');
+  if (!repSheet) return;
+
+  const repRows    = repSheet.getDataRange().getValues();
+  const repHeaders = repRows[0];
+  const ngoIdx     = repHeaders.indexOf('ngo');
+  const monthIdx   = repHeaders.indexOf('month');
+  let   lockedIdx  = repHeaders.indexOf('report_locked');
+  if (lockedIdx < 0) {
+    lockedIdx = repHeaders.length;
+    repSheet.getRange(1, lockedIdx + 1).setValue('report_locked');
+  }
+
+  const lockedOrgs = new Set();
+
+  for (let i = 1; i < repRows.length; i++) {
+    const rowMonth = normalizeMonthLabel(repRows[i][monthIdx]);
+    if (rowMonth !== monthLabel) continue;
+    if (String(repRows[i][lockedIdx]).toLowerCase() === 'true') continue;
+
+    // Auto-lock this row
+    repSheet.getRange(i + 1, lockedIdx + 1).setValue('true');
+    lockedOrgs.add(String(repRows[i][ngoIdx]).trim());
+    Logger.log('Auto-locked report: ' + repRows[i][ngoIdx] + ' — ' + monthLabel);
+  }
+
+  if (!lockedOrgs.size) { Logger.log('No reports to auto-lock for ' + monthLabel); return; }
+
+  // Send notification emails
+  const users  = getActiveNGOUsers();
+  const mailed = new Set();
+
+  users.forEach(u => {
+    if (!lockedOrgs.has(u.org)) return;
+    if (mailed.has(u.org)) return;
+    mailed.add(u.org);
+    try {
+      MailApp.sendEmail({
+        to: u.email,
+        subject: `Your ${monthLabel} Report has been Auto-Locked`,
+        htmlBody: `
+<div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;border:1px solid #dde3ee;border-radius:10px;overflow:hidden">
+  <div style="background:#1A3C6E;padding:18px 24px">
+    <h2 style="color:#fff;margin:0;font-size:16px">Samagra Shiksha — NGO Partner Portal</h2>
+    <p style="color:rgba(255,255,255,0.7);margin:4px 0 0;font-size:12px">Madhyamik Shiksha Vibhag, Uttar Pradesh | PMU</p>
+  </div>
+  <div style="padding:24px">
+    <p style="font-size:14px;color:#1a1a2e">Dear <strong>${u.name}</strong>,</p>
+    <p style="font-size:14px;color:#444;line-height:1.6">
+      Your <strong>${monthLabel}</strong> Monthly Report for <strong>${u.org}</strong> has been
+      <span style="color:#C8960C;font-weight:700">auto-locked by the system</span>
+      as the submission deadline (5th of the month) has passed.
+    </p>
+    <p style="font-size:14px;color:#444;line-height:1.6">
+      Your report is now visible to the PMU team. If you need to make corrections,
+      please contact your PMU coordinator.
+    </p>
+    <div style="background:#fff8e1;border:1px solid #ffe082;border-radius:8px;padding:14px;margin:20px 0">
+      <p style="margin:0;font-size:13px;color:#795548">
+        <strong>📋 Report Details</strong><br>
+        Organisation: <strong>${u.org}</strong><br>
+        Period: <strong>${monthLabel}</strong><br>
+        Status: <strong style="color:#2e7d32">🔒 Locked</strong>
+      </p>
+    </div>
+    <p style="font-size:12px;color:#888;border-top:1px solid #eee;padding-top:14px;margin-top:14px">
+      To avoid auto-locking in future months, please lock your report yourself before the 5th.<br>
+      For help, contact your PMU coordinator.
+    </p>
+  </div>
+</div>`
+      });
+      Logger.log('Auto-lock email sent to: ' + u.email + ' (' + u.org + ')');
+    } catch(e) {
+      Logger.log('Auto-lock email failed for ' + u.email + ': ' + e.message);
+    }
+  });
+}
+
+// ── 3. Daily trigger function (checks date & calls above) ─────
+function dailyMonthlyCheck() {
+  const today   = new Date();
+  const day     = today.getDate();
+  const month   = today.getMonth();
+  const year    = today.getFullYear();
+  const lastDay = new Date(year, month + 1, 0).getDate();
+
+  if (day === lastDay) {
+    Logger.log('Last day of month — sending reminders');
+    sendMonthEndReminders();
+  }
+  if (day === 5) {
+    Logger.log('5th of month — auto-locking previous month reports');
+    autoLockUnlockedReports();
+  }
+}
+
+// ── 4. One-time setup: creates daily trigger at 7 AM ──────────
+// Run this ONCE manually from Apps Script editor: Extensions → Apps Script → Run setupDailyTrigger
+function setupDailyTrigger() {
+  // Remove existing triggers for this function to avoid duplicates
+  ScriptApp.getProjectTriggers().forEach(t => {
+    if (t.getHandlerFunction() === 'dailyMonthlyCheck') ScriptApp.deleteTrigger(t);
+  });
+  // Create new daily trigger at 7:00 AM
+  ScriptApp.newTrigger('dailyMonthlyCheck')
+    .timeBased()
+    .everyDays(1)
+    .atHour(7)
+    .create();
+  Logger.log('Daily trigger set: dailyMonthlyCheck runs at 7 AM every day');
+}
