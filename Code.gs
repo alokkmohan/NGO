@@ -1177,20 +1177,92 @@ function sendMonthEndReminders() {
 }
 
 
-// ── 3. One-time setup: monthly reminder trigger ───────────────
-// Run ONCE manually: Extensions → Apps Script → select setupMonthlyTriggers → Run
-function setupMonthlyTriggers() {
-  // Remove any existing trigger for this function
-  ScriptApp.getProjectTriggers().forEach(t => {
-    if (t.getHandlerFunction() === 'sendMonthEndReminders') ScriptApp.deleteTrigger(t);
+// ── 3. 1st of month: Remind all active NGOs to fill tasks on portal ──
+function sendMonthlyTaskReminder() {
+  const today     = new Date();
+  const prevMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+  const monthLabel = MONTH_NAMES[today.getMonth()] + ' ' + today.getFullYear();
+
+  const users = getActiveNGOUsers();
+  const done  = new Set();
+
+  users.forEach(u => {
+    if (done.has(u.email)) return;
+    done.add(u.email);
+    MailApp.sendEmail({
+      to: u.email,
+      subject: `Action Required: Fill Your Monthly Tasks for ${monthLabel} on the Portal`,
+      htmlBody: `
+<div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;border:1px solid #dde3ee;border-radius:10px;overflow:hidden">
+  <div style="background:#1A3C6E;padding:18px 24px">
+    <h2 style="color:#fff;margin:0;font-size:16px">Samagra Shiksha — NGO Partner Portal</h2>
+    <p style="color:rgba(255,255,255,0.7);margin:4px 0 0;font-size:12px">Madhyamik Shiksha Vibhag, Uttar Pradesh | PMU Office</p>
+  </div>
+  <div style="padding:24px">
+    <p style="font-size:14px;color:#1a1a2e">Dear <strong>${u.name || u.org}</strong>,</p>
+    <p style="font-size:14px;color:#444;line-height:1.6">
+      A new month has begun. As a partner organisation under the Samagra Shiksha Secondary Education Programme,
+      you are required to <strong>update your monthly tasks and progress</strong> on the NGO Partner Portal for
+      <strong>${monthLabel}</strong>.
+    </p>
+    <div style="background:#fff8e1;border-left:4px solid #f59e0b;border-radius:6px;padding:14px 16px;margin:16px 0">
+      <p style="margin:0;font-size:14px;color:#78350f;font-weight:700">
+        Please log in and fill your tasks before the end of this month.
+      </p>
+    </div>
+    <div style="background:#f4f6fa;border-radius:8px;padding:14px;margin:16px 0;font-size:13px;color:#555">
+      <strong>What to do:</strong><br><br>
+      1. Log in to the portal<br>
+      2. Go to <strong>My Tasks</strong><br>
+      3. Update the status and progress for each task<br>
+      4. Submit your monthly report before the 30th
+    </div>
+    <div style="text-align:center;margin:20px 0">
+      <a href="https://samsecup.dataimpact.in/"
+        style="background:#1A3C6E;color:#fff;padding:12px 28px;border-radius:6px;text-decoration:none;font-size:14px;font-weight:700;display:inline-block">
+        Open Portal: samsecup.dataimpact.in
+      </a>
+    </div>
+    <p style="font-size:13px;color:#444;line-height:1.6">
+      Organisation: <strong>${u.org}</strong><br>
+      Reporting Period: <strong>${monthLabel}</strong>
+    </p>
+    <p style="font-size:12px;color:#888;border-top:1px solid #eee;padding-top:14px;margin-top:14px">
+      This is an automated reminder from the PMU. For any queries, please contact us at
+      <a href="mailto:rmsaup.spo@gmail.com" style="color:#1A3C6E">rmsaup.spo@gmail.com</a>.<br><br>
+      Samagra Shiksha, Secondary, Uttar Pradesh | PMU Office
+    </p>
+  </div>
+</div>`
+    });
   });
 
-  // Reminder on 30th of every month at 10 AM
+  Logger.log('Monthly task reminders sent to ' + done.size + ' users.');
+}
+
+// ── 4. One-time setup: monthly reminder triggers ───────────────
+// Run ONCE manually: Extensions → Apps Script → select setupMonthlyTriggers → Run
+function setupMonthlyTriggers() {
+  const FUNCTIONS = ['sendMonthEndReminders', 'sendMonthlyTaskReminder'];
+
+  // Remove existing triggers for both functions
+  ScriptApp.getProjectTriggers().forEach(t => {
+    if (FUNCTIONS.includes(t.getHandlerFunction())) ScriptApp.deleteTrigger(t);
+  });
+
+  // 1st of every month at 10 AM — task reminder
+  ScriptApp.newTrigger('sendMonthlyTaskReminder')
+    .timeBased()
+    .onMonthDay(1)
+    .atHour(10)
+    .create();
+
+  // 30th of every month at 10 AM — report lock reminder
   ScriptApp.newTrigger('sendMonthEndReminders')
     .timeBased()
     .onMonthDay(30)
     .atHour(10)
     .create();
 
-  Logger.log('Trigger set: sendMonthEndReminders runs on 30th of every month at 10 AM');
+  Logger.log('Triggers set: sendMonthlyTaskReminder on 1st, sendMonthEndReminders on 30th — both at 10 AM');
 }
