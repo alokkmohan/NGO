@@ -759,11 +759,23 @@ tr:hover td{background:#FAFBFF}
     <!-- ── PAGE: ALL NGOs (Admin) ── -->
     <div class="page" id="page-ngo-list">
       <div class="card">
-        <div class="card-title">👥 All partner organisations</div>
-        <table>
-          <thead><tr><th>#</th><th>Organisation</th><th>Nodal Person</th><th>Theme</th><th>Districts</th><th>Schools</th><th>Reports</th><th>Last Report</th><th>Tasks</th></tr></thead>
-          <tbody id="admin-ngo-tbody"></tbody>
-        </table>
+        <div class="card-title">👥 All Partner Organisations</div>
+        <div style="overflow-x:auto">
+          <table>
+            <thead><tr>
+              <th>#</th>
+              <th>Organisation</th>
+              <th>Name of POC</th>
+              <th>Email</th>
+              <th>MOU Date</th>
+              <th>Reports</th>
+              <th>Tasks</th>
+              <th>Status</th>
+              <th>Action</th>
+            </tr></thead>
+            <tbody id="admin-ngo-tbody"></tbody>
+          </table>
+        </div>
       </div>
     </div>
 
@@ -941,8 +953,9 @@ function fmtDate(v){
 function isTaskLocked(v){ return v===true || String(v).toLowerCase()==='true'; }
 
 // Live data — populated from Google Sheets on login
-let SAMPLE_NGOS = [];
-let REPORTS     = [];
+let SAMPLE_NGOS      = [];
+let REPORTS          = [];
+let ADMIN_PARTNERS   = []; // admin-only: all partners with status & MOU date
 
 const DEMO_NGOS    = [];
 const DEMO_REPORTS = [];
@@ -1803,23 +1816,31 @@ async function apiPost(body, timeoutMs=60000){
 
 async function loadSheetData(){
   try {
-    const [ngoRes, repRes, projRes] = await Promise.all([
+    const isAdmin = currentUser?.role === 'admin';
+    const calls = [
       apiPost({action:'getNGOs'}),
       apiPost({action:'getReports'}),
-      apiPost({action:'getProjects', ngo: currentUser?.role==='admin' ? 'all' : (currentUser?.org||'')})
-    ]);
+      apiPost({action:'getProjects', ngo: isAdmin ? 'all' : (currentUser?.org||'')})
+    ];
+    if(isAdmin) calls.push(apiPost({action:'getAdminPartners'}));
+    const [ngoRes, repRes, projRes, partRes] = await Promise.all(calls);
+
     if(ngoRes.success && ngoRes.data.length){
       SAMPLE_NGOS.length = 0;
-      ngoRes.data.forEach(n => SAMPLE_NGOS.push({
-        id:+n.id||0, name:n.name||'', theme:n.theme||'', person:n.person||'',
-        dist:n.dist||'', x:+n.x||300, y:+n.y||300,
-        schools:+n.schools||0, students:+n.students||0,
-        girls:+n.girls||0, teachers:+n.teachers||0,
-        progress:+n.progress||0, month:n.month||'', kmi:n.kmi||'',
-        // Extended profile fields
-        phone:String(n.phone||''), desig:n.desig||'', org_type:n.org_type||'',
-        start_date:n.start_date||'', blocks:n.blocks||'', schools_list:n.schools_list||''
-      }));
+      ngoRes.data.forEach(n => {
+        // For non-admin: skip inactive NGOs
+        if(!isAdmin && (n.ngo_status||'active') === 'inactive') return;
+        SAMPLE_NGOS.push({
+          id:+n.id||0, name:n.name||'', theme:n.theme||'', person:n.person||'',
+          dist:n.dist||'', x:+n.x||300, y:+n.y||300,
+          schools:+n.schools||0, students:+n.students||0,
+          girls:+n.girls||0, teachers:+n.teachers||0,
+          progress:+n.progress||0, month:n.month||'', kmi:n.kmi||'',
+          phone:String(n.phone||''), desig:n.desig||'', org_type:n.org_type||'',
+          start_date:n.start_date||'', blocks:n.blocks||'', schools_list:n.schools_list||'',
+          ngo_status: n.ngo_status || 'active'
+        });
+      });
     }
     if(repRes.success && repRes.data.length){
       REPORTS.length = 0;
@@ -1828,6 +1849,10 @@ async function loadSheetData(){
     if(projRes && projRes.success && projRes.data.length){
       PROJECTS.length = 0;
       projRes.data.forEach(p => PROJECTS.push(p));
+    }
+    if(isAdmin && partRes?.success){
+      ADMIN_PARTNERS.length = 0;
+      partRes.data.forEach(p => ADMIN_PARTNERS.push(p));
     }
   } catch(e){ console.warn('Could not load Sheet data:', e.message); }
 
@@ -4865,26 +4890,95 @@ function renderUnlockTasksPage(){
 }
 
 function renderAdminNGOList(){
-  document.getElementById('admin-ngo-tbody').innerHTML=SAMPLE_NGOS.map((n,i)=>{
-    const taskCount = PROJECTS.filter(p=>p.ngo===n.name && p.status!=='deleted').length;
-    const lockedCount = PROJECTS.filter(p=>p.ngo===n.name && p.status!=='deleted' && isTaskLocked(p.locked)).length;
-    return `<tr>
-      <td>${i+1}</td>
-      <td><strong>${n.name}</strong></td>
-      <td style="font-size:11px">${n.person}</td>
-      <td><span class="badge" style="background:${THEME_COLORS[n.theme]||'#ccc'}22;color:${THEME_COLORS[n.theme]||'#555'}">${n.theme}</span></td>
-      <td style="font-size:11px;color:var(--muted)">${n.dist}</td>
-      <td>${n.schools.toLocaleString()}</td>
-      <td>${REPORTS.filter(r=>r.ngo===n.name).length}</td>
-      <td style="font-size:11px">${n.month}</td>
+  const tbody = document.getElementById('admin-ngo-tbody');
+  if(!tbody) return;
+
+  // Merge ADMIN_PARTNERS (Users sheet) with SAMPLE_NGOS (profile sheet)
+  const rows = ADMIN_PARTNERS.length ? ADMIN_PARTNERS : SAMPLE_NGOS.map(n=>({
+    org: n.name, name: n.person||'', email:'', status: n.ngo_status||'active', mou_date:''
+  }));
+
+  tbody.innerHTML = rows.map((p, i) => {
+    const ngoName     = p.org || '';
+    const ngoProfile  = SAMPLE_NGOS.find(n => n.name === ngoName) || {};
+    const taskCount   = PROJECTS.filter(t => t.ngo===ngoName && t.status!=='deleted').length;
+    const lockedCount = PROJECTS.filter(t => t.ngo===ngoName && t.status!=='deleted' && isTaskLocked(t.locked)).length;
+    const repCount    = REPORTS.filter(r => r.ngo===ngoName).length;
+    const isActive    = (p.status||'active') === 'active';
+    const ngoEsc      = ngoName.replace(/'/g,"\\'");
+
+    return `<tr style="${isActive?'':'background:#fff5f5;opacity:.85'}">
+      <td style="color:var(--muted);font-size:11px">${i+1}</td>
+      <td><strong style="color:var(--blue)">${ngoName}</strong></td>
+      <td style="font-size:12px">${p.name || ngoProfile.person || '—'}</td>
+      <td style="font-size:11px;color:var(--muted)">${p.email||'—'}</td>
+      <td style="font-size:11px;white-space:nowrap">
+        <span id="mou-display-${i}">${p.mou_date ? fmtDate(p.mou_date) : '—'}</span>
+        <input type="date" id="mou-input-${i}" value="${p.mou_date||''}"
+          onchange="saveMouDate('${ngoEsc}', this.value, ${i})"
+          style="display:none;padding:3px 6px;border:1px solid var(--border);border-radius:5px;font-size:11px">
+        <button onclick="toggleMouEdit(${i})"
+          style="margin-left:4px;padding:2px 6px;font-size:10px;background:#f0f6ff;border:1px solid #c5d5f5;border-radius:4px;cursor:pointer;color:var(--blue)">✏</button>
+      </td>
+      <td style="text-align:center">${repCount}</td>
       <td>
-        <button onclick="openAdminTaskModal('${n.name.replace(/'/g,"\\'")}')
-          " style="padding:4px 10px;font-size:11px;background:var(--blue);color:#fff;border:none;border-radius:5px;cursor:pointer;white-space:nowrap">
-          ${taskCount?`${lockedCount}/${taskCount} 🔒`:'—'} Tasks
+        <button onclick="openAdminTaskModal('${ngoEsc}')"
+          style="padding:3px 8px;font-size:11px;background:var(--blue);color:#fff;border:none;border-radius:5px;cursor:pointer;white-space:nowrap">
+          ${taskCount ? `${lockedCount}/${taskCount} 🔒` : '—'}
+        </button>
+      </td>
+      <td>
+        <span style="padding:3px 10px;border-radius:12px;font-size:11px;font-weight:700;
+          background:${isActive?'#e8f5e9':'#fce4ec'};color:${isActive?'#2e7d32':'#c62828'}">
+          ${isActive ? 'Active' : 'Inactive'}
+        </span>
+      </td>
+      <td>
+        <button onclick="toggleNGOStatus('${ngoEsc}', '${isActive?'inactive':'active'}', this)"
+          style="padding:4px 10px;font-size:11px;font-weight:600;border:none;border-radius:6px;cursor:pointer;white-space:nowrap;
+            background:${isActive?'#fce4ec':'#e8f5e9'};color:${isActive?'#c62828':'#2e7d32'}">
+          ${isActive ? '🔴 Mark Inactive' : '🟢 Mark Active'}
         </button>
       </td>
     </tr>`;
   }).join('');
+}
+
+function toggleMouEdit(i){
+  const disp  = document.getElementById('mou-display-'+i);
+  const input = document.getElementById('mou-input-'+i);
+  const show  = input.style.display === 'none';
+  disp.style.display  = show ? 'none'   : 'inline';
+  input.style.display = show ? 'inline' : 'none';
+}
+
+async function saveMouDate(ngo, date, i){
+  try {
+    await apiPost({ action:'setNGOStatus', ngo, mou_date: date });
+    const p = ADMIN_PARTNERS.find(x => x.org === ngo);
+    if(p) p.mou_date = date;
+    document.getElementById('mou-display-'+i).textContent = date ? fmtDate(date) : '—';
+    toggleMouEdit(i);
+  } catch(e){ alert('Save failed: ' + e.message); }
+}
+
+async function toggleNGOStatus(ngo, newStatus, btn){
+  if(!confirm(`Mark "${ngo}" as ${newStatus}?\n\n${newStatus==='inactive'?'They will not be able to login.':'They will be able to login again.'}`)) return;
+  btn.disabled = true; btn.textContent = '...';
+  try {
+    const res = await apiPost({ action:'setNGOStatus', ngo, status: newStatus });
+    if(res.success){
+      const p = ADMIN_PARTNERS.find(x => x.org === ngo);
+      if(p) p.status = newStatus;
+      // Also update SAMPLE_NGOS
+      const sn = SAMPLE_NGOS.find(n => n.name === ngo);
+      if(sn) sn.ngo_status = newStatus;
+      renderAdminNGOList();
+    } else {
+      alert('Failed: ' + (res.error||'Unknown error'));
+      btn.disabled = false;
+    }
+  } catch(e){ alert('Error: ' + e.message); btn.disabled = false; }
 }
 
 function openAdminTaskModal(ngoName){

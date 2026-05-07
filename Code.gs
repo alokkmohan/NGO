@@ -36,6 +36,8 @@ function doGet(e) {
     else if (action === 'unlockProjectsByComponent') result = unlockProjectsByComponent(p);
     else if (action === 'lockReport')           result = lockReport(p);
     else if (action === 'submitReport')  result = submitReport({ report: JSON.parse(p.report) });
+    else if (action === 'getAdminPartners')     result = getAdminPartners();
+    else if (action === 'setNGOStatus')         result = setNGOStatus(p);
     // legacy — kept for backward compat
     else if (action === 'login')          result = login(p);
     else if (action === 'changePassword') result = changePassword(p);
@@ -275,30 +277,30 @@ function isNGOActive(orgName) {
 }
 
 // ── GET NGOs ─────────────────────────────────────────────────
-// NGOs sheet columns: id|name|theme|person|dist|x|y|schools|students|girls|teachers|progress|month|kmi
+// Returns all NGOs with a 'ngo_status' field (active/inactive) from NGO_List
+// Frontend filters inactive ones for non-admin; admin sees all with toggle
 function getNGOs() {
   const sheet = getSS().getSheetByName('NGOs');
   const rows  = sheet.getDataRange().getValues();
   if (rows.length < 2) return { success: true, data: [] };
   const headers = rows[0];
-  // Build active NGO set from NGO_List
-  const activeNames = new Set();
+  // Build status map from NGO_List: name → 'active'/'inactive'
+  const statusMap = {};
   const listSheet = getSS().getSheetByName('NGO_List');
   if (listSheet) {
     const lRows = listSheet.getDataRange().getValues();
     for (let i = 1; i < lRows.length; i++) {
-      if (String(lRows[i][2]).toLowerCase().trim() === 'active')
-        activeNames.add(String(lRows[i][1]).trim().toLowerCase());
+      const name   = String(lRows[i][1]||'').trim().toLowerCase();
+      const status = String(lRows[i][2]||'active').toLowerCase().trim();
+      if (name) statusMap[name] = status;
     }
   }
   const data = rows.slice(1).map(row => {
     const obj = {};
     headers.forEach((h, i) => obj[h] = row[i]);
+    const key = String(obj.name||'').trim().toLowerCase();
+    obj.ngo_status = statusMap[key] || 'active'; // default active if not in list
     return obj;
-  }).filter(obj => {
-    // If NGO_List has entries, only return active NGOs; otherwise return all
-    if (activeNames.size === 0) return true;
-    return activeNames.has(String(obj.name||'').trim().toLowerCase());
   });
   return { success: true, data };
 }
@@ -888,6 +890,86 @@ function forgotPassword(data) {
     }
   }
   return { success: false, error: 'Email not found in system' };
+}
+
+// ── ADMIN: Get all NGO partners with status & MOU date ───────
+function getAdminPartners() {
+  const ss = getSS();
+
+  // Read NGO_List: sr_no | name | status | mou_date
+  const listSheet = ss.getSheetByName('NGO_List');
+  const listMap   = {}; // name.lower → { status, mou_date }
+  if (listSheet) {
+    const lRows = listSheet.getDataRange().getValues();
+    const lH    = lRows[0];
+    const sIdx  = lH.indexOf('status');
+    const mIdx  = lH.indexOf('mou_date');
+    for (let i = 1; i < lRows.length; i++) {
+      const name = String(lRows[i][1]||'').trim().toLowerCase();
+      if (!name) continue;
+      listMap[name] = {
+        status:   String(lRows[i][sIdx >= 0 ? sIdx : 2]||'active').trim().toLowerCase(),
+        mou_date: mIdx >= 0 ? String(lRows[i][mIdx]||'') : ''
+      };
+    }
+  }
+
+  // Read Users: email | password | role | name | org | ...
+  const usersSheet = ss.getSheetByName('Users');
+  const partners   = [];
+  if (usersSheet) {
+    const uRows = usersSheet.getDataRange().getValues();
+    const uH    = uRows[0];
+    const eIdx  = uH.indexOf('email');
+    const rIdx  = uH.indexOf('role');
+    const nIdx  = uH.indexOf('name');
+    const oIdx  = uH.indexOf('org');
+    const seen  = new Set();
+    for (let i = 1; i < uRows.length; i++) {
+      const role = String(uRows[i][rIdx]||'').toLowerCase();
+      if (role === 'admin') continue;
+      const org   = String(uRows[i][oIdx]||'').trim();
+      const email = String(uRows[i][eIdx]||'').trim();
+      if (!org || seen.has(org)) continue;
+      seen.add(org);
+      const info = listMap[org.toLowerCase()] || { status:'active', mou_date:'' };
+      partners.push({ org, email, name: String(uRows[i][nIdx]||'').trim(), status: info.status, mou_date: info.mou_date });
+    }
+  }
+  return { success: true, data: partners };
+}
+
+// ── ADMIN: Set NGO status (active/inactive) in NGO_List ──────
+function setNGOStatus(data) {
+  const ngo    = String(data.ngo||'').trim();
+  const status = String(data.status||'active').trim().toLowerCase();
+  if (!ngo) return { success: false, error: 'NGO name required' };
+
+  const sheet = getSS().getSheetByName('NGO_List');
+  if (!sheet) return { success: false, error: 'NGO_List sheet not found' };
+
+  const rows  = sheet.getDataRange().getValues();
+  const h     = rows[0];
+  let   sIdx  = h.indexOf('status');
+  let   mIdx  = h.indexOf('mou_date');
+
+  // Ensure columns exist
+  if (sIdx < 0) { sIdx = h.length;   sheet.getRange(1, sIdx+1).setValue('status'); }
+  if (mIdx < 0) { mIdx = h.length+1 > sIdx+1 ? h.length+1 : sIdx+1;
+                  sheet.getRange(1, mIdx+1).setValue('mou_date'); }
+
+  for (let i = 1; i < rows.length; i++) {
+    if (String(rows[i][1]||'').trim().toLowerCase() === ngo.toLowerCase()) {
+      sheet.getRange(i+1, sIdx+1).setValue(status);
+      // Save mou_date if provided
+      if (data.mou_date !== undefined)
+        sheet.getRange(i+1, mIdx+1).setValue(data.mou_date||'');
+      return { success: true };
+    }
+  }
+  // Not found → append new row
+  sheet.appendRow([rows.length, ngo, status, data.mou_date||'']);
+  return { success: true };
 }
 
 // ── PERMISSION TEST — run this once manually to authorize MailApp ──
