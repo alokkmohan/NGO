@@ -997,22 +997,21 @@ function normalizeMonthLabel(val) {
 }
 
 // Get all active NGO users: [{email, name, org}]
+// Reads by position: col 0=email, 2=role, 3=name, 4=org (same as login)
 function getActiveNGOUsers() {
   const sheet = getSS().getSheetByName('Users');
   if (!sheet) return [];
-  const rows    = sheet.getDataRange().getValues();
-  const h       = rows[0];
-  const eIdx    = h.indexOf('email');
-  const rIdx    = h.indexOf('role');
-  const nIdx    = h.indexOf('name');
-  const oIdx    = h.indexOf('org');
-  const users   = [];
+  const rows  = sheet.getDataRange().getValues();
+  const users = [];
   for (let i = 1; i < rows.length; i++) {
-    if (String(rows[i][rIdx]||'').toLowerCase() === 'admin') continue;
-    const email = String(rows[i][eIdx]||'').trim();
-    const org   = String(rows[i][oIdx]||'').trim();
+    const email = String(rows[i][0]||'').trim();
+    const role  = String(rows[i][2]||'').toLowerCase();
+    const name  = String(rows[i][3]||'').trim();
+    const org   = String(rows[i][4]||'').trim();
+    if (role === 'admin') continue;
     if (!email || !org) continue;
-    users.push({ email, name: String(rows[i][nIdx]||'').trim() || org, org });
+    if (!isNGOActive(org)) continue;
+    users.push({ email, name: name || org, org });
   }
   return users;
 }
