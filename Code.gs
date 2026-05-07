@@ -894,93 +894,93 @@ function forgotPassword(data) {
   return { success: false, error: 'Email not found in system' };
 }
 
-// ── ADMIN: Get all NGO partners with status & MOU from/to dates ──
+// ── ADMIN: Get all NGO partners — data comes entirely from Users sheet ──
 function getAdminPartners() {
-  const ss = getSS();
-
-  // Read NGO_List: sr_no | name | status | mou_from | mou_to
-  const listSheet = ss.getSheetByName('NGO_List');
-  const listMap   = {}; // name.lower → { status, mou_from, mou_to }
-  if (listSheet) {
-    const lRows = listSheet.getDataRange().getValues();
-    const lH    = lRows[0];
-    const sIdx  = lH.indexOf('status');
-    const fIdx  = lH.indexOf('mou_from');
-    const tIdx  = lH.indexOf('mou_to');
-    for (let i = 1; i < lRows.length; i++) {
-      const name = String(lRows[i][1]||'').trim().toLowerCase();
-      if (!name) continue;
-      listMap[name] = {
-        status:   String(lRows[i][sIdx >= 0 ? sIdx : 2]||'active').trim().toLowerCase(),
-        mou_from: fIdx >= 0 ? String(lRows[i][fIdx]||'') : '',
-        mou_to:   tIdx >= 0 ? String(lRows[i][tIdx]||'') : ''
-      };
-    }
-  }
-
-  // Read Users: email | password | role | name | org | ...
+  const ss         = getSS();
   const usersSheet = ss.getSheetByName('Users');
   const partners   = [];
-  if (usersSheet) {
-    const uRows = usersSheet.getDataRange().getValues();
-    const uH    = uRows[0];
-    const eIdx  = uH.indexOf('email');
-    const rIdx  = uH.indexOf('role');
-    const nIdx  = uH.indexOf('name');
-    const oIdx  = uH.indexOf('org');
-    const seen  = new Set();
-    for (let i = 1; i < uRows.length; i++) {
-      const role = String(uRows[i][rIdx]||'').toLowerCase();
-      if (role === 'admin') continue;
-      const org   = String(uRows[i][oIdx]||'').trim();
-      const email = String(uRows[i][eIdx]||'').trim();
-      if (!org || seen.has(org)) continue;
-      seen.add(org);
-      const info = listMap[org.toLowerCase()] || { status:'active', mou_from:'', mou_to:'' };
-      partners.push({
-        org, email,
-        name:     String(uRows[i][nIdx]||'').trim(),
-        status:   info.status,
-        mou_from: info.mou_from,
-        mou_to:   info.mou_to
-      });
-    }
+  if (!usersSheet) return { success: true, data: partners };
+
+  const uRows = usersSheet.getDataRange().getValues();
+  const uH    = uRows[0];
+  const eIdx  = uH.indexOf('email');
+  const rIdx  = uH.indexOf('role');
+  const nIdx  = uH.indexOf('name');
+  const oIdx  = uH.indexOf('org');
+  const sIdx  = uH.indexOf('status');
+  const fIdx  = uH.indexOf('mou_from');
+  const tIdx  = uH.indexOf('mou_to');
+
+  const seen = new Set();
+  for (let i = 1; i < uRows.length; i++) {
+    const role = String(uRows[i][rIdx]||'').toLowerCase();
+    if (role === 'admin') continue;
+    const org = String(uRows[i][oIdx]||'').trim();
+    if (!org || seen.has(org)) continue;
+    seen.add(org);
+    partners.push({
+      org,
+      email:    String(uRows[i][eIdx]||'').trim(),
+      name:     String(uRows[i][nIdx]||'').trim(),
+      status:   sIdx >= 0 ? String(uRows[i][sIdx]||'active').trim().toLowerCase() : 'active',
+      mou_from: fIdx >= 0 ? String(uRows[i][fIdx]||'') : '',
+      mou_to:   tIdx >= 0 ? String(uRows[i][tIdx]||'') : ''
+    });
   }
   return { success: true, data: partners };
 }
 
-// ── ADMIN: Set NGO status / MOU dates in NGO_List ────────────
+// ── ADMIN: Set NGO status / MOU dates ──
+// Primary store: Users sheet (status, mou_from, mou_to columns auto-created)
+// Secondary sync: NGO_List status column (controls login access via isNGOActive)
 function setNGOStatus(data) {
   const ngo    = String(data.ngo||'').trim();
   const status = String(data.status||'').trim().toLowerCase();
   if (!ngo) return { success: false, error: 'NGO name required' };
 
-  const sheet = getSS().getSheetByName('NGO_List');
-  if (!sheet) return { success: false, error: 'NGO_List sheet not found' };
+  const ss = getSS();
 
-  const rows = sheet.getDataRange().getValues();
-  const h    = rows[0];
+  // ── 1. Update Users sheet ────────────────────────────────────
+  const usersSheet = ss.getSheetByName('Users');
+  if (!usersSheet) return { success: false, error: 'Users sheet not found' };
 
-  // Ensure columns exist
-  function ensureCol(name) {
-    let idx = h.indexOf(name);
-    if (idx < 0) { idx = h.length; sheet.getRange(1, idx+1).setValue(name); h.push(name); }
+  const uRows = usersSheet.getDataRange().getValues();
+  const uH    = uRows[0];
+
+  function ensureUserCol(name) {
+    let idx = uH.indexOf(name);
+    if (idx < 0) { idx = uH.length; usersSheet.getRange(1, idx+1).setValue(name); uH.push(name); }
     return idx;
   }
-  const sIdx = ensureCol('status');
-  const fIdx = ensureCol('mou_from');
-  const tIdx = ensureCol('mou_to');
+  const sIdx = ensureUserCol('status');
+  const fIdx = ensureUserCol('mou_from');
+  const tIdx = ensureUserCol('mou_to');
 
-  for (let i = 1; i < rows.length; i++) {
-    if (String(rows[i][1]||'').trim().toLowerCase() === ngo.toLowerCase()) {
-      if (status) sheet.getRange(i+1, sIdx+1).setValue(status);
-      if (data.mou_from !== undefined) sheet.getRange(i+1, fIdx+1).setValue(data.mou_from||'');
-      if (data.mou_to   !== undefined) sheet.getRange(i+1, tIdx+1).setValue(data.mou_to||'');
-      return { success: true };
+  for (let i = 1; i < uRows.length; i++) {
+    const rowOrg = String(uRows[i][uH.indexOf('org')]||'').trim();
+    if (rowOrg.toLowerCase() !== ngo.toLowerCase()) continue;
+    if (status) usersSheet.getRange(i+1, sIdx+1).setValue(status);
+    if (data.mou_from !== undefined) usersSheet.getRange(i+1, fIdx+1).setValue(data.mou_from||'');
+    if (data.mou_to   !== undefined) usersSheet.getRange(i+1, tIdx+1).setValue(data.mou_to||'');
+  }
+
+  // ── 2. Sync status to NGO_List (controls login access) ───────
+  if (status) {
+    const listSheet = ss.getSheetByName('NGO_List');
+    if (listSheet) {
+      const lRows = listSheet.getDataRange().getValues();
+      const lH    = lRows[0];
+      let lsIdx   = lH.indexOf('status');
+      if (lsIdx < 0) { lsIdx = lH.length; listSheet.getRange(1, lsIdx+1).setValue('status'); }
+      for (let i = 1; i < lRows.length; i++) {
+        if (String(lRows[i][1]||'').trim().toLowerCase() === ngo.toLowerCase()) {
+          listSheet.getRange(i+1, lsIdx+1).setValue(status);
+          break;
+        }
+      }
     }
   }
-  // Not found → append new row
-  sheet.appendRow([rows.length, ngo, status, data.mou_date||'']);
+
   return { success: true };
 }
 
