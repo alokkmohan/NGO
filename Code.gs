@@ -895,6 +895,7 @@ function forgotPassword(data) {
 }
 
 // ── ADMIN: Get all NGO partners — org name + email from Users sheet ──
+// Reads by position (col 0=email, 2=role, 4=org) — same as login(), no header dependency
 function getAdminPartners() {
   const ss         = getSS();
   const usersSheet = ss.getSheetByName('Users');
@@ -902,22 +903,20 @@ function getAdminPartners() {
 
   const uRows = usersSheet.getDataRange().getValues();
   const uH    = uRows[0];
-  const eIdx  = uH.indexOf('email');
-  const rIdx  = uH.indexOf('role');
-  const oIdx  = uH.indexOf('org');
-  const sIdx  = uH.indexOf('status');
+  const sIdx  = uH.indexOf('status'); // optional column — ok if -1
 
   const seen     = new Set();
   const partners = [];
   for (let i = 1; i < uRows.length; i++) {
-    const role = String(uRows[i][rIdx]||'').toLowerCase();
+    const email = String(uRows[i][0]||'').trim();
+    const role  = String(uRows[i][2]||'').toLowerCase();
+    const org   = String(uRows[i][4]||'').trim();
     if (role === 'admin') continue;
-    const org = String(uRows[i][oIdx]||'').trim();
     if (!org || seen.has(org.toLowerCase())) continue;
     seen.add(org.toLowerCase());
     partners.push({
       org,
-      email:  String(uRows[i][eIdx]||'').trim(),
+      email,
       status: sIdx >= 0 ? String(uRows[i][sIdx]||'active').trim().toLowerCase() : 'active'
     });
   }
@@ -938,11 +937,10 @@ function setNGOStatus(data) {
   if (usersSheet) {
     const uRows = usersSheet.getDataRange().getValues();
     const uH    = uRows[0];
-    const oIdx  = uH.indexOf('org');
-    let   sIdx  = uH.indexOf('status');
+    let sIdx = uH.indexOf('status');
     if (sIdx < 0) { sIdx = uH.length; usersSheet.getRange(1, sIdx+1).setValue('status'); }
     for (let i = 1; i < uRows.length; i++) {
-      if (String(uRows[i][oIdx]||'').trim().toLowerCase() === ngo.toLowerCase()) {
+      if (String(uRows[i][4]||'').trim().toLowerCase() === ngo.toLowerCase()) { // col 4 = org
         usersSheet.getRange(i+1, sIdx+1).setValue(status);
       }
     }
