@@ -3161,18 +3161,28 @@ function renderReportsPage(){
   const myReports = REPORTS.filter(r => r.ngo === currentUser.org)
     .sort((a,b) => (+b.id||0) - (+a.id||0));
 
-  // Build month options — proper names, no duplicates
+  const mNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const now      = new Date();
+  const curLabel  = mNames[now.getMonth()] + ' ' + now.getFullYear();
+  const prevDate  = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const prevLabel = mNames[prevDate.getMonth()] + ' ' + prevDate.getFullYear();
+
+  // Always show current + previous month, then any other months with saved reports
   const seen = new Set();
   sel.innerHTML = '<option value="">— Select Month —</option>';
+  [curLabel, prevLabel].forEach(label => {
+    seen.add(label);
+    sel.appendChild(Object.assign(document.createElement('option'), {value: label, textContent: label}));
+  });
   myReports.forEach(r => {
     const label = _mrMonthLabel(r.month);
-    if(!label || seen.has(r.month)) return;
-    seen.add(r.month);
+    if(!label || seen.has(label)) return;
+    seen.add(label);
     sel.appendChild(Object.assign(document.createElement('option'), {value: r.month, textContent: label}));
   });
 
-  // Auto-select most recent month
-  if(myReports.length) sel.value = myReports[0].month;
+  // Auto-select current month
+  sel.value = curLabel;
   mrOnMonthChange();
 }
 
@@ -3193,7 +3203,7 @@ function mrOnMonthChange(){
     return;
   }
 
-  const rep = REPORTS.find(r => r.ngo === currentUser.org && r.month === month);
+  const rep = REPORTS.find(r => r.ngo === currentUser.org && _normalizeMonth(r.month) === _normalizeMonth(month));
   if(!rep){
     if(stDiv) stDiv.style.display='none';
     if(wrap)  wrap.innerHTML=`<div style="color:var(--muted);font-size:13px;padding:20px;text-align:center">No saved report found for ${_mrMonthLabel(month)}.</div>`;
