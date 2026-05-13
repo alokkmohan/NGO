@@ -265,6 +265,43 @@ function getNGOList() {
   return { success: true, data };
 }
 
+// ── One-time: set ALL NGOs in NGO_List to active ──
+// Run once from Apps Script editor to re-enable all NGOs
+function activateAllNGOs() {
+  const ss        = getSS();
+  const listSheet = ss.getSheetByName('NGO_List');
+  if (!listSheet) { Logger.log('NGO_List not found'); return; }
+
+  const rows = listSheet.getDataRange().getValues();
+  const h    = rows[0];
+  let sIdx   = h.indexOf('status');
+  if (sIdx < 0) { sIdx = h.length; listSheet.getRange(1, sIdx+1).setValue('status'); }
+
+  let count = 0;
+  for (let i = 1; i < rows.length; i++) {
+    if (!String(rows[i][1]||'').trim()) continue;
+    listSheet.getRange(i+1, sIdx+1).setValue('active');
+    count++;
+  }
+
+  // Also clear any 'inactive' status in Users sheet
+  const usersSheet = ss.getSheetByName('Users');
+  if (usersSheet) {
+    const uRows = usersSheet.getDataRange().getValues();
+    const uH    = uRows[0];
+    const usIdx = uH.indexOf('status');
+    if (usIdx >= 0) {
+      for (let i = 1; i < uRows.length; i++) {
+        if (String(uRows[i][usIdx]||'').toLowerCase() === 'inactive') {
+          usersSheet.getRange(i+1, usIdx+1).setValue('active');
+        }
+      }
+    }
+  }
+
+  Logger.log('activateAllNGOs: ' + count + ' NGOs set to active.');
+}
+
 // Check if NGO is active in NGO_List
 function isNGOActive(orgName) {
   const sheet = getSS().getSheetByName('NGO_List');
