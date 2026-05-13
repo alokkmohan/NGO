@@ -894,17 +894,27 @@ function forgotPassword(data) {
   return { success: false, error: 'Email not found in system' };
 }
 
-// ── ADMIN: Get all NGO partners — org name + email from Users sheet ──
-// Reads by position (col 0=email, 2=role, 4=org) — same as login(), no header dependency
+// ── ADMIN: Get all NGO partners ──
+// org + email from Users sheet (positional), status from NGO_List (login source of truth)
 function getAdminPartners() {
-  const ss         = getSS();
+  const ss = getSS();
+
+  // Build status map from NGO_List (same source isNGOActive() uses)
+  const statusMap  = {};
+  const listSheet  = ss.getSheetByName('NGO_List');
+  if (listSheet) {
+    const lRows = listSheet.getDataRange().getValues();
+    for (let i = 1; i < lRows.length; i++) {
+      const name   = String(lRows[i][1]||'').trim().toLowerCase();
+      const status = String(lRows[i][2]||'active').trim().toLowerCase();
+      if (name) statusMap[name] = status;
+    }
+  }
+
   const usersSheet = ss.getSheetByName('Users');
   if (!usersSheet) return { success: true, data: [] };
 
-  const uRows = usersSheet.getDataRange().getValues();
-  const uH    = uRows[0];
-  const sIdx  = uH.indexOf('status'); // optional column — ok if -1
-
+  const uRows    = usersSheet.getDataRange().getValues();
   const seen     = new Set();
   const partners = [];
   for (let i = 1; i < uRows.length; i++) {
@@ -917,7 +927,7 @@ function getAdminPartners() {
     partners.push({
       org,
       email,
-      status: sIdx >= 0 ? String(uRows[i][sIdx]||'active').trim().toLowerCase() : 'active'
+      status: statusMap[org.toLowerCase()] || 'active'
     });
   }
   return { success: true, data: partners };
