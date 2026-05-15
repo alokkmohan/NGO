@@ -393,7 +393,6 @@ tr:hover td{background:#FAFBFF}
       <div class="nav-item" id="nav-myreports-item" onclick="showPage('my-reports')"><span class="ni">📋</span>My Reports</div>
       <div class="nav-sep" id="nav-admin-sep" style="display:none">Admin</div>
       <div class="nav-item" id="nav-ngos-item" style="display:none" onclick="showPage('ngo-list')"><span class="ni">👥</span>All Partners</div>
-      <div class="nav-item" id="nav-unlock-tasks-item" style="display:none" onclick="showPage('unlock-tasks')"><span class="ni">🔓</span>Unlock Components</div>
       <div class="nav-item" id="nav-admin-report-item" style="display:none" onclick="showPage('admin-reports')"><span class="ni">📊</span>Generate Reports</div>
     </div>
     <div class="sidebar-user">
@@ -776,28 +775,6 @@ tr:hover td{background:#FAFBFF}
       </div>
     </div>
 
-    <!-- ── PAGE: UNLOCK COMPONENTS (Admin) ── -->
-    <div class="page" id="page-unlock-tasks">
-      <div class="card">
-        <div class="card-title">🔓 Unlock Components</div>
-        <div style="font-size:12px;color:var(--muted);margin-bottom:14px">Yahan sirf wo components dikh rahe hain jinhe NGO ne lock kiya hai. Unlock karne ke baad NGO us component mein naye tasks add ya edit kar sakta hai.</div>
-        <table>
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>NGO / Organisation</th>
-              <th>Component</th>
-              <th>Tasks</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody id="unlock-tasks-tbody"></tbody>
-        </table>
-        <div id="unlock-tasks-empty" style="display:none;text-align:center;color:var(--muted);padding:24px;font-size:13px">
-          Koi locked component nahi mila.
-        </div>
-      </div>
-    </div>
 
     <!-- ── ADMIN TASK UNLOCK MODAL ── -->
     <div id="admin-task-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:9999;align-items:flex-start;justify-content:center;padding:24px 12px;overflow-y:auto">
@@ -1887,7 +1864,6 @@ function initApp(){
     // Admin: show admin tools, hide NGO submission items
     document.getElementById('nav-admin-sep').style.display='block';
     document.getElementById('nav-ngos-item').style.display='flex';
-    document.getElementById('nav-unlock-tasks-item').style.display='flex';
     document.getElementById('nav-admin-report-item').style.display='flex';
     document.getElementById('nav-ngo-sep').style.display='none';
     document.getElementById('nav-profile-item').style.display='none';
@@ -2258,25 +2234,22 @@ function showPage(p){
   const pageMap={
     'dashboard':'page-dashboard','profile-view':'page-profile-view',
     'monthly-report':'page-monthly-report','my-reports':'page-my-reports',
-    'ngo-list':'page-ngo-list','admin-reports':'page-admin-reports',
-    'unlock-tasks':'page-unlock-tasks'
+    'ngo-list':'page-ngo-list','admin-reports':'page-admin-reports'
   };
   const titleMap={
     'dashboard':'Dashboard & Map','profile-view':'My Profile',
     'monthly-report':'Monthly Report','my-reports':'My Reports',
-    'ngo-list':'All Partners','admin-reports':'Generate Reports',
-    'unlock-tasks':'Unlock Components'
+    'ngo-list':'All Partners','admin-reports':'Generate Reports'
   };
   document.getElementById(pageMap[p]).classList.add('active');
   document.getElementById('page-title').textContent = titleMap[p]||p;
 
-  const navMap={'dashboard':0,'profile-view':1,'monthly-report':2,'my-reports':3,'ngo-list':4,'unlock-tasks':5,'admin-reports':6};
+  const navMap={'dashboard':0,'profile-view':1,'monthly-report':2,'my-reports':3,'ngo-list':4,'admin-reports':5};
   const navItems = document.querySelectorAll('.nav-item');
   if(navMap[p]!==undefined && navItems[navMap[p]]) navItems[navMap[p]].classList.add('active');
 
   if(p==='profile-view'){ renderProfileView(); renderMyReports(); }
   if(p==='ngo-list') renderAdminNGOList();
-  if(p==='unlock-tasks') renderUnlockTasksPage();
   if(p==='monthly-report'){
     reportStep=0;updateReportSteps();prefillReportForm();
     const warn = document.getElementById('report-lock-warning');
@@ -4859,43 +4832,6 @@ function fillAdminNGOSelect(){
   }
 }
 
-function renderUnlockTasksPage(){
-  const tbody = document.getElementById('unlock-tasks-tbody');
-  const empty = document.getElementById('unlock-tasks-empty');
-  if(!tbody) return;
-
-  // Collect all locked components across all NGOs
-  const rows = [];
-  const compMap = {};
-  PROJECTS.filter(p => p.status !== 'deleted').forEach(p => {
-    const key = p.ngo + '||' + p.component;
-    if(!compMap[key]) compMap[key] = { ngo: p.ngo, component: p.component, tasks: [] };
-    compMap[key].tasks.push(p);
-  });
-  Object.values(compMap).forEach(c => {
-    if(c.tasks.every(t => isTaskLocked(t.locked))) rows.push(c);
-  });
-
-  if(!rows.length){
-    tbody.innerHTML = '';
-    empty.style.display = 'block';
-    return;
-  }
-  empty.style.display = 'none';
-  tbody.innerHTML = rows.map((r, i) => `<tr>
-    <td>${i+1}</td>
-    <td><strong>${r.ngo}</strong></td>
-    <td>${r.component}</td>
-    <td style="text-align:center">${r.tasks.length}</td>
-    <td>
-      <button onclick="adminUnlockComponent('${r.component.replace(/'/g,"\\'")}','${r.ngo.replace(/'/g,"\\'")}',this)"
-        style="padding:5px 16px;font-size:12px;font-weight:700;background:#e65100;color:#fff;border:none;border-radius:5px;cursor:pointer">
-        🔓 Unlock
-      </button>
-    </td>
-  </tr>`).join('');
-}
-
 function renderAdminNGOList(){
   const tbody = document.getElementById('admin-ngo-tbody');
   if(!tbody) return;
@@ -5009,7 +4945,6 @@ async function adminUnlockComponent(comp, ngoName, btn){
     if(res.success){
       PROJECTS.filter(p => p.ngo === ngoName && p.component === comp && p.status !== 'deleted')
               .forEach(p => p.locked = 'false');
-      renderUnlockTasksPage();
       renderAdminNGOList();
     } else {
       alert('Unlock failed: ' + (res.error||'Unknown error'));
