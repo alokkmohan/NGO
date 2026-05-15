@@ -551,14 +551,6 @@ tr:hover td{background:#FAFBFF}
     <!-- ── PAGE: MONTHLY REPORT ── -->
     <div class="page" id="page-monthly-report">
 
-      <!-- Tasks-not-locked warning banner -->
-      <div id="report-lock-warning" style="display:none;background:#FFF8E1;border:1px solid #FFD54F;border-radius:10px;padding:14px 16px;margin-bottom:14px">
-        <div style="font-size:14px;font-weight:700;color:#E65100;margin-bottom:4px">⚠️ Please lock your tasks before submitting a report</div>
-        <div style="font-size:13px;color:#7F4F00;line-height:1.6">
-          🎯 <b>Major Components &amp; Tasks</b> are not locked yet.<br>
-          Please go to <a href="#" onclick="showPage('profile-view');return false;" style="color:#1D4ED8;font-weight:600">My Profile → Section 3</a>, save your activities and lock them before submitting a monthly report.
-        </div>
-      </div>
 
       <!-- Report Header (auto-filled) -->
       <div class="card" style="margin-bottom:12px">
@@ -2250,14 +2242,7 @@ function showPage(p){
 
   if(p==='profile-view'){ renderProfileView(); renderMyReports(); }
   if(p==='ngo-list') renderAdminNGOList();
-  if(p==='monthly-report'){
-    reportStep=0;updateReportSteps();prefillReportForm();
-    const warn = document.getElementById('report-lock-warning');
-    if(warn && currentUser?.role !== 'admin'){
-      const hasLocked = PROJECTS.some(pr => pr.ngo === currentUser.org && isTaskLocked(pr.locked));
-      warn.style.display = hasLocked ? 'none' : 'block';
-    }
-  }
+  if(p==='monthly-report'){ reportStep=0;updateReportSteps();prefillReportForm(); }
   if(p==='my-reports') renderReportsPage();
   if(p==='dashboard' && _lmap){ setTimeout(()=>_lmap.invalidateSize(), 100); }
 }
@@ -2545,15 +2530,13 @@ function renderProfileView(){
           <div style="margin-bottom:12px">
             <div style="font-weight:700;color:var(--blue);font-size:12px;margin-bottom:5px;padding:5px 8px;background:#e8f0fe;border-radius:6px">▸ ${comp}</div>
             ${tasks.map(t=>{
-              const isLocked=isTaskLocked(t.locked);
               const dateLabel = t.start_date ? (fmtDate(t.start_date) + (t.end_date ? ' → '+fmtDate(t.end_date) : '')) : '';
               const taskDist  = (t.task_dist||'').split(',').map(d=>d.trim()).filter(Boolean);
               const allSchools= (t.task_schools||'').trim().toUpperCase()==='ALL';
               const taskSchoolList = allSchools ? [] : (t.task_schools||'').split('|').map(s=>s.trim()).filter(Boolean);
-              return `<div style="padding:8px 10px;background:${isLocked?'#f1f8e9':'#f8f9ff'};border-radius:6px;margin-bottom:6px;font-size:12px;border-left:3px solid ${isLocked?'#66bb6a':'#b0bcd4'}">
+              return `<div style="padding:8px 10px;background:#f8f9ff;border-radius:6px;margin-bottom:6px;font-size:12px;border-left:3px solid #b0bcd4">
                 <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
                   <span style="font-weight:600">${t.task_name||'—'}</span>
-                  ${isLocked?'<span style="font-size:10px;color:#2e7d32;background:#c8e6c9;border-radius:10px;padding:1px 8px;font-weight:700">🔒 Locked</span>':'<span style="font-size:10px;color:#b8860b;background:#fff8e1;border-radius:10px;padding:1px 8px">unlocked</span>'}
                   ${dateLabel?`<span style="font-size:11px;color:var(--muted)">${dateLabel}</span>`:''}
                 </div>
                 ${taskDist.length?`<div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:3px">
@@ -2567,15 +2550,14 @@ function renderProfileView(){
       </div>
       <div id="pv-sec3-form" style="display:none;padding:14px;border-top:1px solid var(--border);background:#fafcff">
         <div style="font-size:11px;color:var(--blue);background:#eef4ff;border-radius:7px;padding:9px 12px;margin-bottom:12px">
-          Add activities with start &amp; end dates. Click <b>💾 Save</b>, then <b>🔒 Lock Activities</b> — only locked activities appear in the Monthly Report.
+          Add activities with start &amp; end dates. Click <b>💾 Save</b> to save your activities. You can edit or delete them anytime before submitting the monthly report.
         </div>
         <div id="pve-comp-task-builder"></div>
         <div id="pv-sec3-save-msg" style="display:none;background:#e8f5e9;border:1px solid #a5d6a7;border-radius:8px;padding:10px 14px;margin-top:8px;font-size:12px;color:#2e7d32;font-weight:600">
-          ✅ Activities saved! Now click <b>🔒 Lock Activities</b> to include them in the Monthly Report.
+          ✅ Activities saved! They will appear in the Monthly Report.
         </div>
         <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
           <button onclick="pvSave(3)" style="padding:7px 22px;background:var(--green);color:#fff;border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer">💾 Save</button>
-          <button onclick="lockAllSaved()" style="padding:7px 18px;background:#fff8e1;border:1px solid #ffe082;color:#b8860b;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer">🔒 Lock Activities</button>
           <button onclick="pvCancel(3);renderProfileView();renderMyReports();" style="padding:7px 16px;background:#f1f1f1;border:1px solid var(--border);border-radius:7px;font-size:12px;cursor:pointer">✕ Close</button>
         </div>
       </div>
@@ -2728,8 +2710,7 @@ function pvInitTasks(){
       if(edEl) edEl.value=proj.end_date||'';
       // Pre-fill geographic coverage
       prefillTaskGeo(lastBlock, proj.task_dist||'', proj.task_schools||'ALL');
-      // If locked, freeze the block
-      if(lastBlock.dataset.locked==='true') lockTaskBlock(lastBlock);
+      // Tasks are always editable until the monthly report is submitted
     });
   });
 }
@@ -3664,14 +3645,10 @@ function prefillReportForm(){
 function buildReportTaskCards(existingRep){
   const container = document.getElementById('r-task-cards');
   if(!container) return;
-  const myProjs = PROJECTS.filter(p => p.ngo === currentUser.org && isTaskLocked(p.locked));
+  const myProjs = PROJECTS.filter(p => p.ngo === currentUser.org && p.status !== 'deleted');
   if(!myProjs.length){
-    const hasAny = PROJECTS.some(p => p.ngo === currentUser.org);
     container.innerHTML = `<div style="text-align:center;padding:24px 16px;color:var(--muted)">
-      ${hasAny
-        ? `<b style="color:#b8860b">🔒 No locked activities yet.</b><br><span style="font-size:12px">Go to <a href="#" onclick="showPage('profile-view');return false;" style="color:var(--blue2)">My Profile → Section 3</a>, save your activities, then lock each one before submitting a report.</span>`
-        : `No activities found. Go to <a href="#" onclick="showPage('profile-view');return false;" style="color:var(--blue2)">My Profile</a> to add activities.`
-      }
+      No activities found. Go to <a href="#" onclick="showPage('profile-view');return false;" style="color:var(--blue2)">My Profile</a> to add activities.
     </div>`;
     return;
   }
@@ -4149,8 +4126,8 @@ async function submitMonthlyReport(silent = false){
     return;
   }
 
-  // Collect task-wise data — only locked tasks (these are the ones shown in the form)
-  const myProjs = PROJECTS.filter(p => p.ngo === currentUser.org && isTaskLocked(p.locked));
+  // Collect task-wise data — all saved tasks appear in the report
+  const myProjs = PROJECTS.filter(p => p.ngo === currentUser.org && p.status !== 'deleted');
   const activities = myProjs.map(t => {
     const tid = 'task_' + (t.project_id || t.task_name).toString().replace(/[^a-z0-9]/gi,'_');
 
@@ -4404,7 +4381,7 @@ async function confirmAndLock(){
 // ── Download full report for a single month (print-to-PDF) ──
 function downloadMonthReport(month){
   const myNGO  = SAMPLE_NGOS.find(n=>n.name===currentUser.org)||{};
-  const myProjs= PROJECTS.filter(p=>p.ngo===currentUser.org && isTaskLocked(p.locked));
+  const myProjs= PROJECTS.filter(p=>p.ngo===currentUser.org && p.status!=='deleted');
   const rep    = REPORTS.find(r=>r.ngo===currentUser.org && (r.report_from===month||r.month===month));
   if(!rep){ alert('Report not found for '+month); return; }
 
