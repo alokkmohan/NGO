@@ -2677,6 +2677,36 @@ function pveUpdateSelectedSchools(){
     : '';
 }
 
+// Refresh the saved-activities summary view (above the edit form) after saving
+function refreshSec3View(){
+  const el = document.getElementById('pv-sec3-view');
+  if(!el) return;
+  const myProjects = PROJECTS.filter(p => p.ngo === currentUser.org && p.status !== 'deleted');
+  const byComp = {};
+  myProjects.forEach(p => { const c=p.component||'Other'; if(!byComp[c]) byComp[c]=[]; byComp[c].push(p); });
+  el.innerHTML = Object.keys(byComp).length ? Object.entries(byComp).map(([comp,tasks])=>`
+    <div style="margin-bottom:12px">
+      <div style="font-weight:700;color:var(--blue);font-size:12px;margin-bottom:5px;padding:5px 8px;background:#e8f0fe;border-radius:6px">▸ ${comp}</div>
+      ${tasks.map(t=>{
+        const dateLabel=t.start_date?(fmtDate(t.start_date)+(t.end_date?' → '+fmtDate(t.end_date):'')):'';
+        const taskDist=(t.task_dist||'').split(',').map(d=>d.trim()).filter(Boolean);
+        const allSchools=(t.task_schools||'').trim().toUpperCase()==='ALL';
+        const taskSchoolList=allSchools?[]:(t.task_schools||'').split('|').map(s=>s.trim()).filter(Boolean);
+        return `<div style="padding:8px 10px;background:#f8f9ff;border-radius:6px;margin-bottom:6px;font-size:12px;border-left:3px solid #b0bcd4">
+          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+            <span style="font-weight:600">${t.task_name||'—'}</span>
+            ${dateLabel?`<span style="font-size:11px;color:var(--muted)">${dateLabel}</span>`:''}
+          </div>
+          ${taskDist.length?`<div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:3px">
+            <span style="font-size:10px;color:var(--muted);align-self:center;margin-right:2px">📍</span>
+            ${taskDist.map(d=>`<span style="background:#e8f0fe;color:var(--blue);border-radius:12px;padding:2px 8px;font-size:11px">${d}</span>`).join('')}
+            ${allSchools?'<span style="background:#e8f5e9;color:var(--green);border-radius:12px;padding:2px 8px;font-size:11px;font-weight:600">All Schools</span>':taskSchoolList.length?`<span style="background:#fff8e1;color:var(--amber);border-radius:12px;padding:2px 8px;font-size:11px">${taskSchoolList.length} school${taskSchoolList.length>1?'s':''}</span>`:''}
+          </div>`:''}
+        </div>`;
+      }).join('')}
+    </div>`).join('') : '<div style="color:var(--muted);font-size:12px">No tasks defined yet.</div>';
+}
+
 // Section 3 — Component/Task builder initialisation
 function pvInitTasks(){
   const container=document.getElementById('pve-comp-task-builder');
@@ -2962,10 +2992,11 @@ async function pvSave(sec){
       const banner=document.getElementById('pv-sec3-save-msg');
       if(banner){
         banner.style.cssText='display:block;background:#e8f5e9;border:1px solid #a5d6a7;border-radius:8px;padding:12px 16px;margin-top:10px;font-size:13px;color:#2e7d32;font-weight:600;text-align:center';
-        banner.innerHTML='✅ <b>Activities saved successfully!</b> Click 🔒 Lock Activities to include them in Monthly Report.';
+        banner.innerHTML='✅ <b>Activities saved successfully!</b>';
         banner.scrollIntoView({behavior:'smooth',block:'nearest'});
         setTimeout(()=>{ banner.style.display='none'; },8000);
       }
+      refreshSec3View();
       return; // don't fall through to pvCancel below
     }
 
