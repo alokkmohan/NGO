@@ -2560,6 +2560,7 @@ function renderProfileView(){
           </div>`).join('') : '<div style="color:var(--muted);font-size:12px">No tasks defined yet.</div>'}
       </div>
       <div id="pv-sec3-form" style="display:none;padding:14px;border-top:1px solid var(--border);background:#fafcff">
+        <div id="pv-sec3-saved-panel"></div>
         <div style="font-size:11px;color:var(--blue);background:#eef4ff;border-radius:7px;padding:9px 12px;margin-bottom:12px">
           Add activities with start &amp; end dates. Click <b>💾 Save</b> to save your activities. You can edit or delete them anytime before submitting the monthly report.
         </div>
@@ -2707,6 +2708,57 @@ function refreshSec3View(){
     </div>`).join('') : '<div style="color:var(--muted);font-size:12px">No tasks defined yet.</div>';
 }
 
+// Render saved activities panel inside the edit form (above task builder)
+function renderSavedPanel(){
+  const el = document.getElementById('pv-sec3-saved-panel');
+  if(!el) return;
+  const myProjs = PROJECTS.filter(p => p.ngo === currentUser.org && p.status !== 'deleted');
+  if(!myProjs.length){ el.innerHTML=''; return; }
+  const byComp = {};
+  myProjs.forEach(p=>{ const c=p.component||'Other'; if(!byComp[c]) byComp[c]=[]; byComp[c].push(p); });
+  el.innerHTML = `<div style="background:#f0faf4;border:1px solid #a5d6a7;border-radius:8px;padding:10px 14px;margin-bottom:12px">
+    <div style="font-size:12px;font-weight:700;color:#2e7d32;margin-bottom:8px">✅ Saved Activities</div>
+    ${Object.entries(byComp).map(([comp,tasks])=>`
+      <div style="margin-bottom:8px">
+        <div style="font-size:11px;font-weight:700;color:var(--blue);background:#e8f0fe;border-radius:5px;padding:3px 8px;margin-bottom:4px">▸ ${comp}</div>
+        ${tasks.map(t=>{
+          const locked = String(t.locked)==='true';
+          const dateStr = t.start_date ? ` · ${fmtDate(t.start_date)}${t.end_date?' → '+fmtDate(t.end_date):''}` : '';
+          return `<div style="display:flex;align-items:center;gap:6px;padding:6px 8px;background:#fff;border-radius:6px;margin-bottom:4px;border:1px solid ${locked?'#a5d6a7':'#d0e8ff'}">
+            <span style="flex:1;font-size:12px;font-weight:600">${t.task_name||'—'}<span style="font-size:11px;color:var(--muted);font-weight:400">${dateStr}</span>${locked?'<span style="font-size:10px;color:#2e7d32;background:#e8f5e9;border:1px solid #a5d6a7;border-radius:10px;padding:1px 7px;margin-left:6px">🔒 Locked</span>':''}</span>
+            ${!locked?`<button onclick="editSavedActivity('${t.project_id}')" style="padding:3px 10px;background:#e8f0fe;color:var(--blue);border:1px solid #b0c8f0;border-radius:5px;font-size:11px;cursor:pointer">✏ Edit</button>
+            <button onclick="deleteSavedActivity('${t.project_id}')" style="padding:3px 10px;background:#fff0f0;color:var(--red);border:1px solid #f5c6c6;border-radius:5px;font-size:11px;cursor:pointer">✕ Delete</button>`:''}
+          </div>`;
+        }).join('')}
+      </div>`).join('')}
+  </div>`;
+}
+
+// Scroll to and highlight the matching task block in the builder
+function editSavedActivity(pid){
+  const block = document.querySelector(`[data-project-id="${pid}"]`);
+  if(!block){ alert('Please expand the component below to edit this activity.'); return; }
+  block.scrollIntoView({behavior:'smooth', block:'center'});
+  block.style.transition='box-shadow .3s';
+  block.style.boxShadow='0 0 0 3px #1a73e8';
+  setTimeout(()=>{ block.style.boxShadow=''; }, 2000);
+}
+
+// Delete a single saved activity, refresh panel + task builder
+async function deleteSavedActivity(pid){
+  if(!confirm('Delete this activity?\n\nThis cannot be undone.')) return;
+  showLoader('Deleting…');
+  try{
+    const res = await apiPost({action:'deleteProject', project_id: pid});
+    if(res && res.success===false){ hideLoader(); alert(res.error||'Delete failed'); return; }
+    await loadSheetData();
+    hideLoader();
+    renderSavedPanel();
+    refreshSec3View();
+    pvInitTasks();
+  }catch(e){ hideLoader(); alert('Delete failed: '+e.message); }
+}
+
 // Section 3 — Component/Task builder initialisation
 function pvInitTasks(){
   const container=document.getElementById('pve-comp-task-builder');
@@ -2754,6 +2806,7 @@ function pvInitTasks(){
       // Tasks are always editable until the monthly report is submitted
     });
   });
+  renderSavedPanel();
 }
 
 // Visually freeze a task block so it cannot be edited or deleted
@@ -2997,6 +3050,7 @@ async function pvSave(sec){
         setTimeout(()=>{ banner.style.display='none'; },8000);
       }
       refreshSec3View();
+      renderSavedPanel();
       return; // don't fall through to pvCancel below
     }
 

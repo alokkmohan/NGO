@@ -31,6 +31,7 @@ function doGet(e) {
     else if (action === 'saveProject')          result = saveProject(p);
     else if (action === 'getProjects')          result = getProjects(p);
     else if (action === 'deleteUnlockedProjects') result = deleteUnlockedProjects(p);
+    else if (action === 'deleteProject')          result = deleteProject(p);
     else if (action === 'lockProject')          result = lockProject(p);
     else if (action === 'unlockProject')        result = unlockProject(p);
     else if (action === 'unlockProjectsByComponent') result = unlockProjectsByComponent(p);
@@ -68,6 +69,7 @@ function doPost(e) {
     if (action === 'unlockProject') return respond(unlockProject(data));
     if (action === 'unlockProjectsByComponent') return respond(unlockProjectsByComponent(data));
     if (action === 'deleteUnlockedProjects') return respond(deleteUnlockedProjects(data));
+    if (action === 'deleteProject')          return respond(deleteProject(data));
     if (action === 'lockReport')        return respond(lockReport(data));
     if (action === 'submitReport')      return respond(submitReport({ report: JSON.parse(data.report) }));
     if (action === 'getAdminPartners')  return respond(getAdminPartners());
@@ -765,6 +767,26 @@ function deleteUnlockedProjects(data) {
     if (!isLocked) sheet.getRange(i + 1, statusIdx + 1).setValue('deleted');
   }
   return { success: true };
+}
+
+// Mark a single unlocked project as deleted by project_id
+function deleteProject(data) {
+  if (!data.project_id) return { success: false, error: 'project_id required' };
+  const sheet = getSS().getSheetByName('Projects');
+  if (!sheet) return { success: false, error: 'No Projects sheet' };
+  const rows = sheet.getDataRange().getValues();
+  const h = rows[0];
+  const pidIdx    = h.indexOf('project_id');
+  const statusIdx = h.indexOf('status');
+  const lockedIdx = h.indexOf('locked');
+  for (let i = 1; i < rows.length; i++) {
+    if (String(rows[i][pidIdx]) !== String(data.project_id)) continue;
+    if (lockedIdx >= 0 && String(rows[i][lockedIdx]) === 'true')
+      return { success: false, error: 'Cannot delete a locked activity.' };
+    sheet.getRange(i + 1, statusIdx + 1).setValue('deleted');
+    return { success: true };
+  }
+  return { success: false, error: 'Project not found' };
 }
 
 // Lock a project so it can never be edited or deleted via the UI
