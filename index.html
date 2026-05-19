@@ -5081,15 +5081,24 @@ function generateReport(){
   const selMonth = document.getElementById('rep-month').value;
   const out      = document.getElementById('report-output');
 
+  // When "All NGOs" is selected, only include NGOs that have submitted a report for the chosen month
+  function ngoHasReport(ngoName){
+    return REPORTS.some(r => r.ngo === ngoName &&
+      (selMonth === 'all' || _normalizeMonth(r.month) === _normalizeMonth(selMonth)) &&
+      String(r.report_locked) === 'true');
+  }
+
   if(selType === 'official'){
     // ── OFFICIAL KPI REPORT (per NGO) ──
-    let targetNGOs = selNGO === 'all' ? SAMPLE_NGOS : SAMPLE_NGOS.filter(n=>n.name===selNGO);
-    if(!targetNGOs.length){ out.innerHTML='<p style="color:var(--muted);padding:16px">No NGO data found.</p>'; return; }
+    let targetNGOs = selNGO === 'all'
+      ? SAMPLE_NGOS.filter(n => ngoHasReport(n.name))
+      : SAMPLE_NGOS.filter(n=>n.name===selNGO);
+    if(!targetNGOs.length){ out.innerHTML='<p style="color:var(--muted);padding:16px">No submitted reports found for the selected filter.</p>'; return; }
     out.innerHTML = targetNGOs.map(n => buildOfficialReport(n, selMonth)).join('');
 
   } else {
     // ── SUMMARY REPORT (all NGOs) ──
-    let ngos = selNGO==='all' ? SAMPLE_NGOS : SAMPLE_NGOS.filter(n=>n.name===selNGO);
+    let ngos = selNGO==='all' ? SAMPLE_NGOS.filter(n => ngoHasReport(n.name)) : SAMPLE_NGOS.filter(n=>n.name===selNGO);
     const tot = (key) => ngos.reduce((a,n)=>a+(+n[key]||0),0);
     out.innerHTML = `
       <div class="official-report">
