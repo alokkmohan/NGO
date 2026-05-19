@@ -111,11 +111,6 @@ function sendOTP(data) {
       return { success: false, isAdmin: true, error: 'admin' };
     }
 
-    // Check NGO active status
-    if (!isNGOActive(org)) {
-      return { success: false, error: 'Your organisation is currently inactive. Please contact PMU Admin.' };
-    }
-
     // Ensure OTP columns exist (col 7 = otp, col 8 = otp_expiry, col 9 = otp_sent_at)
     const hRow = sheet.getRange(1, 1, 1, 9).getValues()[0];
     if (!hRow[6]) sheet.getRange(1, 7).setValue('otp');
