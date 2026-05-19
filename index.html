@@ -928,6 +928,20 @@ function fmtDate(v){
   return s;
 }
 
+// Convert any month value (ISO date or "April 2026") to "Month YYYY" label
+function _fmtMonthLabel(v){
+  if(!v) return '';
+  const s = String(v).trim();
+  if(/^[A-Za-z]+ \d{4}$/.test(s)) return s; // already "April 2026"
+  if(s.includes('-')){
+    const datePart = s.split('T')[0];
+    const [yr, mo] = datePart.split('-').map(Number);
+    const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    return (months[mo-1]||'') + ' ' + yr;
+  }
+  return s;
+}
+
 // Robust locked check — handles boolean true, string 'true', or uppercase 'TRUE' from Sheets
 function isTaskLocked(v){ return v===true || String(v).toLowerCase()==='true'; }
 
@@ -2011,13 +2025,16 @@ function updateDashboardStats(){
   document.getElementById('s-partners-sub').textContent=total?`${REPORTS.length} reports submitted`:'No data yet';
   document.getElementById('s-partners').closest('.stat-card').querySelector('.stat-label').textContent='Active partners';
   const distSet=new Set();
-  SAMPLE_NGOS.forEach(n=>(n.dist||'').split(',').forEach(d=>{if(d.trim())distSet.add(d.trim());}));
+  SAMPLE_NGOS.forEach(n=>(n.dist||'').split(',').forEach(d=>{if(d.trim())distSet.add(d.trim().toUpperCase());}));
+  // Also count districts from task-level coverage (task_dist in PROJECTS)
+  PROJECTS.filter(p=>p.status!=='deleted').forEach(p=>(p.task_dist||'').split(',').forEach(d=>{if(d.trim())distSet.add(d.trim().toUpperCase());}));
   document.getElementById('s-districts').textContent=distSet.size||'0';
   document.getElementById('s-districts').closest('.stat-card').querySelector('.stat-label').textContent='Districts covered';
   document.getElementById('s-districts').closest('.stat-card').querySelector('.stat-sub').textContent='of 75 UP districts';
   const totalSchools=SAMPLE_NGOS.reduce((a,n)=>a+(+n.schools||0),0);
   document.getElementById('s-schools').textContent=totalSchools?totalSchools.toLocaleString('en-IN'):'0';
-  const latestMonth=SAMPLE_NGOS.map(n=>n.month).filter(Boolean).sort().reverse()[0]||'';
+  const latestMonthRaw=SAMPLE_NGOS.map(n=>n.month).filter(Boolean).sort().reverse()[0]||'';
+  const latestMonth=_fmtMonthLabel(latestMonthRaw);
   document.getElementById('s-schools-sub').textContent=latestMonth?'Last: '+latestMonth:'';
   const totalStudents=SAMPLE_NGOS.reduce((a,n)=>a+(+n.students||0),0);
   const totalGirls=SAMPLE_NGOS.reduce((a,n)=>a+(+n.girls||0),0);
