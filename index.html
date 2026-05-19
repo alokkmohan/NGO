@@ -952,6 +952,8 @@ let activeFilter = 'all';
 async function doSendOTP(isResend){
   const email = document.getElementById('login-email').value.trim();
   if(!email){ alert('Please enter your email address'); return; }
+  const btn = document.getElementById('login-main-btn');
+  btn.disabled = true;
   showLoader(isResend ? 'Resending OTP…' : 'Checking email…');
   try {
     const res = await apiPost({action:'sendOTP', email});
@@ -965,16 +967,19 @@ async function doSendOTP(isResend){
       document.getElementById('login-otp').focus();
       if(isResend) alert('✅ New OTP sent to ' + email);
     } else if(res.isAdmin){
-      // Admin — show password field
+      // Admin — show password field, change button to Sign In
       document.getElementById('admin-pass-wrap').style.display = 'block';
-      document.getElementById('login-main-btn').textContent = 'Sign In →';
-      document.getElementById('login-main-btn').onclick = doAdminLogin;
+      btn.textContent = 'Sign In →';
+      btn.onclick = doAdminLogin;
+      btn.disabled = false;
       document.getElementById('admin-pass').focus();
     } else {
+      btn.disabled = false;
       alert(res.error || 'Could not send OTP. Please try again.');
     }
   } catch(e){
     hideLoader();
+    btn.disabled = false;
     alert('Connection error: ' + e.message);
   }
 }
@@ -983,6 +988,8 @@ async function doAdminLogin(){
   const email = document.getElementById('login-email').value.trim();
   const pass  = document.getElementById('admin-pass').value;
   if(!pass){ alert('Please enter password'); return; }
+  const btn = document.getElementById('login-main-btn');
+  btn.disabled = true;
   showLoader('Signing in…');
   try {
     const res = await apiPost({action:'login', email, password: pass});
@@ -993,9 +1000,10 @@ async function doAdminLogin(){
       await loadSheetData();
       startApp();
     } else {
+      btn.disabled = false;
       alert(res.error || 'Invalid password');
     }
-  } catch(e){ hideLoader(); alert('Connection error: ' + e.message); }
+  } catch(e){ hideLoader(); btn.disabled = false; alert('Connection error: ' + e.message); }
 }
 
 async function doVerifyOTP(){
