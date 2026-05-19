@@ -2022,7 +2022,8 @@ function updateDashboardStats(){
   document.getElementById('ngo-dashboard').style.display='none';
   const total=SAMPLE_NGOS.length;
   document.getElementById('s-partners').textContent=total||'0';
-  document.getElementById('s-partners-sub').textContent=total?`${REPORTS.length} reports submitted`:'No data yet';
+  const submittedReports = REPORTS.filter(r => String(r.report_locked) === 'true').length;
+  document.getElementById('s-partners-sub').textContent=total?`${submittedReports} reports submitted`:'No data yet';
   document.getElementById('s-partners').closest('.stat-card').querySelector('.stat-label').textContent='Active partners';
   const distSet=new Set();
   SAMPLE_NGOS.forEach(n=>(n.dist||'').split(',').forEach(d=>{if(d.trim())distSet.add(d.trim().toUpperCase());}));
@@ -2070,7 +2071,8 @@ function renderAdminCharts(){
   const reports = REPORTS;
 
   // ── Extra KPI cards ──
-  const submitted = ngos.filter(n => n.month).length;
+  const submittedNGOs = new Set(REPORTS.filter(r => String(r.report_locked) === 'true').map(r => r.ngo));
+  const submitted = submittedNGOs.size;
   const pending   = ngos.length - submitted;
   const totalGirls = ngos.reduce((a,n) => a + (+n.girls||0), 0);
 
