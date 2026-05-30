@@ -3891,7 +3891,7 @@ function _updateSubmitBtn(){
 function refreshLockBtn(){
   const btn = document.getElementById('r-lock-btn');
   if(!btn || btn.disabled) return;
-  const hasTasks = document.querySelectorAll('#r-task-cards [id$="_activity"]').length > 0;
+  const hasTasks = document.querySelectorAll('#r-task-cards [id$="_entries"]').length > 0;
   if(hasTasks) _updateSubmitBtn();
   else btn.style.display = 'none';
 }
@@ -3991,6 +3991,53 @@ function prefillReportForm(){
   if(saEl) saEl.style.display = 'block';
 }
 
+function _entryHtml(monthMin, monthMax, isLocked, sa){
+  const fromVal   = sa?.from_date || '';
+  const toVal     = sa?.to_date   || '';
+  const detailVal = (sa?.details || sa?.name || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const dis       = isLocked ? 'disabled' : '';
+  const bg        = isLocked ? '#f8f9ff'  : '#fff';
+  return `<div class="task-entry" style="background:#f8faff;border:1px solid #dbe6f8;border-radius:8px;padding:10px 12px;margin-bottom:8px;position:relative">
+    ${!isLocked?`<button type="button" onclick="removeTaskEntry(this)"
+      style="position:absolute;top:8px;right:8px;background:none;border:none;font-size:16px;color:var(--muted);cursor:pointer;line-height:1;padding:0 4px"
+      title="Remove entry">×</button>`:''}
+    <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:8px">
+      <div>
+        <label style="font-size:11px;color:#222;font-weight:600;display:block;margin-bottom:3px">From <span style="color:var(--red)">*</span></label>
+        <input type="date" class="entry-from" ${dis} min="${monthMin}" max="${monthMax}" value="${fromVal}"
+          onchange="_markDirty();_scheduleAutoSave()"
+          style="padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:${bg}">
+      </div>
+      <div>
+        <label style="font-size:11px;color:#222;font-weight:600;display:block;margin-bottom:3px">To <span style="color:var(--red)">*</span></label>
+        <input type="date" class="entry-to" ${dis} min="${monthMin}" max="${monthMax}" value="${toVal}"
+          onchange="_markDirty();_scheduleAutoSave()"
+          style="padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:${bg}">
+      </div>
+    </div>
+    <textarea class="entry-details" rows="2" ${dis} placeholder="What was done in this period..."
+      oninput="_markDirty();_scheduleAutoSave()"
+      style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;font-family:inherit;resize:vertical;outline:none;box-sizing:border-box;background:${bg}">${detailVal}</textarea>
+  </div>`;
+}
+
+function addTaskEntry(tid, monthMin, monthMax){
+  const container = document.getElementById(tid + '_entries');
+  if(!container) return;
+  const div = document.createElement('div');
+  div.innerHTML = _entryHtml(monthMin, monthMax, false, null);
+  container.appendChild(div.firstChild);
+  _markDirty();
+}
+
+function removeTaskEntry(btn){
+  const entry = btn.closest('.task-entry');
+  const container = entry?.parentElement;
+  if(!container || container.querySelectorAll('.task-entry').length <= 1) return;
+  entry.remove();
+  _markDirty();
+}
+
 function buildReportTaskCards(existingRep){
   const container = document.getElementById('r-task-cards');
   if(!container) return;
@@ -4017,6 +4064,8 @@ function buildReportTaskCards(existingRep){
   const byComp = {};
   myProjs.forEach(p => { const c=p.component||'Other'; if(!byComp[c]) byComp[c]=[]; byComp[c].push(p); });
 
+  const isLocked = existingRep && String(existingRep.report_locked) === 'true';
+
   container.innerHTML = Object.entries(byComp).map(([comp, tasks]) =>
     `<div style="margin-bottom:8px">
       <div style="font-size:11px;font-weight:700;color:var(--blue);text-transform:uppercase;letter-spacing:.5px;
@@ -4025,14 +4074,13 @@ function buildReportTaskCards(existingRep){
         const tid = 'task_' + (t.project_id || t.task_name).toString().replace(/[^a-z0-9]/gi,'_');
         const tName = (t.task_name||'').trim().toLowerCase();
         const lastAct = lastTasks.find(a => (a.task_name||'').trim().toLowerCase() === tName) || {};
-        const subs = lastAct.sub_activities || [];
-        const actText = subs.map(s => (s.name||s.details||'').trim()).filter(Boolean).join('\n') || '';
-        const dateLabel = t.start_date ? fmtDate(t.start_date) + (t.end_date ? ' → '+fmtDate(t.end_date) : '') : '';
+        const subs = lastAct.sub_activities?.length ? lastAct.sub_activities : [null];
+        const dateLabel = t.start_date ? fmtDate(t.start_date)+(t.end_date?' → '+fmtDate(t.end_date):'') : '';
         const selOpts = ['Not started','In progress','Completed'].map(v =>
           `<option value="${v}"${lastAct.status===v?' selected':''}>${v}</option>`).join('');
-        const isLocked = existingRep && String(existingRep.report_locked)==='true';
+        const entriesHtml = subs.map(sa => _entryHtml(monthMin, monthMax, isLocked, sa)).join('');
         return `<div class="card" style="margin-bottom:10px;padding:14px">
-          <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:10px">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:12px">
             <div style="flex:1;min-width:180px">
               <div style="font-weight:700;font-size:15px;color:#1a1a2e">${t.task_name}</div>
               ${dateLabel?`<div style="font-size:11px;color:var(--muted);margin-top:2px">${dateLabel}</div>`:''}
@@ -4045,12 +4093,12 @@ function buildReportTaskCards(existingRep){
               </select>
             </div>
           </div>
-          <label style="font-size:12px;color:#222;font-weight:600;display:block;margin-bottom:4px">Monthly Activity <span style="color:var(--red)">*</span></label>
-          <textarea id="${tid}_activity" rows="3" ${isLocked?'disabled':''}
-            placeholder="Describe what was done this month for this activity..."
-            oninput="_markDirty();_scheduleAutoSave()"
-            style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:7px;font-size:13px;font-family:inherit;resize:vertical;outline:none;box-sizing:border-box;background:${isLocked?'#f8f9ff':'#fff'}">${actText.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</textarea>
-          <div id="${tid}_selist" style="display:none"></div>
+          <div id="${tid}_entries">${entriesHtml}</div>
+          <div id="${tid}_activity" style="display:none"></div><!-- stub for JS compat -->
+          <div id="${tid}_selist"   style="display:none"></div><!-- stub for JS compat -->
+          ${!isLocked?`<button type="button" onclick="addTaskEntry('${tid}','${monthMin}','${monthMax}')"
+            style="margin-top:4px;padding:5px 14px;background:#e8f0fe;color:var(--blue);border:1px solid #c5d8f8;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer">
+            + Add Entry</button>`:''}
         </div>`;
       }).join('')}
     </div>`
@@ -4449,9 +4497,15 @@ async function submitMonthlyReport(silent = false){
       alert(`Please select a Status for: "${t.task_name}"`); statusSel.focus(); throw new Error('status_required');
     }
     const taskStatus = statusSel?.value || '';
-    const actText = document.getElementById(tid + '_activity')?.value.trim() || '';
-    const sub_activities = actText
-      ? [{name: actText, from_date: fromDate, to_date: toDate, details: ''}]
+    // Collect all entries for this task
+    const entriesContainer = document.getElementById(tid + '_entries');
+    const sub_activities = entriesContainer
+      ? Array.from(entriesContainer.querySelectorAll('.task-entry')).map(entry => ({
+          name:      '',
+          from_date: entry.querySelector('.entry-from')?.value  || '',
+          to_date:   entry.querySelector('.entry-to')?.value    || '',
+          details:   entry.querySelector('.entry-details')?.value.trim() || ''
+        })).filter(e => e.from_date || e.to_date || e.details)
       : [];
     return {
       task_id:        t.project_id || '',
