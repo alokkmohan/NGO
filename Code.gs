@@ -507,55 +507,12 @@ function lockReport(data) {
   for (let i = 1; i < rows.length; i++) {
     if (String(rows[i][ngoIdx]) === String(data.ngo) && String(rows[i][monthIdx]) === String(data.month)) {
       sheet.getRange(i + 1, lockedIdx + 1).setValue('true');
-      // Send thank-you email to NGO users
-      try { sendLockThankYouEmail(data.ngo, data.month); } catch(e) { Logger.log('Thank-you email error: ' + e.message); }
       return { success: true };
     }
   }
   return { success: false, error: 'Report not found' };
 }
 
-function sendLockThankYouEmail(org, monthLabel) {
-  const users = getActiveNGOUsers().filter(u => u.org === org);
-  const done  = new Set();
-  users.forEach(u => {
-    if (done.has(u.email)) return;
-    done.add(u.email);
-    MailApp.sendEmail({
-      to: u.email,
-      subject: `Thank You: ${monthLabel} Report Submitted Successfully`,
-      htmlBody: `
-<div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;border:1px solid #dde3ee;border-radius:10px;overflow:hidden">
-  <div style="background:#1A3C6E;padding:18px 24px">
-    <h2 style="color:#fff;margin:0;font-size:16px">Samagra Shiksha — NGO Partner Portal</h2>
-    <p style="color:rgba(255,255,255,0.7);margin:4px 0 0;font-size:12px">Madhyamik Shiksha Vibhag, Uttar Pradesh, PMU</p>
-  </div>
-  <div style="padding:24px">
-    <p style="font-size:14px;color:#1a1a2e">Dear <strong>${u.name}</strong>,</p>
-    <div style="background:#e8f5e9;border-left:4px solid #1D9E75;border-radius:6px;padding:14px 16px;margin:16px 0">
-      <p style="margin:0;font-size:15px;color:#1b5e20;font-weight:700">
-        ✅ Your ${monthLabel} Monthly Report has been locked and submitted successfully!
-      </p>
-    </div>
-    <p style="font-size:14px;color:#444;line-height:1.6">
-      Thank you, <strong>${u.name}</strong>. Your report for <strong>${org}</strong> has been
-      received by the PMU team and is now part of the official record.
-    </p>
-    <div style="background:#f4f6fa;border-radius:8px;padding:14px;margin:16px 0;font-size:13px;color:#555">
-      <strong>📋 Submission Details</strong><br>
-      Organisation: <strong>${org}</strong><br>
-      Reporting Period: <strong>${monthLabel}</strong><br>
-      Status: <strong style="color:#1D9E75">🔒 Locked & Submitted</strong>
-    </div>
-    <p style="font-size:12px;color:#888;border-top:1px solid #eee;padding-top:14px;margin-top:14px">
-      You can view your submitted report anytime by logging into the portal under <em>My Reports</em>.<br><br>
-      Samagra Shiksha, Secondary, Uttar Pradesh, PMU Office
-    </p>
-  </div>
-</div>`
-    });
-  });
-}
 
 // ── DRIVE FOLDER HELPERS ─────────────────────────────────────
 
@@ -931,18 +888,7 @@ function forgotPassword(data) {
       const temp = 'NGO@' + Math.floor(1000 + Math.random() * 9000);
       sheet.getRange(i + 1, 2).setValue(temp);    // save new password
       sheet.getRange(i + 1, 6).setValue('');       // force password change on next login
-      // Send email
-      try {
-        MailApp.sendEmail({
-          to: rows[i][0],
-          subject: 'Samagra UP NGO Portal — Password Reset',
-          body: `Dear ${rows[i][3] || 'Partner'},\n\nYour password has been reset.\n\nTemporary Password: ${temp}\n\nPlease login and change your password immediately.\n\nLogin at: https://samsecup.dataimpact.in/\n\n— PMU Team, Samagra UP Secondary Education Programme`
-        });
-      } catch(e) {
-        // Email failed — still return temp password so admin can share manually
-        return { success: true, temp, emailSent: false };
-      }
-      return { success: true, emailSent: true };
+      return { success: true, temp };
     }
   }
   return { success: false, error: 'Email not found in system' };
@@ -1093,7 +1039,7 @@ function isReportLocked(repRows, repHeaders, org, monthLabel) {
   return false; // no report found = not locked
 }
 
-// ── 1. 30th of month: Send 3 types of emails based on report status ──
+// ── 1. 30th of month: Remind NGOs that have NOT yet submitted their report ──
 function sendMonthEndReminders() {
   const today      = new Date();
   const monthLabel = MONTH_NAMES[today.getMonth()] + ' ' + today.getFullYear();
@@ -1106,226 +1052,81 @@ function sendMonthEndReminders() {
   const monthIdx   = repHeaders.indexOf('month');
   const lockedIdx  = repHeaders.indexOf('report_locked');
 
-  // Build a map: org → { hasReport, isLocked }
-  function getRepStatus(org) {
+  function isSubmitted(org) {
     for (let i = 1; i < repRows.length; i++) {
       if (String(repRows[i][ngoIdx]||'').trim() !== org) continue;
       if (normalizeMonthLabel(repRows[i][monthIdx]) !== monthLabel) continue;
-      return {
-        hasReport: true,
-        isLocked:  String(repRows[i][lockedIdx]||'').toLowerCase() === 'true'
-      };
+      return String(repRows[i][lockedIdx]||'').toLowerCase() === 'true';
     }
-    return { hasReport: false, isLocked: false };
+    return false;
   }
 
   const users = getActiveNGOUsers();
   const done  = new Set();
+  let sent = 0;
 
   users.forEach(u => {
     if (done.has(u.org)) return;
     done.add(u.org);
-
-    const { hasReport, isLocked } = getRepStatus(u.org);
+    if (isSubmitted(u.org)) return;   // already submitted — skip
 
     try {
-      if (isLocked) {
-        // ── Already locked → Thank you email ──
-        MailApp.sendEmail({
-          to: u.email,
-          subject: `Thank You: ${monthLabel} Report Submitted to PMU`,
-          htmlBody: `
+      MailApp.sendEmail({
+        to: u.email,
+        subject: `Action Required: Submit your ${monthLabel} Report — Samagra Shiksha`,
+        htmlBody: `
 <div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;border:1px solid #dde3ee;border-radius:10px;overflow:hidden">
   <div style="background:#1A3C6E;padding:18px 24px">
     <h2 style="color:#fff;margin:0;font-size:16px">Samagra Shiksha — NGO Partner Portal</h2>
-    <p style="color:rgba(255,255,255,0.7);margin:4px 0 0;font-size:12px">Madhyamik Shiksha Vibhag, Uttar Pradesh, PMU</p>
-  </div>
-  <div style="padding:24px">
-    <p style="font-size:14px;color:#1a1a2e">Dear <strong>${u.name}</strong>,</p>
-    <div style="background:#e8f5e9;border-left:4px solid #1D9E75;border-radius:6px;padding:14px 16px;margin:16px 0">
-      <p style="margin:0;font-size:15px;color:#1b5e20;font-weight:700">
-        ✅ Your ${monthLabel} report is locked and submitted to PMU. Thank you!
-      </p>
-    </div>
-    <p style="font-size:14px;color:#444;line-height:1.6">
-      Great work, <strong>${u.name}</strong>! Your monthly report for <strong>${u.org}</strong>
-      has been received. You can view it anytime under <em>My Reports</em>.
-    </p>
-    <p style="font-size:12px;color:#888;border-top:1px solid #eee;padding-top:14px;margin-top:14px">
-      Samagra Shiksha, Secondary, Uttar Pradesh, PMU Office
-    </p>
-  </div>
-</div>`
-        });
-        Logger.log('Thanks email → ' + u.email + ' (' + u.org + ') — already locked');
-
-      } else if (hasReport) {
-        // ── Report saved but not locked → Lock reminder ──
-        MailApp.sendEmail({
-          to: u.email,
-          subject: `Action Required: Lock your ${monthLabel} Report by Today`,
-          htmlBody: `
-<div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;border:1px solid #dde3ee;border-radius:10px;overflow:hidden">
-  <div style="background:#1A3C6E;padding:18px 24px">
-    <h2 style="color:#fff;margin:0;font-size:16px">Samagra Shiksha — NGO Partner Portal</h2>
-    <p style="color:rgba(255,255,255,0.7);margin:4px 0 0;font-size:12px">Madhyamik Shiksha Vibhag, Uttar Pradesh, PMU</p>
-  </div>
-  <div style="padding:24px">
-    <p style="font-size:14px;color:#1a1a2e">Dear <strong>${u.name}</strong>,</p>
-    <p style="font-size:14px;color:#444;line-height:1.6">
-      Your <strong>${monthLabel}</strong> report for <strong>${u.org}</strong> has been saved
-      but is <span style="color:#E24B4A;font-weight:700">not locked yet</span>.
-    </p>
-    <div style="background:#fff3e0;border-left:4px solid #E24B4A;border-radius:6px;padding:14px 16px;margin:16px 0">
-      <p style="margin:0;font-size:14px;color:#b71c1c;font-weight:700">
-        ⚠️ Your report will NOT reach the PMU / Department unless it is locked.
-      </p>
-      <p style="margin:6px 0 0;font-size:13px;color:#7f4f00">
-        Please log in and click <strong>Lock Month Report</strong> to submit it.
-      </p>
-    </div>
-    <div style="text-align:center;margin:24px 0">
-      <a href="${PORTAL_URL}" style="background:#1A3C6E;color:#fff;padding:12px 28px;border-radius:8px;
-        text-decoration:none;font-size:14px;font-weight:700;display:inline-block">🔒 Lock My Report Now</a>
-    </div>
-    <p style="font-size:12px;color:#888;border-top:1px solid #eee;padding-top:14px;margin-top:14px">
-      For help, contact your PMU coordinator.
-    </p>
-  </div>
-</div>`
-        });
-        Logger.log('Lock reminder → ' + u.email + ' (' + u.org + ') — saved but not locked');
-
-      } else {
-        // ── No report at all → Fill & lock reminder ──
-        MailApp.sendEmail({
-          to: u.email,
-          subject: `Action Required: Submit your ${monthLabel} Monthly Report Today`,
-          htmlBody: `
-<div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;border:1px solid #dde3ee;border-radius:10px;overflow:hidden">
-  <div style="background:#1A3C6E;padding:18px 24px">
-    <h2 style="color:#fff;margin:0;font-size:16px">Samagra Shiksha — NGO Partner Portal</h2>
-    <p style="color:rgba(255,255,255,0.7);margin:4px 0 0;font-size:12px">Madhyamik Shiksha Vibhag, Uttar Pradesh, PMU</p>
-  </div>
-  <div style="padding:24px">
-    <p style="font-size:14px;color:#1a1a2e">Dear <strong>${u.name}</strong>,</p>
-    <p style="font-size:14px;color:#444;line-height:1.6">
-      We have not received your <strong>${monthLabel}</strong> Monthly Report for
-      <strong>${u.org}</strong> yet.
-    </p>
-    <div style="background:#fff3e0;border-left:4px solid #E24B4A;border-radius:6px;padding:14px 16px;margin:16px 0">
-      <p style="margin:0;font-size:14px;color:#b71c1c;font-weight:700">
-        ⚠️ Today is the last date. Please fill and lock your report immediately.
-      </p>
-      <p style="margin:6px 0 0;font-size:13px;color:#7f4f00">
-        Without locking, your report will NOT reach the PMU / Department.
-      </p>
-    </div>
-    <div style="text-align:center;margin:24px 0">
-      <a href="${PORTAL_URL}" style="background:#E24B4A;color:#fff;padding:12px 28px;border-radius:8px;
-        text-decoration:none;font-size:14px;font-weight:700;display:inline-block">📝 Fill & Lock Report Now</a>
-    </div>
-    <p style="font-size:12px;color:#888;border-top:1px solid #eee;padding-top:14px;margin-top:14px">
-      For help, contact your PMU coordinator.
-    </p>
-  </div>
-</div>`
-        });
-        Logger.log('Fill reminder → ' + u.email + ' (' + u.org + ') — no report');
-      }
-    } catch(e) {
-      Logger.log('Email failed for ' + u.email + ': ' + e.message);
-    }
-  });
-}
-
-
-// ── 3. 1st of month: Remind all active NGOs to fill tasks on portal ──
-function sendMonthlyTaskReminder() {
-  const today     = new Date();
-  const prevMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
-  const monthLabel = MONTH_NAMES[today.getMonth()] + ' ' + today.getFullYear();
-
-  const users = getActiveNGOUsers();
-  const done  = new Set();
-
-  users.forEach(u => {
-    if (done.has(u.email)) return;
-    done.add(u.email);
-    MailApp.sendEmail({
-      to: u.email,
-      subject: `Action Required: Fill Your Monthly Tasks for ${monthLabel} on the Portal`,
-      htmlBody: `
-<div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;border:1px solid #dde3ee;border-radius:10px;overflow:hidden">
-  <div style="background:#1A3C6E;padding:18px 24px">
-    <h2 style="color:#fff;margin:0;font-size:16px">Samagra Shiksha — NGO Partner Portal</h2>
-    <p style="color:rgba(255,255,255,0.7);margin:4px 0 0;font-size:12px">Madhyamik Shiksha Vibhag, Uttar Pradesh | PMU Office</p>
+    <p style="color:rgba(255,255,255,0.7);margin:4px 0 0;font-size:12px">Madhyamik Shiksha Vibhag, Uttar Pradesh | PMU</p>
   </div>
   <div style="padding:24px">
     <p style="font-size:14px;color:#1a1a2e">Dear <strong>${u.name || u.org}</strong>,</p>
     <p style="font-size:14px;color:#444;line-height:1.6">
-      A new month has begun. As a partner organisation under the Samagra Shiksha Secondary Education Programme,
-      you are required to <strong>update your monthly tasks and progress</strong> on the NGO Partner Portal for
-      <strong>${monthLabel}</strong>.
+      This is a reminder that your <strong>${monthLabel}</strong> Monthly Report for
+      <strong>${u.org}</strong> has not been submitted yet.
     </p>
-    <div style="background:#fff8e1;border-left:4px solid #f59e0b;border-radius:6px;padding:14px 16px;margin:16px 0">
-      <p style="margin:0;font-size:14px;color:#78350f;font-weight:700">
-        Please log in and fill your tasks before the end of this month.
+    <div style="background:#fff3e0;border-left:4px solid #E24B4A;border-radius:6px;padding:14px 16px;margin:16px 0">
+      <p style="margin:0;font-size:14px;color:#b71c1c;font-weight:700">
+        ⚠️ Please submit your report today. It will not reach the PMU until submitted.
       </p>
     </div>
-    <div style="background:#f4f6fa;border-radius:8px;padding:14px;margin:16px 0;font-size:13px;color:#555">
-      <strong>What to do:</strong><br><br>
-      1. Log in to the portal<br>
-      2. Go to <strong>My Tasks</strong><br>
-      3. Update the status and progress for each task<br>
-      4. Submit your monthly report before the 30th
+    <div style="text-align:center;margin:24px 0">
+      <a href="${PORTAL_URL}" style="background:#1A3C6E;color:#fff;padding:12px 32px;border-radius:8px;
+        text-decoration:none;font-size:15px;font-weight:700;display:inline-block">Submit Report →</a>
     </div>
-    <div style="text-align:center;margin:20px 0">
-      <a href="https://samsecup.dataimpact.in/"
-        style="background:#1A3C6E;color:#fff;padding:12px 28px;border-radius:6px;text-decoration:none;font-size:14px;font-weight:700;display:inline-block">
-        Open Portal: samsecup.dataimpact.in
-      </a>
-    </div>
-    <p style="font-size:13px;color:#444;line-height:1.6">
-      Organisation: <strong>${u.org}</strong><br>
-      Reporting Period: <strong>${monthLabel}</strong>
-    </p>
     <p style="font-size:12px;color:#888;border-top:1px solid #eee;padding-top:14px;margin-top:14px">
-      This is an automated reminder from the PMU. For any queries, please contact us at
-      <a href="mailto:rmsaup.spo@gmail.com" style="color:#1A3C6E">rmsaup.spo@gmail.com</a>.<br><br>
+      For help, contact your PMU coordinator.<br>
       Samagra Shiksha, Secondary, Uttar Pradesh | PMU Office
     </p>
   </div>
 </div>`
-    });
+      });
+      sent++;
+      Logger.log('Reminder → ' + u.email + ' (' + u.org + ')');
+    } catch(e) {
+      Logger.log('Email failed for ' + u.email + ': ' + e.message);
+    }
   });
 
-  Logger.log('Monthly task reminders sent to ' + done.size + ' users.');
+  Logger.log('Month-end reminders sent to ' + sent + ' pending NGOs.');
 }
 
-// ── 4. One-time setup: monthly reminder triggers ───────────────
+
+// ── 2. One-time setup: monthly reminder trigger ───────────────
 // Run ONCE manually: Extensions → Apps Script → select setupMonthlyTriggers → Run
 function setupMonthlyTriggers() {
-  const FUNCTIONS = ['sendMonthEndReminders', 'sendMonthlyTaskReminder'];
-
-  // Remove existing triggers for both functions
+  // Remove existing trigger for sendMonthEndReminders
   ScriptApp.getProjectTriggers().forEach(t => {
-    if (FUNCTIONS.includes(t.getHandlerFunction())) ScriptApp.deleteTrigger(t);
+    if (t.getHandlerFunction() === 'sendMonthEndReminders') ScriptApp.deleteTrigger(t);
   });
 
-  // 1st of every month at 10 AM — task reminder
-  ScriptApp.newTrigger('sendMonthlyTaskReminder')
-    .timeBased()
-    .onMonthDay(1)
-    .atHour(10)
-    .create();
-
-  // 30th of every month at 10 AM — report lock reminder
+  // 30th of every month at 10 AM — pending-report reminder
   ScriptApp.newTrigger('sendMonthEndReminders')
     .timeBased()
     .onMonthDay(30)
     .atHour(10)
     .create();
 
-  Logger.log('Triggers set: sendMonthlyTaskReminder on 1st, sendMonthEndReminders on 30th — both at 10 AM');
+  Logger.log('Trigger set: sendMonthEndReminders on 30th at 10 AM');
 }
