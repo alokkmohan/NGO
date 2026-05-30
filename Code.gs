@@ -143,7 +143,7 @@ function sendOTP(data) {
           '  ' + otp + '\n\n' +
           'This OTP is valid for 10 minutes.\n' +
           'Do not share this OTP with anyone.\n\n' +
-          'Login at: https://samsecup.dataimpact.in/\n\n' +
+          'Login at: https://samsecup.egtau.org/\n\n' +
           '— PMU Team, Samagra UP Secondary Education Programme'
       });
       return { success: true };
@@ -990,7 +990,7 @@ function authorizeMailPermission() {
 
 const MONTH_NAMES = ['January','February','March','April','May','June',
                      'July','August','September','October','November','December'];
-const PORTAL_URL  = 'https://samsecup.dataimpact.in/';
+const PORTAL_URL  = 'https://samsecup.egtau.org/';
 
 // ── Helpers ──────────────────────────────────────────────────
 
