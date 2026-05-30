@@ -3123,10 +3123,7 @@ function renderMyReports(){
     .sort((a,b) => (+b.id||0) - (+a.id||0));
   const card  = document.getElementById('my-reports-card');
   const list  = document.getElementById('my-reports-list');
-  const count = document.getElementById('my-reports-count');
-  if(!myReports.length){ card.style.display='none'; return; }
-  card.style.display='block';
-  count.textContent = myReports.length + ' report' + (myReports.length!==1?'s':'') + ' submitted';
+  if(!myReports.length){ if(card) card.style.display='none'; return; }
 
   // Format date "2026-04-01" → "1 Apr 2026"
   const fmtD = fmtDate; // use global — handles ISO timestamps correctly
