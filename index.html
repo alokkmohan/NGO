@@ -705,19 +705,11 @@ tr:hover td{background:#FAFBFF}
 
       <!-- Save / Submit buttons -->
       <div id="r-submit-area" style="margin-bottom:24px">
-        <div style="display:flex;gap:10px;flex-wrap:wrap">
-          <button id="r-save-btn"
-            style="display:none;flex:1;min-width:160px;padding:13px;font-size:14px;font-weight:700;background:var(--green);color:#fff;border:none;border-radius:8px;cursor:pointer"
-            onclick="saveReportDraft()">💾 Save Progress</button>
-          <button id="r-lock-btn"
-            style="display:none;flex:1;min-width:160px;padding:13px;font-size:14px;font-weight:700;background:#e65100;color:#fff;border:none;border-radius:8px;cursor:pointer"
-            onclick="showLockPanel()">✅ Submit Final Report</button>
-        </div>
-        <div id="r-lock-wrap" style="display:none"></div><!-- stub kept for JS compat -->
-        <div style="font-size:11px;color:var(--muted);margin-top:8px;text-align:center;line-height:1.5">
-          💾 Save Progress anytime — update daily or weekly.<br>
-          ✅ Submit Final Report when done — <b>cannot be changed after submission.</b>
-        </div>
+        <button id="r-lock-btn"
+          style="display:none;width:100%;padding:14px;font-size:15px;font-weight:700;border:none;border-radius:8px;cursor:pointer"
+          onclick="lockReportFinal()">✅ Submit Report</button>
+        <div id="r-save-btn" style="display:none"></div><!-- stub for JS compat -->
+        <div id="r-lock-wrap" style="display:none"></div><!-- stub for JS compat -->
       </div>
 
       <!-- Success message -->
@@ -1173,6 +1165,7 @@ function onReportMonthChange(){
   const stEl  = document.getElementById('r-month-status');
   const lockBtn = document.getElementById('r-lock-btn');
 
+  _formDirty = false;
   // Always reset lock panel and B/D/E visibility first
   hideLockPanel();
 
@@ -1181,25 +1174,20 @@ function onReportMonthChange(){
     wrap.style.display = 'block';
     if(isLocked){
       stEl.style.cssText = 'padding:8px 12px;border-radius:7px;font-size:12px;font-weight:600;background:#e8f5e9;color:#2e7d32;border:1px solid #a5d6a7';
-      stEl.textContent = '✅ Report submitted to PMU. No further changes allowed.';
-      // Hide both action buttons for submitted report
-      const saveBtn2 = document.getElementById('r-save-btn');
-      if(saveBtn2){ saveBtn2.disabled = true; saveBtn2.style.display = 'none'; }
-      if(lockBtn) { lockBtn.disabled  = true; lockBtn.style.display  = 'none'; }
-      // Show B/D/E as read-only summary for locked month
+      stEl.textContent = '✅ Report submitted to PMU.';
+      _formDirty = false;
       prefillFromExisting(existing);
       ['r-section-b','r-section-d','r-section-e'].forEach(id => {
         const el = document.getElementById(id);
         if(el){ el.style.display='block'; el.querySelectorAll('input,textarea').forEach(i=>i.disabled=true); }
       });
-      // Lock Section A task cards
       setTimeout(() => {
-        const tc = document.getElementById('r-task-cards');
-        if(tc){
-          tc.querySelectorAll('input,select,textarea').forEach(el => el.disabled = true);
-          tc.querySelectorAll('button').forEach(btn => { btn.style.display = 'none'; });
-        }
-      }, 300);
+        _updateSubmitBtn();
+        // Add dirty listeners so user can update
+        document.getElementById('r-task-cards')?.querySelectorAll('input,select,textarea').forEach(el => {
+          el.addEventListener('change', _markDirty, {once:true});
+        });
+      }, 400);
     } else {
       wrap.style.display = 'none';
       if(lockBtn){ lockBtn.textContent='✅ Submit Final Report'; lockBtn.disabled=false; lockBtn.style.opacity='1'; }
@@ -3712,15 +3700,55 @@ function fillFormFromData(data){
   reportStep=0; updateReportSteps();
 }
 
+let _formDirty = false;
+
+function _markDirty(){
+  _formDirty = true;
+  _updateSubmitBtn();
+}
+
+function _updateSubmitBtn(){
+  const btn = document.getElementById('r-lock-btn');
+  if(!btn) return;
+  const pick = document.getElementById('r-month-pick');
+  if(!pick?.value) return;
+  const [yr,mo] = pick.value.split('-').map(Number);
+  const mNames=['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const months = mNames[mo-1]+' '+yr;
+  const rep = REPORTS.find(r=>r.ngo===currentUser?.org && r.month===months);
+  const isLocked = rep && String(rep.report_locked)==='true';
+
+  btn.style.display = 'block';
+  btn.disabled = false;
+  btn.style.cursor = 'pointer';
+
+  if(isLocked && !_formDirty){
+    btn.textContent = '✅ Already Submitted';
+    btn.style.background = '#e8f5e9';
+    btn.style.color = '#2e7d32';
+    btn.style.border = '1px solid #a5d6a7';
+    btn.disabled = true;
+    btn.style.cursor = 'default';
+  } else if(isLocked && _formDirty){
+    btn.textContent = '🔄 Update & Submit Again';
+    btn.style.background = '#1a3c6e';
+    btn.style.color = '#fff';
+    btn.style.border = 'none';
+  } else {
+    btn.textContent = '✅ Submit Report';
+    btn.style.background = '#e65100';
+    btn.style.color = '#fff';
+    btn.style.border = 'none';
+  }
+}
+
 // Show Save + Submit buttons when at least one sub-entry exists across all tasks
 function refreshLockBtn(){
-  const lockBtn = document.getElementById('r-lock-btn');
-  const saveBtn = document.getElementById('r-save-btn');
-  if(!lockBtn) return;
-  if(lockBtn.disabled) return; // already submitted — keep as-is
-  const hasEntries = document.querySelectorAll('#r-task-cards .report-sub-entry').length > 0;
-  lockBtn.style.display = hasEntries ? 'block' : 'none';
-  if(saveBtn) saveBtn.style.display = hasEntries ? 'block' : 'none';
+  const btn = document.getElementById('r-lock-btn');
+  if(!btn || btn.disabled) return;
+  const hasEntries = document.querySelectorAll('#r-task-cards .report-sub-entry, #r-task-cards .rse-view-card').length > 0;
+  if(hasEntries) _updateSubmitBtn();
+  else btn.style.display = 'none';
 }
 
 // Save report draft (no lock) — user can keep editing and saving
@@ -3916,6 +3944,12 @@ function buildReportTaskCards(existingRep){
     }
   });
   refreshLockBtn();
+  // Add dirty listeners on all form inputs so any change marks form dirty
+  setTimeout(() => {
+    document.getElementById('r-task-cards')?.querySelectorAll('input,select,textarea').forEach(el => {
+      el.addEventListener('change', _markDirty, {once:true});
+    });
+  }, 200);
 }
 
 function onProjectChange(){ /* legacy stub */ }
@@ -4500,6 +4534,40 @@ function resetMonthlyReport(){
 function submitReport(){ submitMonthlyReport(); } // legacy alias
 
 // Show Section B/D/E + submit confirm panel
+async function lockReportFinal(){
+  const monthPick = document.getElementById('r-month-pick');
+  if(!monthPick?.value){ alert('Please select a Reporting Month first.'); return; }
+  const [yr, mo] = monthPick.value.split('-').map(Number);
+  const mNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const months = mNames[mo-1] + ' ' + yr;
+  const isUpdate = _formDirty && REPORTS.find(r=>r.ngo===currentUser.org && r.month===months && String(r.report_locked)==='true');
+  const msg = isUpdate
+    ? `Update & resubmit your ${months} report?\n\nYour previous submission will be replaced.`
+    : `Submit your ${months} report to PMU?\n\nYou can update it again later if needed.`;
+  if(!confirm(msg)) return;
+  const btn = document.getElementById('r-lock-btn');
+  if(btn){ btn.disabled=true; btn.textContent='Submitting…'; }
+  try {
+    await submitMonthlyReport();
+    showLoader('Submitting to PMU…');
+    await apiPost({action:'lockReport', ngo:currentUser.org, month:months});
+    const rep = REPORTS.find(r=>r.ngo===currentUser.org && r.month===months);
+    if(rep) rep.report_locked = 'true';
+    hideLoader();
+    _formDirty = false;
+    _updateSubmitBtn();
+    // Show success banner
+    const wrap = document.getElementById('r-month-status-wrap');
+    const stEl = document.getElementById('r-month-status');
+    if(wrap && stEl){
+      wrap.style.display = 'block';
+      stEl.style.cssText = 'padding:10px 14px;border-radius:7px;font-size:13px;font-weight:600;background:#e8f5e9;color:#2e7d32;border:1px solid #a5d6a7';
+      stEl.textContent = isUpdate ? '🔄 Report updated and resubmitted to PMU.' : '✅ Report submitted to PMU successfully!';
+    }
+    renderMyReports();
+  } catch(e){ hideLoader(); if(btn){btn.disabled=false;_updateSubmitBtn();} alert('Submission failed: '+e.message); }
+}
+
 function showLockPanel(){
   const monthPick = document.getElementById('r-month-pick');
   if(!monthPick?.value){ alert('Please select a Reporting Month first.'); return; }
@@ -4552,9 +4620,8 @@ async function confirmAndLock(){
       stEl.textContent = '✅ Submitted — this month\'s report is finalised and submitted to PMU. No further changes allowed.';
     }
     const lockBtn = document.getElementById('r-lock-btn');
-    if(lockBtn) { lockBtn.disabled = true; lockBtn.style.display = 'none'; }
-    const saveBtn = document.getElementById('r-save-btn');
-    if(saveBtn) { saveBtn.disabled = true; saveBtn.style.display = 'none'; }
+    _formDirty = false;
+    _updateSubmitBtn();
     // Lock Section A task cards — disable all inputs and hide action buttons
     const taskCards = document.getElementById('r-task-cards');
     if(taskCards){
