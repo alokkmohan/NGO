@@ -1691,8 +1691,10 @@ async function saveProfile(){
     if(newName) {
       currentUser.name = newName;
       sessionStorage.setItem('ngo_session', JSON.stringify(currentUser));
-      document.getElementById('sb-name').textContent = newName;
-      document.getElementById('sb-avatar').textContent = newName[0].toUpperCase();
+      const _sbn2 = document.getElementById('sb-name');
+      const _sba2 = document.getElementById('sb-avatar');
+      if(_sbn2) _sbn2.textContent = newName;
+      if(_sba2) _sba2.textContent = newName[0].toUpperCase();
     }
     await loadSheetData();
   } catch(e){ console.warn('Profile save error:', e.message); }
@@ -2997,8 +2999,10 @@ async function pvSave(sec){
       if(data.person){
         currentUser.name = data.person;
         sessionStorage.setItem('ngo_session', JSON.stringify(currentUser));
-        document.getElementById('sb-name').textContent = data.person;
-        document.getElementById('sb-avatar').textContent = data.person[0].toUpperCase();
+        const _sbn = document.getElementById('sb-name');
+        const _sba = document.getElementById('sb-avatar');
+        if(_sbn) _sbn.textContent = data.person;
+        if(_sba) _sba.textContent = data.person[0].toUpperCase();
       }
     }
 
