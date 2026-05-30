@@ -1256,8 +1256,9 @@ function onReportMonthChange(){
   const mlEl = document.getElementById('rh-month-label');
   if(mlEl) mlEl.textContent = monthLabel;
 
-  // Check if already submitted for this month
-  const existing = REPORTS.find(r => r.ngo === currentUser.org && r.month === monthLabel);
+  // Check if already submitted for this month — prefer locked (submitted) over draft if duplicates exist
+  const _allForMonth = REPORTS.filter(r => r.ngo === currentUser.org && r.month === monthLabel);
+  const existing = _allForMonth.find(r => String(r.report_locked)==='true') || _allForMonth[0];
   const wrap  = document.getElementById('r-month-status-wrap');
   const stEl  = document.getElementById('r-month-status');
   const lockBtn = document.getElementById('r-lock-btn');
@@ -4506,9 +4507,10 @@ async function submitMonthlyReport(silent = false){
     if(res && res.docUrl) driveDocUrl = res.docUrl;
   } catch(e){ console.warn('Sync error:', e.message); }
 
-  // Update local state — replace existing or push new
-  const idx = REPORTS.findIndex(r => r.ngo === currentUser.org && r.month === months);
-  if(idx >= 0) REPORTS[idx] = report; else REPORTS.push(report);
+  // Update local state — prefer locked entry if duplicates, else first match
+  const _allIdx = REPORTS.map((r,i)=>({r,i})).filter(({r})=>r.ngo===currentUser.org && r.month===months);
+  const _best = _allIdx.find(({r})=>String(r.report_locked)==='true') || _allIdx[0];
+  if(_best) REPORTS[_best.i] = report; else REPORTS.push(report);
   const ngo = SAMPLE_NGOS.find(n => n.name === currentUser.org);
   if(ngo){ ngo.schools=report.schools||ngo.schools; ngo.students=report.students||ngo.students; ngo.month=months; }
   renderPartnerTable(); renderMap(activeFilter);
