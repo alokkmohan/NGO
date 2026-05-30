@@ -3727,7 +3727,7 @@ async function saveReportDraft(){
     setTimeout(()=>msg.remove(), 3000);
   } catch(e){
     if(saveBtn){ saveBtn.disabled=false; saveBtn.textContent='💾 Save Progress'; }
-    alert('Save failed: '+e.message);
+    if(e.message !== 'status_required') alert('Save failed: '+e.message);
   }
 }
 
@@ -3852,9 +3852,10 @@ function buildReportTaskCards(existingRep){
               ${dateLabel?`<span style="font-size:11px;color:var(--muted);margin-left:8px">${dateLabel}</span>`:''}
             </div>
             <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-              <label style="font-size:11px;color:var(--muted);font-weight:600">Status:</label>
+              <label style="font-size:11px;color:var(--muted);font-weight:600">Status: <span style="color:var(--red)">*</span></label>
               <select id="${tid}_status" onchange="onTaskStatusChange('${tid}')"
                 style="padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:#fff;outline:none">
+                <option value="">— Select —</option>
                 <option value="Not started">Not started</option>
                 <option value="In progress">In progress</option>
                 <option value="Completed">Completed</option>
@@ -4324,7 +4325,8 @@ async function submitMonthlyReport(silent = false){
     }).filter(e => e.name || e.from_date || e.to_date || e.details); // skip completely empty rows
 
     const statusSel    = document.getElementById(tid + '_status');
-    const taskStatus   = statusSel?.value || (sub_activities.length ? 'In progress' : 'Not started');
+    if(statusSel && !statusSel.value){ alert(`Please select a Status for activity: "${t.task_name}"`); statusSel.focus(); throw new Error('status_required'); }
+    const taskStatus   = statusSel?.value || '';
     const completionDate = taskStatus === 'Completed'
       ? (document.getElementById(tid + '_completion_date')?.value || '') : '';
 
