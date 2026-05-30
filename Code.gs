@@ -414,6 +414,12 @@ function submitReport(data) {
   const hRow3 = rSheet.getRange(1, 1, 1, rSheet.getLastColumn()).getValues()[0];
   if (!hRow3.includes('report_locked')) rSheet.getRange(1, hRow3.length + 1).setValue('report_locked');
 
+  // Use script lock to prevent concurrent duplicate inserts
+  const lock = LockService.getScriptLock();
+  lock.waitLock(15000);
+
+  try {
+
   // Check if report for this NGO+month already exists (update instead of insert)
   const allRows = rSheet.getDataRange().getValues();
   const hdr0 = allRows[0];
@@ -427,7 +433,7 @@ function submitReport(data) {
     const sheetNgo   = String(allRows[i][ngoIdx0]   || '').trim().toLowerCase();
     const sheetMonth = String(allRows[i][monthIdx0] || '').trim().toLowerCase();
     if (sheetNgo === rNgo && sheetMonth === rMonth) {
-      updateRow = i + 1; // 1-indexed sheet row — always update, even if previously locked
+      updateRow = i + 1;
       break;
     }
   }
@@ -459,6 +465,11 @@ function submitReport(data) {
   } else {
     rSheet.appendRow(newRow);
     savedRow = rSheet.getLastRow();
+  }
+  SpreadsheetApp.flush(); // force write before releasing lock
+
+  } finally {
+    lock.releaseLock();
   }
 
   // Update latest values in NGOs sheet

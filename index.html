@@ -3850,6 +3850,7 @@ function fillFormFromData(data){
 
 let _formDirty = false;
 let _autoSaveTimer = null;
+let _saveInProgress = false; // prevent concurrent API calls
 
 function _markDirty(){
   _formDirty = true;
@@ -3860,17 +3861,21 @@ function _scheduleAutoSave(){
   _markDirty();
   if(_autoSaveTimer) clearTimeout(_autoSaveTimer);
   _autoSaveTimer = setTimeout(async () => {
+    if(_saveInProgress) return; // skip if already saving
     const pick = document.getElementById('r-month-pick');
     if(!pick?.value) return;
     const statusEl = document.getElementById('r-autosave-status');
     if(statusEl) statusEl.textContent = '💾 Saving…';
+    _saveInProgress = true;
     try {
       await submitMonthlyReport(true);
       if(statusEl) statusEl.textContent = '✅ Saved ' + new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
     } catch(e){
       if(statusEl) statusEl.textContent = '❌ Save failed — ' + e.message;
+    } finally {
+      _saveInProgress = false;
     }
-  }, 3000);
+  }, 5000); // 5 second debounce — reduces rapid duplicate calls
 }
 
 function _updateSubmitBtn(){
@@ -4083,14 +4088,18 @@ async function saveTaskEntry(btn){
   form.replaceWith(cardDiv.firstChild);
 
   _markDirty();
+  if(_autoSaveTimer){ clearTimeout(_autoSaveTimer); _autoSaveTimer = null; } // cancel pending auto-save
   const statusEl = document.getElementById('r-autosave-status');
   if(statusEl) statusEl.textContent = '💾 Saving…';
+  _saveInProgress = true;
   try {
     await submitMonthlyReport(true);
     if(statusEl) statusEl.textContent = '✅ Saved ' + new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
   } catch(e){
     if(statusEl) statusEl.textContent = '❌ Save failed — check connection';
     alert('Entry could not be saved: ' + e.message + '\n\nPlease try again or check your internet connection.');
+  } finally {
+    _saveInProgress = false;
   }
 }
 
