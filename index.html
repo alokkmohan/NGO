@@ -3215,6 +3215,7 @@ function reopenProfileWizard(){
 
 function renderMyReports(){
   if(currentUser.role === 'admin') return;
+  renderReportsPage(); // keep My Reports page in sync
   const myReports = REPORTS.filter(r => r.ngo === currentUser.org)
     .sort((a,b) => (+b.id||0) - (+a.id||0));
   const card  = document.getElementById('my-reports-card');
