@@ -364,8 +364,12 @@ function submitReport(data) {
   const monthIdx0  = hdr0.indexOf('month');
   const lockedIdx0 = hdr0.indexOf('report_locked');
   let updateRow = -1;
+  const rNgo   = String(r.ngo   || '').trim().toLowerCase();
+  const rMonth = String(r.month || '').trim().toLowerCase();
   for (let i = 1; i < allRows.length; i++) {
-    if (String(allRows[i][ngoIdx0]) === String(r.ngo) && String(allRows[i][monthIdx0]) === String(r.month)) {
+    const sheetNgo   = String(allRows[i][ngoIdx0]   || '').trim().toLowerCase();
+    const sheetMonth = String(allRows[i][monthIdx0] || '').trim().toLowerCase();
+    if (sheetNgo === rNgo && sheetMonth === rMonth) {
       if (lockedIdx0 >= 0 && String(allRows[i][lockedIdx0]).toLowerCase() === 'true') {
         return { success: false, error: 'Report is locked and cannot be updated.' };
       }
@@ -394,17 +398,20 @@ function submitReport(data) {
     'false' // report_locked
   ];
 
+  let savedRow; // track which sheet row was written
   if (updateRow > 0) {
     rSheet.getRange(updateRow, 1, 1, newRow.length).setValues([newRow]);
+    savedRow = updateRow;
   } else {
     rSheet.appendRow(newRow);
+    savedRow = rSheet.getLastRow();
   }
 
   // Update latest values in NGOs sheet
   const nSheet = ss.getSheetByName('NGOs');
   const nRows  = nSheet.getDataRange().getValues();
   for (let i = 1; i < nRows.length; i++) {
-    if (nRows[i][1] === r.ngo) {
+    if (String(nRows[i][1]||'').trim().toLowerCase() === rNgo) {
       if (r.schools)  nSheet.getRange(i + 1,  8).setValue(+r.schools);
       if (r.students) nSheet.getRange(i + 1,  9).setValue(+r.students);
       if (r.girls)    nSheet.getRange(i + 1, 10).setValue(+r.girls);
@@ -423,15 +430,14 @@ function submitReport(data) {
     const docInfo   = saveReportDoc(r, ngoFolder);
     docUrl = docInfo.docUrl;
 
-    // Write the doc URL back into the Reports sheet (last column)
-    const lastRow = rSheet.getLastRow();
+    // Write the doc URL back into the correct saved row
     const hdr = rSheet.getRange(1, 1, 1, rSheet.getLastColumn()).getValues()[0];
     let docCol = hdr.indexOf('drive_doc_url');
     if (docCol < 0) {
       docCol = hdr.length;
       rSheet.getRange(1, docCol + 1).setValue('drive_doc_url');
     }
-    rSheet.getRange(lastRow, docCol + 1).setValue(docUrl);
+    rSheet.getRange(savedRow, docCol + 1).setValue(docUrl);
   } catch (driveErr) {
     // Drive save failed — don't block report submission
     Logger.log('Drive save error: ' + driveErr.message);
