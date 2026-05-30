@@ -4012,35 +4012,47 @@ function _savedCardHtml(sa, idx){
   </div>`;
 }
 
-// ── Editable entry form ──
-function _editFormHtml(monthMin, monthMax, sa){
+// ── Editable entry form (with Save button inside) ──
+function _editFormHtml(monthMin, monthMax, sa, tid){
   const fromVal   = sa?.from_date || '';
   const toVal     = sa?.to_date   || '';
   const detailVal = (sa?.details || sa?.name || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  return `<div class="task-entry-form" style="background:#f8faff;border:1.5px solid #b3cff5;border-radius:8px;padding:10px 12px;margin-bottom:8px">
-    <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:8px">
+  const tidAttr   = tid ? `data-tid="${tid}"` : '';
+  return `<div class="task-entry-form" ${tidAttr} style="background:#f8faff;border:1.5px solid #b3cff5;border-radius:8px;padding:12px 14px;margin-bottom:8px">
+    <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:10px">
       <div>
-        <label style="font-size:11px;color:#222;font-weight:600;display:block;margin-bottom:3px">From <span style="color:var(--red)">*</span></label>
+        <label style="font-size:11px;color:#222;font-weight:700;display:block;margin-bottom:4px">From <span style="color:var(--red)">*</span></label>
         <input type="date" class="entry-from" min="${monthMin}" max="${monthMax}" value="${fromVal}"
           onchange="_markDirty()"
-          style="padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px">
+          style="padding:6px 10px;border:1.5px solid var(--border);border-radius:6px;font-size:13px">
       </div>
       <div>
-        <label style="font-size:11px;color:#222;font-weight:600;display:block;margin-bottom:3px">To <span style="color:var(--red)">*</span></label>
+        <label style="font-size:11px;color:#222;font-weight:700;display:block;margin-bottom:4px">To <span style="color:var(--red)">*</span></label>
         <input type="date" class="entry-to" min="${monthMin}" max="${monthMax}" value="${toVal}"
           onchange="_markDirty()"
-          style="padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px">
+          style="padding:6px 10px;border:1.5px solid var(--border);border-radius:6px;font-size:13px">
       </div>
     </div>
-    <textarea class="entry-details" rows="2" placeholder="What was done in this period..."
+    <div style="margin-bottom:6px">
+      <label style="font-size:12px;color:#222;font-weight:700">What was done? <span style="color:var(--red)">*</span></label>
+    </div>
+    <textarea class="entry-details" rows="3" placeholder="Describe the activity done in this period..."
       oninput="_markDirty()"
-      style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;font-family:inherit;resize:vertical;outline:none;box-sizing:border-box">${detailVal}</textarea>
+      style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;font-family:inherit;resize:vertical;outline:none;box-sizing:border-box;margin-bottom:10px">${detailVal}</textarea>
+    <div style="display:flex;gap:8px">
+      <button type="button" onclick="saveTaskEntry(this)"
+        style="padding:7px 18px;background:var(--blue);color:#fff;border:none;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer">
+        💾 Save Entry</button>
+      <button type="button" onclick="cancelTaskEntry(this)"
+        style="padding:7px 12px;background:#fff;color:var(--muted);border:1px solid var(--border);border-radius:6px;font-size:12px;cursor:pointer">
+        Cancel</button>
+    </div>
   </div>`;
 }
 
 // ── Save current edit form → convert to card ──
-async function saveTaskEntry(btn, tid){
-  const form = btn.closest('.task-entry-form') || btn.parentElement?.querySelector('.task-entry-form');
+async function saveTaskEntry(btn){
+  const form = btn.closest('.task-entry-form');
   if(!form) return;
   const fromV = form.querySelector('.entry-from')?.value;
   const toV   = form.querySelector('.entry-to')?.value;
@@ -4050,13 +4062,11 @@ async function saveTaskEntry(btn, tid){
   if(!detV) { alert('Please describe what was done.'); return; }
 
   const sa = { from_date: fromV, to_date: toV, details: detV };
-  const idx = form.closest('.task-entry-form-wrap')?.dataset.idx || Date.now();
   const cardDiv = document.createElement('div');
-  cardDiv.innerHTML = _savedCardHtml(sa, idx);
-  form.closest('.task-entry-form-wrap')?.replaceWith(cardDiv.firstChild) || form.replaceWith(cardDiv.firstChild);
+  cardDiv.innerHTML = _savedCardHtml(sa, Date.now());
+  form.replaceWith(cardDiv.firstChild);
 
   _markDirty();
-  // Auto-save silently
   const statusEl = document.getElementById('r-autosave-status');
   if(statusEl) statusEl.textContent = '💾 Saving…';
   try {
@@ -4065,16 +4075,27 @@ async function saveTaskEntry(btn, tid){
   } catch(e){ if(statusEl) statusEl.textContent = ''; }
 }
 
+function cancelTaskEntry(btn){
+  const form = btn.closest('.task-entry-form');
+  const container = form?.closest('[id$="_entries"]');
+  if(!container) return;
+  // Only remove if there's at least one saved card
+  if(container.querySelectorAll('.task-entry-card').length > 0) form.remove();
+  else alert('Please save at least one entry before cancelling.');
+}
+
 // ── Edit button on saved card → convert back to form ──
 function editTaskEntry(btn){
   const card = btn.closest('.task-entry-card');
   if(!card) return;
-  const sa = { from_date: card.dataset.from, to_date: card.dataset.to, details: card.dataset.details };
   const container = card.closest('[id$="_entries"]');
-  const monthMin  = container?.dataset.min || '';
-  const monthMax  = container?.dataset.max || '';
+  if(container?.querySelector('.task-entry-form')){ alert('Please save the open entry first.'); return; }
+  const sa = { from_date: card.dataset.from, to_date: card.dataset.to, details: card.dataset.details };
+  const monthMin = container?.dataset.min || '';
+  const monthMax = container?.dataset.max || '';
+  const tid      = container?.id?.replace('_entries','') || '';
   const wrap = document.createElement('div');
-  wrap.innerHTML = _editFormHtml(monthMin, monthMax, sa);
+  wrap.innerHTML = _editFormHtml(monthMin, monthMax, sa, tid);
   card.replaceWith(wrap.firstChild);
   _markDirty();
 }
@@ -4082,10 +4103,9 @@ function editTaskEntry(btn){
 function addTaskEntry(tid, monthMin, monthMax){
   const container = document.getElementById(tid + '_entries');
   if(!container) return;
-  // If there's already an open edit form, don't add another
-  if(container.querySelector('.task-entry-form')){ alert('Please save the current entry first.'); return; }
+  if(container.querySelector('.task-entry-form')){ alert('Please save the current entry first, then add another.'); return; }
   const wrap = document.createElement('div');
-  wrap.innerHTML = _editFormHtml(monthMin, monthMax, null);
+  wrap.innerHTML = _editFormHtml(monthMin, monthMax, null, tid);
   container.appendChild(wrap.firstChild);
   container.lastChild.scrollIntoView({behavior:'smooth', block:'nearest'});
   _markDirty();
@@ -4143,7 +4163,7 @@ function buildReportTaskCards(existingRep){
         const savedCardsHtml = subs.filter(sa=>sa).map((sa,i) =>
           isLocked ? _savedCardHtml(sa,i) : _savedCardHtml(sa,i)
         ).join('');
-        const blankFormHtml  = !isLocked && !subs.filter(sa=>sa).length ? _editFormHtml(monthMin, monthMax, null) : '';
+        const blankFormHtml  = !isLocked && !subs.filter(sa=>sa).length ? _editFormHtml(monthMin, monthMax, null, tid) : '';
         return `<div class="card" style="margin-bottom:10px;padding:14px">
           <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:12px">
             <div style="flex:1;min-width:180px">
@@ -4161,14 +4181,9 @@ function buildReportTaskCards(existingRep){
           <div id="${tid}_entries" data-min="${monthMin}" data-max="${monthMax}">${savedCardsHtml}${blankFormHtml}</div>
           <div id="${tid}_activity" style="display:none"></div>
           <div id="${tid}_selist"   style="display:none"></div>
-          ${!isLocked?`<div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap">
-            <button type="button" onclick="saveTaskEntry(this,'${tid}')"
-              style="padding:6px 16px;background:var(--blue);color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer">
-              💾 Save Entry</button>
-            <button type="button" onclick="addTaskEntry('${tid}','${monthMin}','${monthMax}')"
-              style="padding:6px 14px;background:#e8f0fe;color:var(--blue);border:1px solid #c5d8f8;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer">
-              + Add Entry</button>
-          </div>`:''}
+          ${!isLocked?`<button type="button" onclick="addTaskEntry('${tid}','${monthMin}','${monthMax}')"
+            style="margin-top:4px;padding:6px 16px;background:#e8f0fe;color:var(--blue);border:1px solid #c5d8f8;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer">
+            + Add Entry</button>`:''}
         </div>`;
       }).join('')}
     </div>`
