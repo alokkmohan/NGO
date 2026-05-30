@@ -362,7 +362,7 @@ tr:hover td{background:#FAFBFF}
 
     <!-- Step 2: Components & Tasks (was Step 3) -->
     <div class="card" id="profile-p2" style="display:none">
-      <div class="card-title">🎯 Define your Components & Tasks</div>
+      <div class="card-title">🎯 Define your Programme Activities</div>
       <div style="background:#f0f6ff;border:1px solid #2E6DB430;border-radius:8px;padding:10px 14px;font-size:12px;color:var(--blue);margin-bottom:14px">
         Select the components you work in — add activities with start &amp; end dates. Save each task individually using <b>💾 Save Task</b>, then click <b>Save Profile</b> when done.
       </div>
@@ -456,8 +456,8 @@ tr:hover td{background:#FAFBFF}
             शुरू करने के लिए इन चरणों का पालन करें / Please follow these steps to get started:<br><br>
             <b>1.</b> 🏢 <b>My Profile</b> पर जाएं और अपने संगठन की बुनियादी जानकारी भरें।<br>
             <span style="color:#3b5bab;font-size:12px">Go to <b>My Profile</b> and fill in your organisation's basic details.</span><br><br>
-            <b>2.</b> 🎯 <b>Major Components &amp; Tasks</b> में जाएं — अपनी गतिविधियाँ (activities) परिभाषित करें और <b>💾 Save</b> करें।<br>
-            <span style="color:#3b5bab;font-size:12px">Go to <b>Major Components &amp; Tasks</b> — define your activities and click <b>💾 Save</b>.</span><br><br>
+            <b>2.</b> 🎯 <b>Programme Activities</b> में जाएं — अपनी गतिविधियाँ (activities) परिभाषित करें और <b>💾 Save</b> करें।<br>
+            <span style="color:#3b5bab;font-size:12px">Go to <b>Programme Activities</b> — define your activities and click <b>💾 Save</b>.</span><br><br>
             <b>3.</b> 📝 <b>Monthly Report</b> में जाएं और अपनी मासिक प्रगति भरें।<br>
             <span style="color:#3b5bab;font-size:12px">Go to <b>Monthly Report</b> and fill in your monthly progress.</span><br><br>
             <b>4.</b> ✅ रिपोर्ट जमा करें — आप कभी भी प्रगति सहेज सकते हैं और तैयार होने पर सबमिट कर सकते हैं।<br>
@@ -1635,7 +1635,7 @@ function buildStep4Summary(){
         <div style="display:flex;flex-wrap:wrap;gap:3px">${schools.slice(0,6).map(s=>`<span style="background:#fef9e7;color:var(--amber);border-radius:12px;padding:2px 7px;font-size:11px">${s}</span>`).join('')}${schools.length>6?`<span style="font-size:11px;color:var(--muted)">+${schools.length-6} more</span>`:''}</div>
       </div>
       <div>
-        <div style="color:var(--muted);font-size:11px;margin-bottom:4px">Components & Tasks</div>
+        <div style="color:var(--muted);font-size:11px;margin-bottom:4px">Programme Activities</div>
         ${compTaskLines.map(l=>`<div style="margin-bottom:3px;line-height:1.5">${l}</div>`).join('')}
       </div>
       <div style="margin-top:10px;padding-top:8px;border-top:1px solid #2E6DB430;font-size:11px;color:var(--muted)">
@@ -2570,7 +2570,7 @@ function renderProfileView(){
     <!-- ── SECTION 3: Major Components & Tasks (shown first) ── -->
     <div id="pv-sec3" style="border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:12px">
       <div style="background:var(--blue);color:#fff;padding:8px 14px;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:space-between">
-        🎯 Major Components & Tasks
+        🎯 Programme Activities
         <button onclick="pvEdit(3)" style="padding:3px 12px;background:#fff;color:var(--blue);border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">✏ Edit</button>
       </div>
       <div id="pv-sec3-view" style="padding:12px 14px">
