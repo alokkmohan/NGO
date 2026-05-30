@@ -350,15 +350,20 @@ function getReports() {
   const rows  = sheet.getDataRange().getValues();
   if (rows.length < 2) return { success: true, data: [] };
   const headers = rows[0];
-  const data    = rows.slice(1).map(row => {
+  const raw = rows.slice(1).map(row => {
     const obj = {};
     headers.forEach((h, i) => obj[h] = row[i]);
-    // Ensure tasks_json is always a string for JSON.parse on client
     if (obj['tasks_json'] && typeof obj['tasks_json'] !== 'string') obj['tasks_json'] = JSON.stringify(obj['tasks_json']);
-    // App reads 'tasks' — serve tasks_json if available, else fallback
     obj['tasks'] = obj['tasks_json'] || obj['tasks'] || '[]';
     return obj;
   });
+  // Deduplicate: one row per ngo+month, prefer locked over draft
+  const best = {};
+  raw.forEach(r => {
+    const key = String(r.ngo) + '|' + String(r.month);
+    if (!best[key] || String(r.report_locked) === 'true') best[key] = r;
+  });
+  const data = Object.values(best);
   return { success: true, data };
 }
 

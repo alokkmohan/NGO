@@ -3861,7 +3861,8 @@ function _updateSubmitBtn(){
   const [yr,mo] = pick.value.split('-').map(Number);
   const mNames=['January','February','March','April','May','June','July','August','September','October','November','December'];
   const months = mNames[mo-1]+' '+yr;
-  const rep = REPORTS.find(r=>r.ngo===currentUser?.org && r.month===months);
+  const _reps = REPORTS.filter(r=>r.ngo===currentUser?.org && r.month===months);
+  const rep = _reps.find(r=>String(r.report_locked)==='true') || _reps[0];
   const isLocked = rep && String(rep.report_locked)==='true';
 
   btn.style.display = 'block';
