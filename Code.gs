@@ -512,8 +512,12 @@ function lockReport(data) {
     lockedIdx = h.length;
     sheet.getRange(1, lockedIdx + 1).setValue('report_locked');
   }
+  const dNgo   = String(data.ngo   || '').trim().toLowerCase();
+  const dMonth = String(data.month || '').trim().toLowerCase();
   for (let i = 1; i < rows.length; i++) {
-    if (String(rows[i][ngoIdx]) === String(data.ngo) && String(rows[i][monthIdx]) === String(data.month)) {
+    const sNgo   = String(rows[i][ngoIdx]   || '').trim().toLowerCase();
+    const sMonth = String(rows[i][monthIdx] || '').trim().toLowerCase();
+    if (sNgo === dNgo && sMonth === dMonth) {
       sheet.getRange(i + 1, lockedIdx + 1).setValue('true');
       return { success: true };
     }

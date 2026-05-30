@@ -4633,8 +4633,8 @@ async function submitMonthlyReport(silent = false){
   const overallStatus = activities.some(a=>a.sub_activities.length) ? '60' : '0';
 
   const report = {
-    ngo:           currentUser.org,
-    month:         months,
+    ngo:           (currentUser.org || '').trim(),
+    month:         months.trim(),
     report_from:   fromDate,
     report_to:     toDate,
     report_locked: 'false',
@@ -4761,7 +4761,7 @@ async function lockReportFinal(){
   try {
     await submitMonthlyReport();
     showLoader('Submitting to PMU…');
-    const lockRes = await apiPost({action:'lockReport', ngo:currentUser.org, month:months});
+    const lockRes = await apiPost({action:'lockReport', ngo:(currentUser.org||'').trim(), month:months.trim()});
     if(!lockRes || !lockRes.success) throw new Error(lockRes?.error || 'Could not lock report on server');
     const rep = REPORTS.find(r=>r.ngo===currentUser.org && r.month===months);
     if(rep) rep.report_locked = 'true';
