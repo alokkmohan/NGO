@@ -11,7 +11,7 @@
 
 const SHEET_ID        = '1fESLu2sjfmKuszrSUZgCjt296gf2GRTSAMkb2uv7F_M';
 const DRIVE_FOLDER_ID = '151IYtuGpaXal0DiInwUGyaGl7ZX51HD7';
-const VERSION         = 'v8-single-write-2026-05-30'; // bump on each deploy to verify live code
+const VERSION         = 'v9-month-text-2026-05-30'; // bump on each deploy to verify live code
 
 // Cached spreadsheet — avoids repeated openById() calls within one request
 function getSS() { return SpreadsheetApp.openById(SHEET_ID); }
@@ -37,7 +37,7 @@ function doGet(e) {
     else if (action === 'unlockProject')        result = unlockProject(p);
     else if (action === 'unlockProjectsByComponent') result = unlockProjectsByComponent(p);
     else if (action === 'lockReport')           result = lockReport(p);
-    else if (action === 'submitReport')  result = submitReport({ report: JSON.parse(p.report) });
+    else if (action === 'submitReport')  result = submitReport({ report: JSON.parse(p.report), lock: !!p.lock });
     else if (action === 'getAdminPartners')     result = getAdminPartners();
     else if (action === 'setNGOStatus')         result = setNGOStatus(p);
     else if (action === 'debugReports')         result = debugReportsInfo();
@@ -364,6 +364,10 @@ function getReports() {
     obj['tasks'] = obj['tasks_json'] || obj['tasks'] || '[]';
     // Normalize report_locked to string 'true'/'false' for the frontend
     obj['report_locked'] = (String(obj['report_locked']).toLowerCase() === 'true') ? 'true' : 'false';
+    // Month may be stored as a Date (Sheets auto-conversion) — return clean
+    // "May 2026" text so the frontend's month matching works after reload.
+    obj['month'] = _monthDisplay(obj['month']);
+    if (obj['ngo'] != null) obj['ngo'] = String(obj['ngo']).trim();
     return obj;
   });
   // Deduplicate: one row per ngo+month, prefer locked over draft
@@ -393,6 +397,26 @@ function tasksToReadable(tasksJson) {
   } catch(e) { return tasksJson || ''; }
 }
 
+// ── MONTH NORMALIZERS ────────────────────────────────────────
+// Google Sheets auto-converts the text "May 2026" into a DATE value when
+// written to a cell. That broke all matching (resubmit made duplicates,
+// reload showed Submit again). These helpers convert ANY stored month value
+// (Date object, ISO string, or "May 2026" text) into a single comparable form.
+function _monthDisplay(v) {
+  try {
+    if (Object.prototype.toString.call(v) === '[object Date]' && !isNaN(v)) {
+      return Utilities.formatDate(v, 'Asia/Kolkata', 'MMMM yyyy');
+    }
+  } catch (e) {}
+  const s = String(v == null ? '' : v).trim();
+  if (/^\d{4}-\d{2}-\d{2}T/.test(s)) {
+    const d = new Date(s);
+    if (!isNaN(d)) return Utilities.formatDate(d, 'Asia/Kolkata', 'MMMM yyyy');
+  }
+  return s;
+}
+function _monthKey(v) { return _monthDisplay(v).trim().toLowerCase(); }
+
 // ── SUBMIT REPORT ────────────────────────────────────────────
 // Fully HEADER-DRIVEN: every field is written by column NAME, never by
 // position. This guarantees ngo/month/tasks_json land in the right columns
@@ -404,7 +428,7 @@ function submitReport(data) {
   const r      = data.report;
 
   const rNgo   = String(r.ngo   || '').trim().toLowerCase();
-  const rMonth = String(r.month || '').trim().toLowerCase();
+  const rMonth = _monthKey(r.month);
 
   // Normalize header names so trailing spaces / capitals never break matching
   const norm = (s) => String(s == null ? '' : s).trim().toLowerCase();
@@ -488,7 +512,7 @@ function submitReport(data) {
     const matches = [];
     for (let i = 1; i < allRows.length; i++) {
       const sNgo = String(allRows[i][ngoIdx] || '').trim().toLowerCase();
-      const sMon = String(allRows[i][monIdx] || '').trim().toLowerCase();
+      const sMon = _monthKey(allRows[i][monIdx]);
       if (sNgo === rNgo && sMon === rMonth) matches.push(i + 1); // 1-based
     }
 
@@ -528,6 +552,13 @@ function submitReport(data) {
       savedRow = rSheet.getLastRow();
     }
 
+    // Force the month cell to PLAIN TEXT so Sheets never re-converts "May 2026"
+    // into a date. This is the root-cause fix for duplicate rows / reload showing
+    // Submit again. We re-write the month as text in the correct display form.
+    if (monIdx >= 0 && savedRow > 0) {
+      rSheet.getRange(savedRow, monIdx + 1).setNumberFormat('@').setValue(_monthDisplay(r.month));
+    }
+
     SpreadsheetApp.flush();
 
     // ── FINAL GUARANTEE: exactly ONE row for this ngo+month ──
@@ -544,7 +575,7 @@ function submitReport(data) {
       let keepRow = -1;
       for (let i = 1; i < fresh.length; i++) {
         const sN = String(fresh[i][fNgo] || '').trim().toLowerCase();
-        const sM = String(fresh[i][fMon] || '').trim().toLowerCase();
+        const sM = _monthKey(fresh[i][fMon]);
         if (sN === rNgo && sM === rMonth) {
           if (fId >= 0 && String(fresh[i][fId]) === String(vals.id)) keepRow = i + 1;
           else dupRows.push(i + 1);
@@ -663,7 +694,7 @@ function cleanupDuplicateReports() {
   const groups = {};
   for (let i = 1; i < rows.length; i++) {
     const key = String(rows[i][ngoIdx] || '').trim().toLowerCase()
-              + '|' + String(rows[i][monIdx] || '').trim().toLowerCase();
+              + '|' + _monthKey(rows[i][monIdx]);
     if (key === '|') continue; // skip fully-empty rows
     (groups[key] = groups[key] || []).push(i + 1);
   }
