@@ -4250,10 +4250,18 @@ async function submitMonthlyReport(silent = false){
 
   if(!silent) showLoader('Saving report to Google Sheets…');
   let driveDocUrl = '';
+  let submitOk = false;
   try {
     const res = await apiPost({action:'submitReport', report: JSON.stringify(report)});
+    if(res && res.error) throw new Error(res.error);
+    if(res && res.success === false) throw new Error('Server rejected report');
+    submitOk = true;
     if(res && res.docUrl) driveDocUrl = res.docUrl;
-  } catch(e){ console.warn('Sync error:', e.message); }
+  } catch(e){
+    console.warn('Sync error:', e.message);
+    if(!silent){ hideLoader(); alert('Report save failed: ' + e.message); }
+    return { success: false, error: e.message };
+  }
 
   // Update local state — replace existing or push new
   const idx = REPORTS.findIndex(r => r.ngo === currentUser.org && r.month === months);
@@ -4275,6 +4283,7 @@ async function submitMonthlyReport(silent = false){
     renderMyReports();
     document.getElementById('r-submit-area').scrollIntoView({behavior:'smooth'});
   }
+  return { success: true };
 }
 
 // View the currently selected month's report in a print window
@@ -4364,11 +4373,16 @@ async function confirmAndLock(){
   const months = mNames[mo-1] + ' ' + yr;
   if(!confirm('Lock report for ' + months + '?\n\nOnce locked it cannot be edited.')) return;
   // Save all sections first, then lock
-  await submitMonthlyReport();
+  const saveResult = await submitMonthlyReport(true);
+  if(saveResult && saveResult.success === false){
+    alert('Report save karne mein error aaya: ' + (saveResult.error||'Unknown error') + '\nPlease try again.');
+    return;
+  }
   // Now lock
   showLoader('Locking report…');
   try {
-    await apiPost({action:'lockReport', ngo:currentUser.org, month:months});
+    const lockRes = await apiPost({action:'lockReport', ngo:currentUser.org, month:months});
+    if(lockRes && lockRes.success === false){ hideLoader(); alert('Lock failed: ' + (lockRes.error||'Unknown error')); return; }
     const rep = REPORTS.find(r => r.ngo === currentUser.org && r.month === months);
     if(rep) rep.report_locked = 'true';
     hideLoader();
