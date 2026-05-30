@@ -11,6 +11,7 @@
 
 const SHEET_ID        = '1fESLu2sjfmKuszrSUZgCjt296gf2GRTSAMkb2uv7F_M';
 const DRIVE_FOLDER_ID = '151IYtuGpaXal0DiInwUGyaGl7ZX51HD7';
+const VERSION         = 'v7-normalized-2026-05-30'; // bump on each deploy to verify live code
 
 // Cached spreadsheet — avoids repeated openById() calls within one request
 function getSS() { return SpreadsheetApp.openById(SHEET_ID); }
@@ -39,6 +40,9 @@ function doGet(e) {
     else if (action === 'submitReport')  result = submitReport({ report: JSON.parse(p.report) });
     else if (action === 'getAdminPartners')     result = getAdminPartners();
     else if (action === 'setNGOStatus')         result = setNGOStatus(p);
+    else if (action === 'debugReports')         result = debugReportsInfo();
+    else if (action === 'version')              result = { version: VERSION };
+    else if (action === 'cleanupDuplicates')    result = { message: cleanupDuplicateReports() };
     // legacy — kept for backward compat
     else if (action === 'login')          result = login(p);
     else if (action === 'changePassword') result = changePassword(p);
@@ -349,19 +353,23 @@ function getReports() {
   const sheet = getSS().getSheetByName('Reports');
   const rows  = sheet.getDataRange().getValues();
   if (rows.length < 2) return { success: true, data: [] };
-  const headers = rows[0];
+  // Normalize header names (trim + lowercase) so keys are predictable for the
+  // frontend regardless of trailing spaces / capitals in the sheet header.
+  const headers = rows[0].map(h => String(h == null ? '' : h).trim().toLowerCase());
   const raw = rows.slice(1).map(row => {
     const obj = {};
-    headers.forEach((h, i) => obj[h] = row[i]);
+    headers.forEach((h, i) => { if (h) obj[h] = row[i]; });
     if (obj['tasks_json'] && typeof obj['tasks_json'] !== 'string') obj['tasks_json'] = JSON.stringify(obj['tasks_json']);
     obj['tasks'] = obj['tasks_json'] || obj['tasks'] || '[]';
+    // Normalize report_locked to string 'true'/'false' for the frontend
+    obj['report_locked'] = (String(obj['report_locked']).toLowerCase() === 'true') ? 'true' : 'false';
     return obj;
   });
   // Deduplicate: one row per ngo+month, prefer locked over draft
   const best = {};
   raw.forEach(r => {
-    const key = String(r.ngo) + '|' + String(r.month);
-    if (!best[key] || String(r.report_locked) === 'true') best[key] = r;
+    const key = String(r.ngo).trim().toLowerCase() + '|' + String(r.month).trim().toLowerCase();
+    if (!best[key] || r.report_locked === 'true') best[key] = r;
   });
   const data = Object.values(best);
   return { success: true, data };
@@ -397,6 +405,9 @@ function submitReport(data) {
   const rNgo   = String(r.ngo   || '').trim().toLowerCase();
   const rMonth = String(r.month || '').trim().toLowerCase();
 
+  // Normalize header names so trailing spaces / capitals never break matching
+  const norm = (s) => String(s == null ? '' : s).trim().toLowerCase();
+
   // ── Ensure all required columns exist (append missing at end) ──
   const REQUIRED = ['id','ngo','month','schools','students','girls','teachers',
     'meetings','events','scst','divyang','budget','dropout',
@@ -407,13 +418,13 @@ function submitReport(data) {
   {
     let h = rSheet.getRange(1, 1, 1, rSheet.getLastColumn()).getValues()[0];
     // Migrate legacy 'tasks' header → 'tasks_readable'
-    const legacyTasks = h.indexOf('tasks');
-    if (legacyTasks >= 0 && h.indexOf('tasks_readable') < 0) {
+    const legacyTasks = h.findIndex(c => norm(c) === 'tasks');
+    if (legacyTasks >= 0 && h.findIndex(c => norm(c) === 'tasks_readable') < 0) {
       rSheet.getRange(1, legacyTasks + 1).setValue('tasks_readable');
       h = rSheet.getRange(1, 1, 1, rSheet.getLastColumn()).getValues()[0];
     }
     REQUIRED.forEach(name => {
-      if (h.indexOf(name) < 0) {
+      if (h.findIndex(c => norm(c) === name) < 0) {
         rSheet.getRange(1, h.length + 1).setValue(name);
         h.push(name);
       }
@@ -465,7 +476,8 @@ function submitReport(data) {
   try {
     const allRows = rSheet.getDataRange().getValues();
     const hdr     = allRows[0];
-    const colOf   = (name) => hdr.indexOf(name); // 0-based, -1 if missing
+    // Normalized lookup — tolerant of trailing spaces / capital letters in header
+    const colOf   = (name) => hdr.findIndex(c => norm(c) === norm(name)); // 0-based, -1 if missing
     const ngoIdx  = colOf('ngo');
     const monIdx  = colOf('month');
     const lockIdx = colOf('report_locked');
@@ -498,14 +510,12 @@ function submitReport(data) {
     vals.id            = keepId;
     vals.report_locked = keepLocked;
 
-    // Build row array in EXACT header order
-    const rowArr = hdr.map(colName => {
-      if (vals.hasOwnProperty(colName)) return vals[colName];
+    // Build row array in EXACT header order (normalized name → value)
+    const rowArr = hdr.map((colName, ci) => {
+      const key = norm(colName);
+      if (vals.hasOwnProperty(key)) return vals[key];
       // keep existing value (e.g. drive_doc_url) when updating, else blank
-      if (targetRow > 0) {
-        const ci = colOf(colName);
-        return ci >= 0 ? allRows[targetRow - 1][ci] : '';
-      }
+      if (targetRow > 0) return allRows[targetRow - 1][ci];
       return '';
     });
 
@@ -583,6 +593,28 @@ function submitReport(data) {
   return { success: true, docUrl: docUrl };
 }
 
+// ── DEBUG ────────────────────────────────────────────────────
+// Run from editor (select debugReportsInfo → Run, then View → Logs)
+// OR call via URL: ...exec?action=debugReports
+function debugReportsInfo() {
+  const sheet = getSS().getSheetByName('Reports');
+  const rows  = sheet.getDataRange().getValues();
+  const hdr   = rows[0];
+  const norm  = (s) => String(s == null ? '' : s).trim().toLowerCase();
+  const info  = {
+    version:    VERSION,
+    columnCount: hdr.length,
+    rowCount:   rows.length - 1,
+    header:     hdr.map((h, i) => i + ':"' + h + '"'),
+    ngoIdx:     hdr.findIndex(c => norm(c) === 'ngo'),
+    monthIdx:   hdr.findIndex(c => norm(c) === 'month'),
+    lockedIdx:  hdr.findIndex(c => norm(c) === 'report_locked'),
+    tasksJsonIdx: hdr.findIndex(c => norm(c) === 'tasks_json')
+  };
+  Logger.log(JSON.stringify(info, null, 2));
+  return info;
+}
+
 // ── ONE-TIME CLEANUP ─────────────────────────────────────────
 // Run this manually from the Apps Script editor (select cleanupDuplicateReports
 // in the function dropdown → Run) to remove all duplicate rows from the Reports
@@ -592,9 +624,10 @@ function cleanupDuplicateReports() {
   const rows  = sheet.getDataRange().getValues();
   if (rows.length < 2) { Logger.log('Nothing to clean.'); return 'Nothing to clean.'; }
   const hdr      = rows[0];
-  const ngoIdx   = hdr.indexOf('ngo');
-  const monIdx   = hdr.indexOf('month');
-  const lockIdx  = hdr.indexOf('report_locked');
+  const nrm      = (s) => String(s == null ? '' : s).trim().toLowerCase();
+  const ngoIdx   = hdr.findIndex(c => nrm(c) === 'ngo');
+  const monIdx   = hdr.findIndex(c => nrm(c) === 'month');
+  const lockIdx  = hdr.findIndex(c => nrm(c) === 'report_locked');
 
   // Group row numbers (1-based) by ngo+month key
   const groups = {};
