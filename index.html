@@ -1746,6 +1746,10 @@ async function saveWizardTask(btn){
   if(!compCb){ alert('Please select a component first'); return; }
   const taskName = block.querySelector('.comp-task-input')?.value.trim();
   if(!taskName){ alert('Please enter an activity name'); block.querySelector('.comp-task-input')?.focus(); return; }
+  const taskStartVal = block.querySelector('.act-start-date')?.value;
+  const taskEndVal   = block.querySelector('.act-end-date')?.value;
+  if(!taskStartVal){ alert('Please select a Start Date for this activity'); block.querySelector('.act-start-date')?.focus(); return; }
+  if(!taskEndVal)  { alert('Please select an End Date for this activity');   block.querySelector('.act-end-date')?.focus();   return; }
 
   btn.disabled = true;
   btn.textContent = 'Saving…';
@@ -3020,7 +3024,7 @@ async function pvSave(sec){
       const checkedComps=[...document.querySelectorAll('.pve-comp-cb:checked')];
       if(!checkedComps.length){ hideLoader(); alert('Please select at least one component'); return; }
 
-      // Validate: every sub-activity must have a name + start date + end date
+      // Validate: every activity must have name + start + end; every sub-activity too
       let validErr='';
       outer: for(const cb of checkedComps){
         const blocks=cb.closest('.comp-block').querySelectorAll('.task-block');
@@ -3028,6 +3032,10 @@ async function pvSave(sec){
           if(block.dataset.locked==='true') continue;
           const taskName=block.querySelector('.comp-task-input')?.value.trim()||'';
           if(!taskName) continue;
+          const tStart=block.querySelector('.act-start-date')?.value||'';
+          const tEnd  =block.querySelector('.act-end-date')?.value||'';
+          if(!tStart){ validErr=`Start Date is required for activity "${taskName}"`; break outer; }
+          if(!tEnd)  { validErr=`End Date is required for activity "${taskName}"`;   break outer; }
           const subRows=[...block.querySelectorAll('.sub-act-rows > div')];
           for(const row of subRows){
             const name =row.querySelector('.sub-act-name')?.value.trim()||'';
