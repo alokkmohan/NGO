@@ -552,8 +552,116 @@ tr:hover td{background:#FAFBFF}
     <!-- ── PAGE: MONTHLY REPORT ── -->
     <div class="page" id="page-monthly-report">
 
+      <!-- Report Header -->
+      <div class="card" style="margin-bottom:12px">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:12px">
+          <div>
+            <div style="font-size:15px;font-weight:700;color:var(--blue)">📝 Monthly Report</div>
+            <div style="font-size:11px;color:var(--muted)">Samagra Shiksha, Secondary, Uttar Pradesh | PMU</div>
+          </div>
+          <div id="r-autosave-status" style="font-size:11px;color:var(--muted);white-space:nowrap"></div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:12px">
+          <div style="background:#f8f9ff;border-radius:8px;padding:8px 12px">
+            <div style="font-size:10px;color:var(--muted)">Organisation</div>
+            <div style="font-weight:700;color:var(--blue);font-size:13px" id="rh-org">—</div>
+          </div>
+          <div style="background:#f8f9ff;border-radius:8px;padding:8px 12px">
+            <div style="font-size:10px;color:var(--muted)">Nodal Person</div>
+            <div style="font-weight:600;font-size:13px" id="rh-person">—</div>
+          </div>
+          <div style="background:#f8f9ff;border-radius:8px;padding:8px 12px">
+            <div style="font-size:10px;color:var(--muted)">Districts</div>
+            <div style="font-size:12px" id="rh-dist">—</div>
+          </div>
+          <div style="background:#e8f5e9;border-radius:8px;padding:8px 12px">
+            <div style="font-size:10px;color:var(--muted)">Reporting Month</div>
+            <div style="font-weight:700;color:#2e7d32;font-size:14px" id="rh-month-label">—</div>
+          </div>
+        </div>
+        <!-- Hidden inputs kept for JS compat -->
+        <select id="r-month-pick" onchange="onReportMonthChange()" style="display:none"></select>
+        <input id="rh-phone" style="display:none">
+        <input id="rh-email" style="display:none">
+        <div id="r-month-status-wrap" style="display:none">
+          <div id="r-month-status" style="padding:10px 14px;border-radius:7px;font-size:13px;font-weight:600"></div>
+        </div>
+      </div>
 
-      <!-- Report Header (auto-filled) -->
+      <!-- Task Cards (built by JS) -->
+      <div id="r-task-cards">
+        <div style="color:var(--muted);font-size:13px;padding:20px;text-align:center">Loading activities…</div>
+      </div>
+
+      <!-- Numbers + KMI — always visible -->
+      <div class="card" id="r-section-b" style="margin-bottom:12px">
+        <div class="card-title">🔢 This Month's Numbers</div>
+        <div id="r-cumulative" style="display:none;background:#f0f6ff;border-radius:8px;padding:8px 12px;margin-bottom:10px;font-size:12px;color:var(--blue)"></div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:14px">
+          <div class="wform-group" style="margin:0"><label style="font-size:11px">Schools covered</label><input id="r-schools" type="number" min="0" placeholder="0" oninput="_scheduleAutoSave()"></div>
+          <div class="wform-group" style="margin:0"><label style="font-size:11px">Students benefited</label><input id="r-students" type="number" min="0" placeholder="0" oninput="_scheduleAutoSave()"></div>
+          <div class="wform-group" style="margin:0"><label style="font-size:11px">Girls benefited</label><input id="r-girls" type="number" min="0" placeholder="0" oninput="_scheduleAutoSave()"></div>
+          <div class="wform-group" style="margin:0"><label style="font-size:11px">Teachers trained</label><input id="r-teachers" type="number" min="0" placeholder="0" oninput="_scheduleAutoSave()"></div>
+          <div class="wform-group" style="margin:0"><label style="font-size:11px">Community meetings</label><input id="r-meetings" type="number" min="0" placeholder="0" oninput="_scheduleAutoSave()"></div>
+          <div class="wform-group" style="margin:0"><label style="font-size:11px">Events / workshops</label><input id="r-events" type="number" min="0" placeholder="0" oninput="_scheduleAutoSave()"></div>
+          <div class="wform-group" style="margin:0"><label style="font-size:11px">SC/ST/OBC students</label><input id="r-scst" type="number" min="0" placeholder="0" oninput="_scheduleAutoSave()"></div>
+          <div class="wform-group" style="margin:0"><label style="font-size:11px">Divyang students</label><input id="r-divyang" type="number" min="0" placeholder="0" oninput="_scheduleAutoSave()"></div>
+          <div class="wform-group" style="margin:0"><label style="font-size:11px">Dropouts prevented</label><input id="r-dropout" type="number" min="0" placeholder="0" oninput="_scheduleAutoSave()"></div>
+        </div>
+        <div class="wform-group" style="margin:0">
+          <label style="font-size:12px;color:#222;font-weight:600">KMI — Key Milestone Indicator <span style="color:var(--red)">*</span></label>
+          <input id="r-kmi" placeholder="E.g: 420 dropout girls re-enrolled in 3 districts of Agra" oninput="_scheduleAutoSave()">
+        </div>
+      </div>
+
+      <!-- In-kind support (collapsed by default) -->
+      <div class="card" id="r-section-d" style="margin-bottom:12px">
+        <div style="cursor:pointer;display:flex;align-items:center;justify-content:space-between" onclick="var b=this.nextElementSibling;b.style.display=b.style.display==='none'?'block':'none';this.querySelector('.rsd-arr').textContent=b.style.display==='none'?'▶':'▼'">
+          <div class="card-title" style="margin:0">🎁 In-kind / Material Support <span style="font-size:11px;font-weight:400;color:var(--muted)">(optional)</span></div>
+          <span class="rsd-arr" style="color:var(--muted);font-size:12px">▶</span>
+        </div>
+        <div style="display:none;margin-top:12px">
+          <div class="wform-row">
+            <div class="wform-group"><label>Equipment / Material provided</label><input id="r-equipment" placeholder="E.g: sports kit to 50 schools" oninput="_scheduleAutoSave()"></div>
+            <div class="wform-group"><label>Training material / kits</label><input id="r-training" placeholder="E.g: activity kit to 30 teachers" oninput="_scheduleAutoSave()"></div>
+          </div>
+          <div class="wform-row">
+            <div class="wform-group"><label>Machine / Infrastructure</label><input id="r-machine" placeholder="E.g: computers to 3 schools" oninput="_scheduleAutoSave()"></div>
+            <div class="wform-group"><label>Cash / Monetary donation</label><input id="r-donation" placeholder="E.g: ₹50,000" oninput="_scheduleAutoSave()"></div>
+          </div>
+          <div class="wform-group"><label>Any other support</label><input id="r-other-support" placeholder="E.g: Uniform, stationery..." oninput="_scheduleAutoSave()"></div>
+        </div>
+      </div>
+
+      <!-- Hidden stubs for JS compat -->
+      <div id="r-section-e" style="display:none">
+        <textarea id="r-achieve"></textarea><textarea id="r-challenges"></textarea>
+        <textarea id="r-support"></textarea><textarea id="r-plans"></textarea>
+      </div>
+      <div id="r-lock-confirm-panel" style="display:none"></div>
+
+      <!-- Submit area -->
+      <div id="r-submit-area" style="margin-bottom:24px">
+        <button id="r-lock-btn"
+          style="display:none;width:100%;padding:14px;font-size:15px;font-weight:700;border:none;border-radius:8px;cursor:pointer"
+          onclick="lockReportFinal()">✅ Submit Report</button>
+        <div id="r-save-btn" style="display:none"></div>
+        <div id="r-lock-wrap" style="display:none"></div>
+      </div>
+
+      <div id="r-success-msg" style="display:none" class="card">
+        <div class="success-box">
+          <div class="success-icon">✓</div>
+          <h3>Report submitted successfully!</h3>
+          <p>Your monthly KPI report has been recorded.<br>PMU will review it and update the dashboard.</p>
+          <button class="btn-blu" style="margin-top:16px;width:auto;padding:8px 20px" onclick="showPage('dashboard')">Go to Dashboard</button>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ── (OLD MONTHLY REPORT CONTENT REMOVED) ── -->
+    <div style="display:none"><!-- old report HTML below is hidden/replaced -->
       <div class="card" style="margin-bottom:12px">
         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:12px">
           <div class="card-title" style="margin:0">📝 Monthly KPI Progress Report</div>
@@ -725,7 +833,7 @@ tr:hover td{background:#FAFBFF}
         </div>
       </div>
 
-    </div>
+    </div></div><!-- end hidden old report HTML -->
 
     <!-- ── PAGE: MY REPORTS ── -->
     <div class="page" id="page-my-reports">
@@ -1144,6 +1252,9 @@ function onReportMonthChange(){
   const [yr, mo] = pick.value.split('-').map(Number);
   const mNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
   const monthLabel = mNames[mo-1] + ' ' + yr;
+  // Update visible month label
+  const mlEl = document.getElementById('rh-month-label');
+  if(mlEl) mlEl.textContent = monthLabel;
 
   // Check if already submitted for this month
   const existing = REPORTS.find(r => r.ngo === currentUser.org && r.month === monthLabel);
@@ -3718,10 +3829,26 @@ function fillFormFromData(data){
 }
 
 let _formDirty = false;
+let _autoSaveTimer = null;
 
 function _markDirty(){
   _formDirty = true;
   _updateSubmitBtn();
+}
+
+function _scheduleAutoSave(){
+  _markDirty();
+  if(_autoSaveTimer) clearTimeout(_autoSaveTimer);
+  _autoSaveTimer = setTimeout(async () => {
+    const pick = document.getElementById('r-month-pick');
+    if(!pick?.value) return;
+    const statusEl = document.getElementById('r-autosave-status');
+    if(statusEl) statusEl.textContent = '💾 Saving…';
+    try {
+      await submitMonthlyReport(true);
+      if(statusEl) statusEl.textContent = '✅ Saved ' + new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
+    } catch(e){ if(statusEl) statusEl.textContent = ''; }
+  }, 3000);
 }
 
 function _updateSubmitBtn(){
@@ -3759,12 +3886,11 @@ function _updateSubmitBtn(){
   }
 }
 
-// Show Save + Submit buttons when at least one sub-entry exists across all tasks
 function refreshLockBtn(){
   const btn = document.getElementById('r-lock-btn');
   if(!btn || btn.disabled) return;
-  const hasEntries = document.querySelectorAll('#r-task-cards .report-sub-entry, #r-task-cards .rse-view-card').length > 0;
-  if(hasEntries) _updateSubmitBtn();
+  const hasTasks = document.querySelectorAll('#r-task-cards [id$="_activity"]').length > 0;
+  if(hasTasks) _updateSubmitBtn();
   else btn.style.display = 'none';
 }
 
@@ -3824,41 +3950,43 @@ function populateReportMonthPicker(){
 
 function prefillReportForm(){
   const myNGO = SAMPLE_NGOS.find(n => n.name === currentUser.org) || {};
-
-  // Auto-fill header
-  const set = (id, val) => { const el=document.getElementById(id); if(el) el.value=val||''; };
   const setText = (id, val) => { const el=document.getElementById(id); if(el) el.textContent=val||'—'; };
+  const set = (id, val) => { const el=document.getElementById(id); if(el) el.value=val||''; };
+
   setText('rh-org',    currentUser.org);
   setText('rh-person', myNGO.person || currentUser.name);
   setText('rh-dist',   myNGO.dist || '—');
   set('rh-phone', myNGO.phone);
   set('rh-email', currentUser.email);
 
-  // Populate month dropdown and auto-select current month
   populateReportMonthPicker();
+
+  // Show month label in header
+  const pick = document.getElementById('r-month-pick');
+  if(pick?.value){
+    const [yr2,mo2] = pick.value.split('-').map(Number);
+    const mNames2 = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    setText('rh-month-label', mNames2[mo2-1]+' '+yr2);
+  }
+
   onReportMonthChange();
 
-  // Show cumulative totals from past reports
+  // Show cumulative totals
   const myReps = REPORTS.filter(r=>r.ngo===currentUser.org);
   if(myReps.length){
-    const cum = {schools:0,students:0,girls:0,teachers:0,meetings:0,events:0};
+    const cum = {schools:0,students:0,girls:0,teachers:0};
     myReps.forEach(r=>{ for(const k in cum) cum[k]+=(+r[k]||0); });
     const cumEl = document.getElementById('r-cumulative');
     if(cumEl){
       cumEl.style.display='block';
-      cumEl.innerHTML=`📊 <b>Cumulative totals (all months combined):</b> &nbsp;
-        Schools: <b>${cum.schools}</b> &nbsp;|&nbsp;
-        Students: <b>${cum.students}</b> &nbsp;|&nbsp;
-        Girls: <b>${cum.girls}</b> &nbsp;|&nbsp;
-        Teachers: <b>${cum.teachers}</b> &nbsp;|&nbsp;
-        Meetings: <b>${cum.meetings}</b> &nbsp;|&nbsp;
-        Events: <b>${cum.events}</b>`;
+      cumEl.innerHTML=`📊 <b>Cumulative (all months):</b> Schools: <b>${cum.schools}</b> · Students: <b>${cum.students}</b> · Girls: <b>${cum.girls}</b> · Teachers: <b>${cum.teachers}</b>`;
     }
   }
 
-  // Hide success, show submit
-  document.getElementById('r-success-msg').style.display = 'none';
-  document.getElementById('r-submit-area').style.display = 'block';
+  const ssEl = document.getElementById('r-success-msg');
+  const saEl = document.getElementById('r-submit-area');
+  if(ssEl) ssEl.style.display = 'none';
+  if(saEl) saEl.style.display = 'block';
 }
 
 function buildReportTaskCards(existingRep){
@@ -3866,107 +3994,67 @@ function buildReportTaskCards(existingRep){
   if(!container) return;
   const myProjs = PROJECTS.filter(p => p.ngo === currentUser.org && p.status !== 'deleted');
   if(!myProjs.length){
-    container.innerHTML = `<div style="text-align:center;padding:24px 16px;color:var(--muted)">
-      No activities found. Go to <a href="#" onclick="showPage('profile-view');return false;" style="color:var(--blue2)">My Profile</a> to add activities.
+    container.innerHTML = `<div class="card" style="text-align:center;padding:24px;color:var(--muted)">
+      No activities found. Go to <a href="#" onclick="showPage('profile-view');return false;" style="color:var(--blue2)">My Profile</a> to add Programme Activities first.
     </div>`;
     return;
   }
 
-  // Use provided existing report data for pre-fill, else last report for carry-over
   const lastRep = existingRep || REPORTS.filter(r=>r.ngo===currentUser.org).sort((a,b)=>(+b.id||0)-(+a.id||0))[0] || {};
   let lastTasks = [];
   try { lastTasks = JSON.parse(lastRep.tasks_json || lastRep.tasks || '[]'); } catch(e){}
 
-  // Compute reporting month date range for constraining sub-entry dates
   const monthPickVal = document.getElementById('r-month-pick')?.value || '';
   let monthMin = '', monthMax = '';
   if(monthPickVal){
-    const [yr, mo] = monthPickVal.split('-').map(Number);
+    const [yr2, mo2] = monthPickVal.split('-').map(Number);
     monthMin = monthPickVal + '-01';
-    monthMax = monthPickVal + '-' + String(new Date(yr, mo, 0).getDate()).padStart(2,'0');
+    monthMax = monthPickVal + '-' + String(new Date(yr2, mo2, 0).getDate()).padStart(2,'0');
   }
 
-  // Group by component
   const byComp = {};
   myProjs.forEach(p => { const c=p.component||'Other'; if(!byComp[c]) byComp[c]=[]; byComp[c].push(p); });
 
   container.innerHTML = Object.entries(byComp).map(([comp, tasks]) =>
-    `<div style="margin-bottom:14px">
+    `<div style="margin-bottom:8px">
       <div style="font-size:11px;font-weight:700;color:var(--blue);text-transform:uppercase;letter-spacing:.5px;
-        margin-bottom:6px;padding:5px 10px;background:#e8f0fe;border-radius:6px">▸ ${comp}</div>
+        padding:5px 10px;background:#e8f0fe;border-radius:6px;margin-bottom:8px">▸ ${comp}</div>
       ${tasks.map(t => {
         const tid = 'task_' + (t.project_id || t.task_name).toString().replace(/[^a-z0-9]/gi,'_');
-        const lastAct = lastTasks.find(a => a.task_name === t.task_name) || {};
-        const actStart  = t.start_date || '';
-        const actEnd    = t.end_date   || '';
-        const dateLabel = actStart ? (fmtDate(actStart) + (actEnd ? ' → ' + fmtDate(actEnd) : '')) : '';
-
-        return `<div style="border:1px solid var(--border);border-radius:8px;margin-bottom:10px;overflow:hidden">
-          <div style="background:#f0f6ff;padding:8px 12px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px">
-            <div>
-              <span style="font-weight:700;font-size:13px;color:var(--blue)">${t.task_name}</span>
-              ${dateLabel?`<span style="font-size:11px;color:var(--muted);margin-left:8px">${dateLabel}</span>`:''}
+        const tName = (t.task_name||'').trim().toLowerCase();
+        const lastAct = lastTasks.find(a => (a.task_name||'').trim().toLowerCase() === tName) || {};
+        const subs = lastAct.sub_activities || [];
+        const actText = subs.map(s => (s.name||s.details||'').trim()).filter(Boolean).join('\n') || '';
+        const dateLabel = t.start_date ? fmtDate(t.start_date) + (t.end_date ? ' → '+fmtDate(t.end_date) : '') : '';
+        const selOpts = ['Not started','In progress','Completed'].map(v =>
+          `<option value="${v}"${lastAct.status===v?' selected':''}>${v}</option>`).join('');
+        const isLocked = existingRep && String(existingRep.report_locked)==='true';
+        return `<div class="card" style="margin-bottom:10px;padding:14px">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:10px">
+            <div style="flex:1;min-width:180px">
+              <div style="font-weight:700;font-size:15px;color:#1a1a2e">${t.task_name}</div>
+              ${dateLabel?`<div style="font-size:11px;color:var(--muted);margin-top:2px">${dateLabel}</div>`:''}
             </div>
-            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-              <label style="font-size:11px;color:var(--muted);font-weight:600">Status: <span style="color:var(--red)">*</span></label>
-              <select id="${tid}_status" onchange="onTaskStatusChange('${tid}')"
-                style="padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:#fff;outline:none">
-                <option value="">— Select —</option>
-                <option value="Not started">Not started</option>
-                <option value="In progress">In progress</option>
-                <option value="Completed">Completed</option>
+            <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+              <label style="font-size:11px;color:#222;font-weight:600;white-space:nowrap">Status <span style="color:var(--red)">*</span></label>
+              <select id="${tid}_status" onchange="_markDirty();_scheduleAutoSave()" ${isLocked?'disabled':''}
+                style="padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:#fff">
+                <option value="">— Select —</option>${selOpts}
               </select>
-              <span id="${tid}_completion_wrap" style="display:none;align-items:center;gap:6px">
-                <label style="font-size:11px;color:var(--muted);font-weight:600">Completion Date:</label>
-                <input type="date" id="${tid}_completion_date"
-                  style="padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;outline:none">
-              </span>
             </div>
           </div>
-          <div style="padding:10px 12px">
-            <div class="rse-list" id="${tid}_selist" data-tid="${tid}" data-start="${actStart}" data-end="${actEnd}"></div>
-            <button type="button"
-              onclick="addReportSubEntry('${tid}','${actStart}','${actEnd}',null,'${monthMin}','${monthMax}')"
-              style="margin-top:4px;padding:5px 14px;background:var(--blue);color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer">
-              + Add Sub-Activity Entry
-            </button>
-          </div>
+          <label style="font-size:12px;color:#222;font-weight:600;display:block;margin-bottom:4px">Monthly Activity <span style="color:var(--red)">*</span></label>
+          <textarea id="${tid}_activity" rows="3" ${isLocked?'disabled':''}
+            placeholder="Describe what was done this month for this activity..."
+            oninput="_markDirty();_scheduleAutoSave()"
+            style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:7px;font-size:13px;font-family:inherit;resize:vertical;outline:none;box-sizing:border-box;background:${isLocked?'#f8f9ff':'#fff'}">${actText.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</textarea>
+          <div id="${tid}_selist" style="display:none"></div>
         </div>`;
       }).join('')}
     </div>`
   ).join('');
 
-  // Pre-fill from saved report: if saved sub-activities exist → show view cards
-  // otherwise → show one blank editable entry
-  myProjs.forEach(t => {
-    const tid = 'task_' + (t.project_id || t.task_name).toString().replace(/[^a-z0-9]/gi,'_');
-    // Case-insensitive trimmed match to handle any whitespace/case differences
-    const tName = (t.task_name || '').trim().toLowerCase();
-    const lastAct = lastTasks.find(a => (a.task_name||'').trim().toLowerCase() === tName) || {};
-    const actStart = t.start_date || '';
-    const actEnd   = t.end_date   || '';
-    const subs = lastAct.sub_activities || [];
-    if(subs.length){
-      subs.forEach(sa => addSubEntryViewCard(tid, sa, monthMin, monthMax));
-    } else {
-      addReportSubEntry(tid, actStart, actEnd, null, monthMin, monthMax);
-    }
-    // Pre-fill task status
-    const statusSel = document.getElementById(tid + '_status');
-    if(statusSel && lastAct.status){
-      statusSel.value = lastAct.status;
-      onTaskStatusChange(tid);
-      const compEl = document.getElementById(tid + '_completion_date');
-      if(compEl && lastAct.completion_date) compEl.value = lastAct.completion_date;
-    }
-  });
   refreshLockBtn();
-  // Add dirty listeners on all form inputs so any change marks form dirty
-  setTimeout(() => {
-    document.getElementById('r-task-cards')?.querySelectorAll('input,select,textarea').forEach(el => {
-      el.addEventListener('change', _markDirty, {once:true});
-    });
-  }, 200);
 }
 
 function onProjectChange(){ /* legacy stub */ }
@@ -4350,72 +4438,34 @@ async function submitMonthlyReport(silent = false){
   const toDate   = monthPick.value + '-' + String(lastDay).padStart(2,'0');
   const kmi      = document.getElementById('r-kmi').value.trim();
 
-  // Check if locked
-  const myReps = REPORTS.filter(r => r.ngo === currentUser.org);
-  const existing = myReps.find(r => r.month === months);
-  if(existing && String(existing.report_locked) === 'true'){
-    alert('This month is locked and cannot be edited.');
-    return;
-  }
-
-  // Collect task-wise data — all saved tasks appear in the report
+  // Collect task-wise data from simplified form
   const myProjs = PROJECTS.filter(p => p.ngo === currentUser.org && p.status !== 'deleted');
   const activities = myProjs.map(t => {
     const tid = 'task_' + (t.project_id || t.task_name).toString().replace(/[^a-z0-9]/gi,'_');
-
-    // Collect sub-activity entries filled in by the user this month
-    const seList = document.getElementById(tid + '_selist');
-    const entries = seList ? Array.from(seList.querySelectorAll('.report-sub-entry')) : [];
-    const sub_activities = entries.map(entry => {
-      if(entry.classList.contains('rse-view-card')){
-        // Locked (unedited) saved entry — collect from dataset
-        return {
-          name:      entry.dataset.name    || '',
-          from_date: entry.dataset.from    || '',
-          to_date:   entry.dataset.to      || '',
-          details:   entry.dataset.details || '',
-          photo_key: entry.dataset.sid     || ''
-        };
-      }
-      const sid = entry.dataset.sid || '';
-      return {
-        name:      entry.querySelector('.rse-name')?.value.trim()    || '',
-        from_date: entry.querySelector('.rse-from')?.value           || '',
-        to_date:   entry.querySelector('.rse-to')?.value             || '',
-        details:   entry.querySelector('.rse-details')?.value.trim() || '',
-        photo_key: sid
-      };
-    }).filter(e => e.name || e.from_date || e.to_date || e.details); // skip completely empty rows
-
-    const statusSel    = document.getElementById(tid + '_status');
-    if(statusSel && !statusSel.value){ alert(`Please select a Status for activity: "${t.task_name}"`); statusSel.focus(); throw new Error('status_required'); }
-    const taskStatus   = statusSel?.value || '';
-    const completionDate = taskStatus === 'Completed'
-      ? (document.getElementById(tid + '_completion_date')?.value || '') : '';
-
+    const statusSel = document.getElementById(tid + '_status');
+    if(!silent && statusSel && !statusSel.value){
+      alert(`Please select a Status for: "${t.task_name}"`); statusSel.focus(); throw new Error('status_required');
+    }
+    const taskStatus = statusSel?.value || '';
+    const actText = document.getElementById(tid + '_activity')?.value.trim() || '';
+    const sub_activities = actText
+      ? [{name: actText, from_date: fromDate, to_date: toDate, details: ''}]
+      : [];
     return {
-      task_id:         t.project_id || '',
-      task_name:       t.task_name,
-      component:       t.component,
-      start_date:      t.start_date || '',
-      end_date:        t.end_date   || '',
-      status:          taskStatus,
-      completion_date: completionDate,
-      sub_activities:  sub_activities,
-      photos:          []
+      task_id:        t.project_id || '',
+      task_name:      t.task_name,
+      component:      t.component,
+      start_date:     t.start_date || '',
+      end_date:       t.end_date   || '',
+      status:         taskStatus,
+      completion_date:'',
+      sub_activities: sub_activities,
+      photos:         []
     };
   });
 
   // Overall status: if any task has entries → 60%
   const overallStatus = activities.some(a=>a.sub_activities.length) ? '60' : '0';
-
-  // Collect all sub-entry photos for upload
-  const allTaskPhotos = activities.flatMap(a => {
-    return a.sub_activities.flatMap(sa => {
-      const sid = sa.photo_key;
-      return (taskPhotos[sid] || []).map(f => ({ file: f, tid: sid, task_name: a.task_name }));
-    });
-  });
 
   const report = {
     ngo:           currentUser.org,
@@ -4423,49 +4473,32 @@ async function submitMonthlyReport(silent = false){
     report_from:   fromDate,
     report_to:     toDate,
     report_locked: 'false',
-    schools:      +document.getElementById('r-schools').value  || 0,
-    students:     +document.getElementById('r-students').value || 0,
-    girls:        +document.getElementById('r-girls').value    || 0,
-    teachers:     +document.getElementById('r-teachers').value || 0,
-    meetings:     +document.getElementById('r-meetings').value || 0,
-    events:       +document.getElementById('r-events').value   || 0,
-    scst:         +document.getElementById('r-scst').value     || 0,
-    divyang:      +document.getElementById('r-divyang').value  || 0,
-    dropout:      +document.getElementById('r-dropout').value  || 0,
+    schools:      +document.getElementById('r-schools')?.value  || 0,
+    students:     +document.getElementById('r-students')?.value || 0,
+    girls:        +document.getElementById('r-girls')?.value    || 0,
+    teachers:     +document.getElementById('r-teachers')?.value || 0,
+    meetings:     +document.getElementById('r-meetings')?.value || 0,
+    events:       +document.getElementById('r-events')?.value   || 0,
+    scst:         +document.getElementById('r-scst')?.value     || 0,
+    divyang:      +document.getElementById('r-divyang')?.value  || 0,
+    dropout:      +document.getElementById('r-dropout')?.value  || 0,
     tasks:        JSON.stringify(activities),
     status:       overallStatus,
     kmi:          kmi,
-    equipment:    document.getElementById('r-equipment')?.value || '',
-    training:     document.getElementById('r-training')?.value  || '',
-    machine:      document.getElementById('r-machine')?.value   || '',
-    donation:     document.getElementById('r-donation')?.value  || '',
-    other_support:document.getElementById('r-other-support')?.value || '',
-    achieve:      document.getElementById('r-achieve').value,
-    challenges:   document.getElementById('r-challenges').value,
-    support:      document.getElementById('r-support').value,
-    plans:        document.getElementById('r-plans').value,
-    photos_count: allTaskPhotos.length,
+    equipment:    document.getElementById('r-equipment')?.value    || '',
+    training:     document.getElementById('r-training')?.value     || '',
+    machine:      document.getElementById('r-machine')?.value      || '',
+    donation:     document.getElementById('r-donation')?.value     || '',
+    other_support:document.getElementById('r-other-support')?.value|| '',
+    achieve:      document.getElementById('r-achieve')?.value      || '',
+    challenges:   document.getElementById('r-challenges')?.value   || '',
+    support:      document.getElementById('r-support')?.value      || '',
+    plans:        document.getElementById('r-plans')?.value        || '',
+    photos_count: 0,
     photos_folder: ''
   };
 
-  // Upload per-task photos to Drive
-  let photoFailCount = 0;
-  for(let i = 0; i < allTaskPhotos.length; i++){
-    const { file, task_name } = allTaskPhotos[i];
-    try {
-      showLoader(`Uploading photo ${i+1} of ${allTaskPhotos.length} — ${task_name}…`);
-      const b64 = await fileToBase64(file);
-      const res = await apiPost({ action:'uploadPhoto', ngo:currentUser.org, month:monthPick.value,
-        base64:b64, mimeType:file.type, filename:file.name }, 90000); // 90s timeout for photos
-      if(res.success && res.folderId) report.photos_folder = 'https://drive.google.com/drive/folders/' + res.folderId;
-      else photoFailCount++;
-    } catch(e){ photoFailCount++; console.warn('Photo upload failed:', e.message); }
-  }
-  if(photoFailCount > 0){
-    alert(`⚠️ ${photoFailCount} photo(s) could not be uploaded (network or size issue).\nThe report will still be saved without those photos.`);
-  }
-
-  if(!silent) showLoader('Saving report to Google Sheets…');
+  if(!silent) showLoader('Saving report…');
   let driveDocUrl = '';
   try {
     const res = await apiPost({action:'submitReport', report: JSON.stringify(report)});
@@ -4483,14 +4516,8 @@ async function submitMonthlyReport(silent = false){
   uploadedPhotos = [];
 
   if(!silent){
-    const lockBtn = document.getElementById('r-lock-btn');
-    if(lockBtn){ lockBtn.textContent = '✅ Submit Final Report'; lockBtn.disabled = false; lockBtn.style.opacity = '1'; }
     refreshLockBtn();
-    // Rebuild task cards so open forms collapse to view cards
-    const savedRep = REPORTS.find(r => r.ngo === currentUser.org && r.month === months);
-    if(savedRep) buildReportTaskCards(savedRep);
     renderMyReports();
-    document.getElementById('r-submit-area').scrollIntoView({behavior:'smooth'});
   }
 }
 
@@ -4550,54 +4577,19 @@ function resetMonthlyReport(){
 
 function submitReport(){ submitMonthlyReport(); } // legacy alias
 
-// Show Section B/D/E + submit confirm panel
-function lockReportFinal(){
+async function lockReportFinal(){
   const monthPick = document.getElementById('r-month-pick');
   if(!monthPick?.value){ alert('Please select a Reporting Month first.'); return; }
-  // Reveal Section B, D, E for user to fill before confirming
-  ['r-section-b','r-section-d','r-section-e'].forEach(id => {
-    const el = document.getElementById(id);
-    if(el){ el.style.display='block'; el.querySelectorAll('input,textarea').forEach(i=>i.disabled=false); }
-  });
-  const panel = document.getElementById('r-lock-confirm-panel');
-  if(panel){ panel.style.display='block'; panel.scrollIntoView({behavior:'smooth',block:'start'}); }
-}
-
-function showLockPanel(){
-  const monthPick = document.getElementById('r-month-pick');
-  if(!monthPick?.value){ alert('Please select a Reporting Month first.'); return; }
-  const [yr, mo] = monthPick.value.split('-').map(Number);
-  const mNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-  const months = mNames[mo-1] + ' ' + yr;
-  if(!confirm('⚠️ Submit Final Report for ' + months + '?\n\nOnce submitted, you will NOT be able to make any changes to this month\'s report.\n\nClick OK to continue, or Cancel to go back.')) return;
-  ['r-section-b','r-section-d','r-section-e'].forEach(id => {
-    const el = document.getElementById(id);
-    if(el) el.style.display = 'block';
-  });
-  const panel = document.getElementById('r-lock-confirm-panel');
-  if(panel){ panel.style.display = 'block'; panel.scrollIntoView({behavior:'smooth', block:'start'}); }
-}
-
-function hideLockPanel(){
-  ['r-section-b','r-section-d','r-section-e'].forEach(id => {
-    const el = document.getElementById(id);
-    if(el) el.style.display = 'none';
-  });
-  const panel = document.getElementById('r-lock-confirm-panel');
-  if(panel) panel.style.display = 'none';
-}
-
-async function confirmAndLock(){
   const kmi = document.getElementById('r-kmi')?.value.trim();
-  if(!kmi){ alert('KMI (Key Milestone Indicator) is required before submitting.'); document.getElementById('r-kmi')?.focus(); return; }
-  const monthPick = document.getElementById('r-month-pick');
-  if(!monthPick?.value) return;
+  if(!kmi){ alert('Please fill the KMI (Key Milestone Indicator) before submitting.'); document.getElementById('r-kmi')?.focus(); document.getElementById('r-kmi')?.scrollIntoView({behavior:'smooth',block:'center'}); return; }
   const [yr, mo] = monthPick.value.split('-').map(Number);
   const mNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
   const months = mNames[mo-1] + ' ' + yr;
-  const isUpdate = REPORTS.find(r=>r.ngo===currentUser.org && r.month===months && String(r.report_locked)==='true');
-  const confBtn = document.querySelector('#r-lock-confirm-panel button');
-  if(confBtn){ confBtn.disabled=true; confBtn.textContent='Submitting…'; }
+  const isUpdate = _formDirty && REPORTS.find(r=>r.ngo===currentUser.org && r.month===months && String(r.report_locked)==='true');
+  const msg = isUpdate ? `Update & resubmit your ${months} report?` : `Submit your ${months} report to PMU?`;
+  if(!confirm(msg)) return;
+  const btn = document.getElementById('r-lock-btn');
+  if(btn){ btn.disabled=true; btn.textContent='Submitting…'; }
   try {
     await submitMonthlyReport();
     showLoader('Submitting to PMU…');
@@ -4605,7 +4597,6 @@ async function confirmAndLock(){
     const rep = REPORTS.find(r=>r.ngo===currentUser.org && r.month===months);
     if(rep) rep.report_locked = 'true';
     hideLoader();
-    hideLockPanel();
     _formDirty = false;
     _updateSubmitBtn();
     const wrap = document.getElementById('r-month-status-wrap');
@@ -4615,18 +4606,15 @@ async function confirmAndLock(){
       stEl.style.cssText = 'padding:10px 14px;border-radius:7px;font-size:13px;font-weight:600;background:#e8f5e9;color:#2e7d32;border:1px solid #a5d6a7';
       stEl.textContent = isUpdate ? '🔄 Report updated and resubmitted to PMU.' : '✅ Report submitted to PMU successfully!';
     }
-    // Show B/D/E as read-only after submit
-    ['r-section-b','r-section-d','r-section-e'].forEach(id => {
-      const el = document.getElementById(id);
-      if(el){ el.style.display='block'; el.querySelectorAll('input,textarea').forEach(i=>i.disabled=true); }
-    });
+    // Rebuild task cards as read-only
+    buildReportTaskCards(REPORTS.find(r=>r.ngo===currentUser.org && r.month===months));
     renderMyReports();
-  } catch(e){
-    hideLoader();
-    if(confBtn){ confBtn.disabled=false; confBtn.textContent='✅ Yes, Submit Final Report'; }
-    alert('Submission failed: '+e.message);
-  }
+  } catch(e){ hideLoader(); if(btn){btn.disabled=false;_updateSubmitBtn();} alert('Submission failed: '+e.message); }
 }
+
+function showLockPanel(){ lockReportFinal(); } // legacy alias
+function hideLockPanel(){ /* no-op — sections always visible now */ }
+function confirmAndLock(){ lockReportFinal(); } // legacy alias
 
 // ── Download full report for a single month (print-to-PDF) ──
 function downloadMonthReport(month){
