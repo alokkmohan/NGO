@@ -2405,6 +2405,9 @@ function showPage(p){
   if(p==='monthly-report'){ reportStep=0;updateReportSteps();prefillReportForm(); }
   if(p==='my-reports') renderReportsPage();
   if(p==='dashboard' && _lmap){ setTimeout(()=>_lmap.invalidateSize(), 100); }
+  // Always start a freshly opened page at the top (avoids carrying over the
+  // scroll position from a long previous page, e.g. Monthly Report)
+  window.scrollTo(0, 0);
 }
 
 // ════════════════════════════════════
@@ -5487,7 +5490,7 @@ function buildReportRows(ngoName, taskActs, myProjs){
         rows.push({
           component:      t.component   || '',
           activity:       t.task_name   || '',
-          subActivity:    sa.name       || '',
+          subActivity:    sa.name       || t.task_name || '',
           startDate:      fmtDate(sa.from_date || sa.date || ''),
           endDate:        fmtDate(sa.to_date   || sa.date || ''),
           update:         sa.details    || sa.update || '',
@@ -5500,7 +5503,7 @@ function buildReportRows(ngoName, taskActs, myProjs){
       rows.push({
         component:      t.component   || '',
         activity:       t.task_name   || '',
-        subActivity:    '',
+        subActivity:    t.task_name   || '',
         startDate:      fmtDate(t.start_date),
         endDate:        fmtDate(t.end_date),
         update:         act.activity  || act.update || '',
