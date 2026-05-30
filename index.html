@@ -3240,11 +3240,24 @@ function renderReportsPage(){
   const wrap = document.getElementById('mr-reports-table');
   if(!wrap) return;
 
-  const myReports = REPORTS.filter(r => r.ngo === currentUser.org)
-    .sort((a,b)=>{
-      const toMs = v => { try{ return new Date(v).getTime(); }catch(e){ return 0; } };
-      return toMs(b.month||b.report_from||'') - toMs(a.month||a.report_from||'');
-    });
+  const toMs = v => { try{ return new Date(v).getTime(); }catch(e){ return 0; } };
+
+  // deduplicate by month — keep submitted if exists, else latest
+  const monthMap = {};
+  REPORTS.filter(r => r.ngo === currentUser.org).forEach(r => {
+    const key = _normalizeMonth(r.month || r.report_from || '');
+    if(!key) return;
+    const prev = monthMap[key];
+    if(!prev) { monthMap[key] = r; return; }
+    const prevLocked = String(prev.report_locked) === 'true';
+    const currLocked = String(r.report_locked) === 'true';
+    if(currLocked && !prevLocked) { monthMap[key] = r; return; }
+    if(!prevLocked && !currLocked && toMs(r.month||r.report_from||'') > toMs(prev.month||prev.report_from||''))
+      monthMap[key] = r;
+  });
+
+  const myReports = Object.values(monthMap)
+    .sort((a,b) => toMs(b.month||b.report_from||'') - toMs(a.month||a.report_from||''));
 
   if(!myReports.length){
     wrap.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:12px 0">No reports submitted yet.</div>';
