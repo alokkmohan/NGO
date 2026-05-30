@@ -4579,7 +4579,7 @@ function renderTaskPhotoPreview(tid){
 function handlePhotos(input){}
 function removePhoto(i){}
 
-async function submitMonthlyReport(silent = false){
+async function submitMonthlyReport(silent = false, lock = false){
   const monthPick = document.getElementById('r-month-pick');
   if(!monthPick?.value){ alert('Please select a Reporting Month'); monthPick?.focus(); return; }
 
@@ -4665,7 +4665,9 @@ async function submitMonthlyReport(silent = false){
 
   if(!silent) showLoader('Saving report…');
   let driveDocUrl = '';
-  const res = await apiPost({action:'submitReport', report: JSON.stringify(report)});
+  const payload = {action:'submitReport', report: JSON.stringify(report)};
+  if(lock) payload.lock = true;
+  const res = await apiPost(payload);
   if(!res || res.error) throw new Error(res?.error || 'Server error — report not saved');
   if(res.docUrl) driveDocUrl = res.docUrl;
 
@@ -4759,10 +4761,8 @@ async function lockReportFinal(){
   const btn = document.getElementById('r-lock-btn');
   if(btn){ btn.disabled=true; btn.textContent='Submitting…'; }
   try {
-    await submitMonthlyReport();
     showLoader('Submitting to PMU…');
-    const lockRes = await apiPost({action:'lockReport', ngo:(currentUser.org||'').trim(), month:months.trim()});
-    if(!lockRes || !lockRes.success) throw new Error(lockRes?.error || 'Could not lock report on server');
+    await submitMonthlyReport(false, true); // save + lock in one API call
     const rep = REPORTS.find(r=>r.ngo===currentUser.org && r.month===months);
     if(rep) rep.report_locked = 'true';
     hideLoader();

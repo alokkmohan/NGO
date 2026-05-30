@@ -497,6 +497,17 @@ function submitReport(data) {
     Logger.log('Drive save error: ' + driveErr.message);
   }
 
+  // If lock:true flag passed, lock the report immediately after saving
+  if (data.lock) {
+    const lockRows = rSheet.getDataRange().getValues();
+    const lh = lockRows[0];
+    const lNgoIdx   = lh.indexOf('ngo');
+    const lMonthIdx = lh.indexOf('month');
+    let lLockedIdx  = lh.indexOf('report_locked');
+    if (lLockedIdx < 0) { lLockedIdx = lh.length; rSheet.getRange(1, lLockedIdx + 1).setValue('report_locked'); }
+    rSheet.getRange(savedRow, lLockedIdx + 1).setValue('true');
+  }
+
   return { success: true, docUrl: docUrl };
 }
 
