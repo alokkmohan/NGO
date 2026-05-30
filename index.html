@@ -1180,9 +1180,12 @@ function onReportMonthChange(){
     const isLocked = String(existing.report_locked) === 'true';
     wrap.style.display = 'block';
     if(isLocked){
-      stEl.style.cssText = 'padding:8px 12px;border-radius:7px;font-size:12px;font-weight:600;background:#fce4ec;color:#c62828;border:1px solid #ef9a9a';
-      stEl.textContent = '✅ Submitted — this month\'s report has been submitted to PMU. No changes allowed.';
-      if(lockBtn){ lockBtn.textContent='✅ '+monthLabel+' — Submitted'; lockBtn.disabled=true; lockBtn.style.display='block'; lockBtn.style.opacity='0.5'; }
+      stEl.style.cssText = 'padding:8px 12px;border-radius:7px;font-size:12px;font-weight:600;background:#e8f5e9;color:#2e7d32;border:1px solid #a5d6a7';
+      stEl.textContent = '✅ Report submitted to PMU. No further changes allowed.';
+      // Hide both action buttons for submitted report
+      const saveBtn2 = document.getElementById('r-save-btn');
+      if(saveBtn2) saveBtn2.style.display = 'none';
+      if(lockBtn)  lockBtn.style.display  = 'none';
       // Show B/D/E as read-only summary for locked month
       prefillFromExisting(existing);
       ['r-section-b','r-section-d','r-section-e'].forEach(id => {
@@ -4549,9 +4552,9 @@ async function confirmAndLock(){
       stEl.textContent = '✅ Submitted — this month\'s report is finalised and submitted to PMU. No further changes allowed.';
     }
     const lockBtn = document.getElementById('r-lock-btn');
-    if(lockBtn){ lockBtn.textContent='✅ '+months+' — Submitted'; lockBtn.disabled=true; lockBtn.style.display='block'; lockBtn.style.opacity='0.5'; }
+    if(lockBtn) lockBtn.style.display = 'none';
     const saveBtn = document.getElementById('r-save-btn');
-    if(saveBtn) saveBtn.style.display='none';
+    if(saveBtn) saveBtn.style.display = 'none';
     // Lock Section A task cards — disable all inputs and hide action buttons
     const taskCards = document.getElementById('r-task-cards');
     if(taskCards){
