@@ -544,10 +544,7 @@ tr:hover td{background:#FAFBFF}
         <div class="card-title">🏢 My organisation profile</div>
         <div id="profile-display"></div>
       </div>
-      <div class="card" id="my-reports-card" style="margin-top:14px;display:none">
-        <div class="card-title">📋 My submitted reports
-          <span id="my-reports-count" style="font-size:12px;font-weight:400;color:var(--muted);margin-left:8px"></span>
-        </div>
+      <div class="card" id="my-reports-card" style="display:none">
         <div id="my-reports-list"></div>
       </div>
     </div>
@@ -1502,14 +1499,12 @@ function addCompTask(containerId){
       <span style="font-size:11px;font-weight:700;color:var(--blue);white-space:nowrap">Activity ${taskIdx}:</span>
       <input type="text" class="comp-task-input" placeholder="Activity name (e.g. KGBV - Type I, Free Textbooks)"
         style="flex:1;padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;outline:none">
-      <button type="button" onclick="this.closest('.task-block').remove()" title="Remove Activity"
-        style="padding:4px 10px;background:#fff0f0;border:1px solid #f5c6c6;color:var(--red);border-radius:6px;font-size:16px;cursor:pointer;line-height:1">−</button>
     </div>
     <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap">
-      <label style="font-size:11px;color:var(--muted);white-space:nowrap">Start Date:</label>
+      <label style="font-size:11px;color:var(--muted);white-space:nowrap">Start Date: <span style="color:var(--red)">*</span></label>
       <input type="date" class="act-start-date" title="Activity Start Date"
         style="padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;outline:none">
-      <label style="font-size:11px;color:var(--muted);white-space:nowrap">End Date:</label>
+      <label style="font-size:11px;color:var(--muted);white-space:nowrap">End Date: <span style="color:var(--red)">*</span></label>
       <input type="date" class="act-end-date" title="Activity End Date"
         style="padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;outline:none">
     </div>
@@ -2763,8 +2758,7 @@ function renderSavedPanel(){
           const dateStr = t.start_date ? ` · ${fmtDate(t.start_date)}${t.end_date?' → '+fmtDate(t.end_date):''}` : '';
           return `<div style="display:flex;align-items:center;gap:6px;padding:6px 8px;background:#fff;border-radius:6px;margin-bottom:4px;border:1px solid ${locked?'#a5d6a7':'#d0e8ff'}">
             <span style="flex:1;font-size:12px;font-weight:600">${t.task_name||'—'}<span style="font-size:11px;color:var(--muted);font-weight:400">${dateStr}</span>${locked?'<span style="font-size:10px;color:#2e7d32;background:#e8f5e9;border:1px solid #a5d6a7;border-radius:10px;padding:1px 7px;margin-left:6px">🔒 Locked</span>':''}</span>
-            ${!locked?`<button onclick="editSavedActivity('${t.project_id}')" style="padding:3px 10px;background:#e8f0fe;color:var(--blue);border:1px solid #b0c8f0;border-radius:5px;font-size:11px;cursor:pointer">✏ Edit</button>
-            <button onclick="deleteSavedActivity('${t.project_id}')" style="padding:3px 10px;background:#fff0f0;color:var(--red);border:1px solid #f5c6c6;border-radius:5px;font-size:11px;cursor:pointer">✕ Delete</button>`:''}
+            ${!locked?`<button onclick="editSavedActivity('${t.project_id}')" style="padding:3px 10px;background:#e8f0fe;color:var(--blue);border:1px solid #b0c8f0;border-radius:5px;font-size:11px;cursor:pointer">✏ Edit</button>`:''}
           </div>`;
         }).join('')}
       </div>`).join('')}
