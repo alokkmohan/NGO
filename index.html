@@ -4047,27 +4047,28 @@ function addReportSubEntry(tid, actStart, actEnd, prefill, monthMin, monthMax){
       title="Remove this entry"
       style="position:absolute;top:6px;right:8px;background:none;border:none;font-size:16px;cursor:pointer;color:var(--muted);line-height:1">×</button>
     <div style="margin-bottom:8px">
-      <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:3px">Monthly Activity</label>
+      <label style="font-size:11px;color:#222;font-weight:600;display:block;margin-bottom:3px">Monthly Activity <span style="color:var(--red)">*</span></label>
       <input type="text" class="rse-name" placeholder="e.g. School visit, Parent meeting, Training session…"
         style="width:100%;padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;outline:none">
     </div>
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap">
-      <label style="font-size:11px;color:var(--muted);white-space:nowrap">From: <span style="color:var(--red)">*</span></label>
+      <label style="font-size:11px;color:#222;font-weight:600;white-space:nowrap">From: <span style="color:var(--red)">*</span></label>
       <input type="date" class="rse-from"${minAttr}${maxAttr}
         onchange="validateRseFromTo(this.closest('.report-sub-entry'),'${monthMin}','${monthMax}')"
         style="padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;outline:none">
-      <label style="font-size:11px;color:var(--muted);white-space:nowrap">To: <span style="color:var(--red)">*</span></label>
+      <label style="font-size:11px;color:#222;font-weight:600;white-space:nowrap">To: <span style="color:var(--red)">*</span></label>
       <input type="date" class="rse-to"${minAttr}${maxAttr}
         onchange="validateRseFromTo(this.closest('.report-sub-entry'),'${monthMin}','${monthMax}')"
         style="padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;outline:none">
       ${rangeHint}
     </div>
-    <textarea class="rse-details" rows="2" placeholder="What was done? (required)"
+    <div style="margin-bottom:6px"><label style="font-size:11px;color:#222;font-weight:600">What was done?</label></div>
+    <textarea class="rse-details" rows="2" placeholder="Describe the activity carried out this month…"
       style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;resize:vertical;outline:none;margin-bottom:8px"></textarea>
     <div style="border:1px dashed var(--border);border-radius:7px;padding:8px;background:#fafbff">
-      <div style="font-size:11px;font-weight:600;color:var(--blue);margin-bottom:5px">📷 Photo (optional)</div>
+      <div style="font-size:11px;font-weight:600;color:#222;margin-bottom:5px">📷 Photo (optional)</div>
       <div onclick="document.getElementById('${sid}_file').click()"
-        style="border:1px dashed #b0bcd4;border-radius:6px;padding:7px;text-align:center;cursor:pointer;background:#fff;font-size:11px;color:var(--muted)">
+        style="border:1px dashed #b0bcd4;border-radius:6px;padding:7px;text-align:center;cursor:pointer;background:#fff;font-size:12px;color:#444">
         Click to attach a photo (max 5MB)
       </div>
       <input type="file" id="${sid}_file" accept="image/*" style="display:none"
