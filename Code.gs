@@ -1092,7 +1092,7 @@ function sendMonthEndReminders() {
       </p>
     </div>
     <div style="text-align:center;margin:24px 0">
-      <a href="${PORTAL_URL}" style="background:#1A3C6E;color:#fff;padding:12px 32px;border-radius:8px;
+      <a href="${PORTAL_URL}?action=submit" style="background:#1A3C6E;color:#fff;padding:12px 32px;border-radius:8px;
         text-decoration:none;font-size:15px;font-weight:700;display:inline-block">Submit Report →</a>
     </div>
     <p style="font-size:12px;color:#888;border-top:1px solid #eee;padding-top:14px;margin-top:14px">

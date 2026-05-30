@@ -1917,6 +1917,8 @@ function initApp(){
   updateDashboardStats();
   showFirstLoginBannerIfNeeded();
   showPage('dashboard');
+  if(currentUser?.role !== 'admin' && new URLSearchParams(location.search).get('action') === 'submit')
+    showPage('monthly-report');
 }
 
 function showFirstLoginBannerIfNeeded(){
