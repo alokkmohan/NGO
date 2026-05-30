@@ -729,23 +729,9 @@ tr:hover td{background:#FAFBFF}
 
     <!-- ── PAGE: MY REPORTS ── -->
     <div class="page" id="page-my-reports">
-      <div class="card" style="margin-bottom:14px">
+      <div class="card">
         <div class="card-title">📋 My Reports</div>
-
-        <!-- Month selector -->
-        <div style="max-width:320px;margin-bottom:16px">
-          <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px">Select Month</label>
-          <select id="mr-month-filter" onchange="mrOnMonthChange()"
-            style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:14px;background:#fff;outline:none">
-            <option value="">— Select Month —</option>
-          </select>
-        </div>
-
-        <!-- Month summary panel (shown after month selected) -->
-        <div id="mr-status" style="display:none;margin-bottom:14px"></div>
-
-        <!-- Sub-activity entries table -->
-        <div id="mr-table-wrap" style="overflow-x:auto"></div>
+        <div id="mr-reports-table"></div>
       </div>
     </div>
 
@@ -3251,34 +3237,52 @@ function renderMyReports(){
 // ════════════════════════════════════
 function renderReportsPage(){
   if(currentUser.role === 'admin') return;
-  const sel = document.getElementById('mr-month-filter');
-  if(!sel) return;
+  const wrap = document.getElementById('mr-reports-table');
+  if(!wrap) return;
+
   const myReports = REPORTS.filter(r => r.ngo === currentUser.org)
-    .sort((a,b) => (+b.id||0) - (+a.id||0));
+    .sort((a,b)=>{
+      const toMs = v => { try{ return new Date(v).getTime(); }catch(e){ return 0; } };
+      return toMs(b.month||b.report_from||'') - toMs(a.month||a.report_from||'');
+    });
 
-  const mNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-  const now      = new Date();
-  const curLabel  = mNames[now.getMonth()] + ' ' + now.getFullYear();
-  const prevDate  = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-  const prevLabel = mNames[prevDate.getMonth()] + ' ' + prevDate.getFullYear();
+  if(!myReports.length){
+    wrap.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:12px 0">No reports submitted yet.</div>';
+    return;
+  }
 
-  // Always show current + previous month, then any other months with saved reports
-  const seen = new Set();
-  sel.innerHTML = '<option value="">— Select Month —</option>';
-  [curLabel, prevLabel].forEach(label => {
-    seen.add(label);
-    sel.appendChild(Object.assign(document.createElement('option'), {value: label, textContent: label}));
-  });
-  myReports.forEach(r => {
-    const label = _mrMonthLabel(r.month);
-    if(!label || seen.has(label)) return;
-    seen.add(label);
-    sel.appendChild(Object.assign(document.createElement('option'), {value: r.month, textContent: label}));
-  });
+  const rows = myReports.map((r,i) => {
+    const month  = _mrMonthLabel(r.month) || r.month || '—';
+    const locked = String(r.report_locked) === 'true';
+    const badge  = locked
+      ? '<span style="background:#e8f5e9;color:#2e7d32;border:1px solid #a5d6a7;border-radius:10px;padding:2px 10px;font-size:11px;font-weight:600">✅ Submitted</span>'
+      : '<span style="background:#e3f2fd;color:#1565c0;border:1px solid #90caf9;border-radius:10px;padding:2px 10px;font-size:11px;font-weight:600">💾 Saved</span>';
+    const rid = r.report_from || r.month;
+    return `<tr style="border-bottom:1px solid var(--border)">
+      <td style="padding:10px 12px;font-size:13px;color:var(--muted);width:36px">${i+1}</td>
+      <td style="padding:10px 12px;font-weight:700;font-size:14px;color:#1a1a2e">${month}</td>
+      <td style="padding:10px 12px">${badge}</td>
+      <td style="padding:10px 12px;text-align:right">
+        <button onclick="downloadMonthReport('${rid}')"
+          style="padding:6px 16px;background:var(--blue);color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap">
+          ⬇ Download PDF
+        </button>
+      </td>
+    </tr>`;
+  }).join('');
 
-  // Auto-select current month
-  sel.value = curLabel;
-  mrOnMonthChange();
+  wrap.innerHTML = `
+    <table style="width:100%;border-collapse:collapse;font-size:13px">
+      <thead>
+        <tr style="background:#f4f6fa">
+          <th style="padding:9px 12px;text-align:left;font-size:11px;color:var(--muted);font-weight:600;border-bottom:2px solid var(--border)">#</th>
+          <th style="padding:9px 12px;text-align:left;font-size:11px;color:var(--muted);font-weight:600;border-bottom:2px solid var(--border)">Month</th>
+          <th style="padding:9px 12px;text-align:left;font-size:11px;color:var(--muted);font-weight:600;border-bottom:2px solid var(--border)">Status</th>
+          <th style="padding:9px 12px;text-align:right;font-size:11px;color:var(--muted);font-weight:600;border-bottom:2px solid var(--border)">Report</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>`;
 }
 
 // Format month value to readable label, handling ISO timestamps from old data
