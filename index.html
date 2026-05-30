@@ -2749,7 +2749,11 @@ function renderSavedPanel(){
   const byComp = {};
   myProjs.forEach(p=>{ const c=p.component||'Other'; if(!byComp[c]) byComp[c]=[]; byComp[c].push(p); });
   el.innerHTML = `<div style="background:#f0faf4;border:1px solid #a5d6a7;border-radius:8px;padding:12px 14px;margin-bottom:14px">
-    <div style="font-size:12px;font-weight:700;color:#2e7d32;margin-bottom:10px">✅ Your Saved Programme Activities</div>
+    <div style="font-size:12px;font-weight:700;color:#2e7d32;margin-bottom:10px">
+      <span style="color:var(--blue)">Programme Activities</span>
+      <span style="color:var(--muted);font-weight:400;margin:0 5px">›</span>
+      <span>Your Saved Programme Activities</span>
+    </div>
     ${Object.entries(byComp).map(([comp,tasks])=>`
       <div style="margin-bottom:10px">
         <div style="font-size:11px;font-weight:700;color:var(--blue);background:#e8f0fe;border-radius:5px;padding:4px 10px;margin-bottom:5px">▸ ${comp}</div>
