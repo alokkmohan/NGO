@@ -418,10 +418,7 @@ function submitReport(data) {
   let updateRow = -1;
   for (let i = 1; i < allRows.length; i++) {
     if (String(allRows[i][ngoIdx0]) === String(r.ngo) && String(allRows[i][monthIdx0]) === String(r.month)) {
-      if (lockedIdx0 >= 0 && String(allRows[i][lockedIdx0]).toLowerCase() === 'true') {
-        return { success: false, error: 'Report is locked and cannot be updated.' };
-      }
-      updateRow = i + 1; // 1-indexed sheet row
+      updateRow = i + 1; // 1-indexed sheet row — always update, even if previously locked
       break;
     }
   }
@@ -443,7 +440,7 @@ function submitReport(data) {
     r.equipment || '', r.training || '', r.machine || '',
     r.donation  || '', r.other_support || '',
     r.report_from || '', r.report_to || '',
-    'false' // report_locked
+    updateRow > 0 ? (String(allRows[updateRow-1][lockedIdx0]) === 'true' ? 'true' : 'false') : 'false'
   ];
 
   if (updateRow > 0) {

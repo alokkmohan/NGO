@@ -4720,6 +4720,7 @@ function resetMonthlyReport(){
 function submitReport(){ submitMonthlyReport(); } // legacy alias
 
 async function lockReportFinal(){
+  if(_autoSaveTimer){ clearTimeout(_autoSaveTimer); _autoSaveTimer = null; }
   const monthPick = document.getElementById('r-month-pick');
   if(!monthPick?.value){ alert('Please select a Reporting Month first.'); return; }
   const kmi = document.getElementById('r-kmi')?.value.trim();
