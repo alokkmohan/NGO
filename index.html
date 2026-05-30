@@ -3849,7 +3849,9 @@ function _scheduleAutoSave(){
     try {
       await submitMonthlyReport(true);
       if(statusEl) statusEl.textContent = '✅ Saved ' + new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
-    } catch(e){ if(statusEl) statusEl.textContent = ''; }
+    } catch(e){
+      if(statusEl) statusEl.textContent = '❌ Save failed — ' + e.message;
+    }
   }, 3000);
 }
 
@@ -4019,13 +4021,13 @@ function _editFormHtml(monthMin, monthMax, sa, tid){
       <div>
         <label style="font-size:11px;color:#222;font-weight:700;display:block;margin-bottom:4px">From <span style="color:var(--red)">*</span></label>
         <input type="date" class="entry-from" min="${monthMin}" max="${monthMax}" value="${fromVal}"
-          onchange="_markDirty()"
+          onchange="_markDirty();_scheduleAutoSave()"
           style="padding:6px 10px;border:1.5px solid var(--border);border-radius:6px;font-size:13px">
       </div>
       <div>
         <label style="font-size:11px;color:#222;font-weight:700;display:block;margin-bottom:4px">To <span style="color:var(--red)">*</span></label>
         <input type="date" class="entry-to" min="${monthMin}" max="${monthMax}" value="${toVal}"
-          onchange="_markDirty()"
+          onchange="_markDirty();_scheduleAutoSave()"
           style="padding:6px 10px;border:1.5px solid var(--border);border-radius:6px;font-size:13px">
       </div>
     </div>
@@ -4033,7 +4035,7 @@ function _editFormHtml(monthMin, monthMax, sa, tid){
       <label style="font-size:12px;color:#222;font-weight:700">What was done? <span style="color:var(--red)">*</span></label>
     </div>
     <textarea class="entry-details" rows="3" placeholder="Describe the activity done in this period..."
-      oninput="_markDirty()"
+      oninput="_markDirty();_scheduleAutoSave()"
       style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;font-family:inherit;resize:vertical;outline:none;box-sizing:border-box;margin-bottom:10px">${detailVal}</textarea>
     <div style="display:flex;gap:8px">
       <button type="button" onclick="saveTaskEntry(this)"
@@ -4068,7 +4070,10 @@ async function saveTaskEntry(btn){
   try {
     await submitMonthlyReport(true);
     if(statusEl) statusEl.textContent = '✅ Saved ' + new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
-  } catch(e){ if(statusEl) statusEl.textContent = ''; }
+  } catch(e){
+    if(statusEl) statusEl.textContent = '❌ Save failed — check connection';
+    alert('Entry could not be saved: ' + e.message + '\n\nPlease try again or check your internet connection.');
+  }
 }
 
 function cancelTaskEntry(btn){
@@ -4642,10 +4647,9 @@ async function submitMonthlyReport(silent = false){
 
   if(!silent) showLoader('Saving report…');
   let driveDocUrl = '';
-  try {
-    const res = await apiPost({action:'submitReport', report: JSON.stringify(report)});
-    if(res && res.docUrl) driveDocUrl = res.docUrl;
-  } catch(e){ console.warn('Sync error:', e.message); }
+  const res = await apiPost({action:'submitReport', report: JSON.stringify(report)});
+  if(!res || res.error) throw new Error(res?.error || 'Server error — report not saved');
+  if(res.docUrl) driveDocUrl = res.docUrl;
 
   // Update local state — prefer locked entry if duplicates, else first match
   const _allIdx = REPORTS.map((r,i)=>({r,i})).filter(({r})=>r.ngo===currentUser.org && r.month===months);
@@ -4739,7 +4743,8 @@ async function lockReportFinal(){
   try {
     await submitMonthlyReport();
     showLoader('Submitting to PMU…');
-    await apiPost({action:'lockReport', ngo:currentUser.org, month:months});
+    const lockRes = await apiPost({action:'lockReport', ngo:currentUser.org, month:months});
+    if(!lockRes || !lockRes.success) throw new Error(lockRes?.error || 'Could not lock report on server');
     const rep = REPORTS.find(r=>r.ngo===currentUser.org && r.month===months);
     if(rep) rep.report_locked = 'true';
     hideLoader();
