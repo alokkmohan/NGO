@@ -11,7 +11,7 @@
 
 const SHEET_ID        = '1fESLu2sjfmKuszrSUZgCjt296gf2GRTSAMkb2uv7F_M';
 const DRIVE_FOLDER_ID = '151IYtuGpaXal0DiInwUGyaGl7ZX51HD7';
-const VERSION         = 'v7-normalized-2026-05-30'; // bump on each deploy to verify live code
+const VERSION         = 'v8-single-write-2026-05-30'; // bump on each deploy to verify live code
 
 // Cached spreadsheet — avoids repeated openById() calls within one request
 function getSS() { return SpreadsheetApp.openById(SHEET_ID); }
@@ -43,6 +43,7 @@ function doGet(e) {
     else if (action === 'debugReports')         result = debugReportsInfo();
     else if (action === 'version')              result = { version: VERSION };
     else if (action === 'cleanupDuplicates')    result = { message: cleanupDuplicateReports() };
+    else if (action === 'repairHeader')         result = { message: repairReportsHeader() };
     // legacy — kept for backward compat
     else if (action === 'login')          result = login(p);
     else if (action === 'changePassword') result = changePassword(p);
@@ -528,6 +529,35 @@ function submitReport(data) {
     }
 
     SpreadsheetApp.flush();
+
+    // ── FINAL GUARANTEE: exactly ONE row for this ngo+month ──
+    // Re-read and delete any stray duplicates, keeping the row we just wrote
+    // (identified by its id). This makes duplicate rows structurally impossible
+    // even if a prior match somehow failed.
+    {
+      const fresh = rSheet.getDataRange().getValues();
+      const fHdr  = fresh[0];
+      const fNgo  = fHdr.findIndex(c => norm(c) === 'ngo');
+      const fMon  = fHdr.findIndex(c => norm(c) === 'month');
+      const fId   = fHdr.findIndex(c => norm(c) === 'id');
+      const dupRows = [];
+      let keepRow = -1;
+      for (let i = 1; i < fresh.length; i++) {
+        const sN = String(fresh[i][fNgo] || '').trim().toLowerCase();
+        const sM = String(fresh[i][fMon] || '').trim().toLowerCase();
+        if (sN === rNgo && sM === rMonth) {
+          if (fId >= 0 && String(fresh[i][fId]) === String(vals.id)) keepRow = i + 1;
+          else dupRows.push(i + 1);
+        }
+      }
+      // If our id wasn't found (edge case), keep the first match instead
+      if (keepRow < 0 && dupRows.length) { keepRow = dupRows.shift(); }
+      // Deleting rows above keepRow shifts it up — account for that
+      const above = dupRows.filter(rn => rn < keepRow).length;
+      dupRows.sort((a, b) => b - a).forEach(rn => rSheet.deleteRow(rn));
+      if (keepRow > 0) savedRow = keepRow - above;
+      SpreadsheetApp.flush();
+    }
   } finally {
     scriptLock.releaseLock();
   }
@@ -656,6 +686,25 @@ function cleanupDuplicateReports() {
   const msg = 'Removed ' + toDelete.length + ' duplicate row(s).';
   Logger.log(msg);
   return msg;
+}
+
+// ── ONE-TIME HEADER REPAIR ───────────────────────────────────
+// Removes blank/empty header columns (e.g. the corrupted empty columns 26-30)
+// left behind by repeated column auto-appends across deployments.
+// Call via URL: ...exec?action=repairHeader
+function repairReportsHeader() {
+  const sheet = getSS().getSheetByName('Reports');
+  const data  = sheet.getDataRange().getValues();
+  if (!data.length) return 'Empty sheet.';
+  const hdr = data[0];
+  // Indices (0-based) of columns whose header is blank
+  const blankCols = [];
+  hdr.forEach((h, i) => { if (String(h == null ? '' : h).trim() === '') blankCols.push(i); });
+  if (!blankCols.length) return 'No blank columns to remove.';
+  // Delete from rightmost to leftmost so indices stay valid (1-based for API)
+  blankCols.sort((a, b) => b - a).forEach(ci => sheet.deleteColumn(ci + 1));
+  SpreadsheetApp.flush();
+  return 'Removed ' + blankCols.length + ' blank column(s): indices ' + blankCols.join(', ');
 }
 
 function lockReport(data) {
