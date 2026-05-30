@@ -3314,7 +3314,7 @@ function mrOnMonthChange(){
     stDiv.style.display='block';
     const statusBadge = isLocked
       ? `<span style="background:#fce4ec;color:#c62828;border:1px solid #ef9a9a;border-radius:10px;padding:3px 10px;font-size:12px;font-weight:700">🔒 Locked</span>`
-      : `<span style="background:#fff8e1;color:#b8860b;border:1px solid #ffe082;border-radius:10px;padding:3px 10px;font-size:12px;font-weight:600">✏ Draft</span>`;
+      : `<span style="background:#e3f2fd;color:#1565c0;border:1px solid #90caf9;border-radius:10px;padding:3px 10px;font-size:12px;font-weight:600">💾 Saved</span>`;
     stDiv.innerHTML=`
       <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;
         padding:12px 16px;background:#f4f8ff;border:1px solid #c5d5f5;border-radius:10px">
@@ -3425,7 +3425,7 @@ function mrDownloadCSV(){
   const rows = myReports.map(r => [
     r.month||'', (r.report_from&&r.report_to ? r.report_from+' to '+r.report_to : r.month||''),
     r.schools||0, r.students||0, r.girls||0, r.teachers||0, r.meetings||0, r.events||0,
-    String(r.report_locked)==='true' ? 'Locked' : 'Draft'
+    String(r.report_locked)==='true' ? 'Submitted' : 'Saved'
   ]);
   const csv = [headers, ...rows].map(r => r.map(c=>`"${String(c||'').replace(/"/g,'""')}"`).join(',')).join('\r\n');
   const a = document.createElement('a');
