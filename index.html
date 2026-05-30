@@ -1189,6 +1189,14 @@ function onReportMonthChange(){
         const el = document.getElementById(id);
         if(el){ el.style.display='block'; el.querySelectorAll('input,textarea').forEach(i=>i.disabled=true); }
       });
+      // Lock Section A task cards
+      setTimeout(() => {
+        const tc = document.getElementById('r-task-cards');
+        if(tc){
+          tc.querySelectorAll('input,select,textarea').forEach(el => el.disabled = true);
+          tc.querySelectorAll('button').forEach(btn => { btn.style.display = 'none'; });
+        }
+      }, 300);
     } else {
       wrap.style.display = 'none';
       if(lockBtn){ lockBtn.textContent='✅ Submit Final Report'; lockBtn.disabled=false; lockBtn.style.opacity='1'; }
@@ -4544,6 +4552,12 @@ async function confirmAndLock(){
     if(lockBtn){ lockBtn.textContent='✅ '+months+' — Submitted'; lockBtn.disabled=true; lockBtn.style.display='block'; lockBtn.style.opacity='0.5'; }
     const saveBtn = document.getElementById('r-save-btn');
     if(saveBtn) saveBtn.style.display='none';
+    // Lock Section A task cards — disable all inputs and hide action buttons
+    const taskCards = document.getElementById('r-task-cards');
+    if(taskCards){
+      taskCards.querySelectorAll('input,select,textarea').forEach(el => el.disabled = true);
+      taskCards.querySelectorAll('button').forEach(btn => { btn.style.display = 'none'; });
+    }
     // Show B/D/E as read-only summary after submit
     ['r-section-b','r-section-d','r-section-e'].forEach(id => {
       const el = document.getElementById(id);
