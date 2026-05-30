@@ -686,10 +686,10 @@ tr:hover td{background:#FAFBFF}
 
       <!-- Submit confirm panel (shown when Submit Final Report clicked) -->
       <div id="r-lock-confirm-panel" style="display:none;background:#fff3e0;border:1.5px solid #e65100;border-radius:10px;padding:14px 16px;margin-bottom:12px">
-        <div style="font-size:13px;font-weight:700;color:#bf360c;margin-bottom:6px">⚠️ Final Submission — Are you sure?</div>
+        <div style="font-size:13px;font-weight:700;color:#bf360c;margin-bottom:6px">⚠️ Review & Submit</div>
         <div style="font-size:12px;color:#795548;margin-bottom:12px">
-          Once submitted, <b>this month's report cannot be changed or updated.</b><br>
-          Please ensure all sections above are filled correctly. KMI field is required.
+          Please fill Section B (numbers), Section D (support), and the KMI above before submitting.<br>
+          <b>KMI field is required.</b> You can update and re-submit later if needed.
         </div>
         <div style="display:flex;gap:10px;flex-wrap:wrap">
           <button onclick="confirmAndLock()"
@@ -4551,38 +4551,16 @@ function resetMonthlyReport(){
 function submitReport(){ submitMonthlyReport(); } // legacy alias
 
 // Show Section B/D/E + submit confirm panel
-async function lockReportFinal(){
+function lockReportFinal(){
   const monthPick = document.getElementById('r-month-pick');
   if(!monthPick?.value){ alert('Please select a Reporting Month first.'); return; }
-  const [yr, mo] = monthPick.value.split('-').map(Number);
-  const mNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-  const months = mNames[mo-1] + ' ' + yr;
-  const isUpdate = _formDirty && REPORTS.find(r=>r.ngo===currentUser.org && r.month===months && String(r.report_locked)==='true');
-  const msg = isUpdate
-    ? `Update & resubmit your ${months} report?\n\nYour previous submission will be replaced.`
-    : `Submit your ${months} report to PMU?\n\nYou can update it again later if needed.`;
-  if(!confirm(msg)) return;
-  const btn = document.getElementById('r-lock-btn');
-  if(btn){ btn.disabled=true; btn.textContent='Submitting…'; }
-  try {
-    await submitMonthlyReport();
-    showLoader('Submitting to PMU…');
-    await apiPost({action:'lockReport', ngo:currentUser.org, month:months});
-    const rep = REPORTS.find(r=>r.ngo===currentUser.org && r.month===months);
-    if(rep) rep.report_locked = 'true';
-    hideLoader();
-    _formDirty = false;
-    _updateSubmitBtn();
-    // Show success banner
-    const wrap = document.getElementById('r-month-status-wrap');
-    const stEl = document.getElementById('r-month-status');
-    if(wrap && stEl){
-      wrap.style.display = 'block';
-      stEl.style.cssText = 'padding:10px 14px;border-radius:7px;font-size:13px;font-weight:600;background:#e8f5e9;color:#2e7d32;border:1px solid #a5d6a7';
-      stEl.textContent = isUpdate ? '🔄 Report updated and resubmitted to PMU.' : '✅ Report submitted to PMU successfully!';
-    }
-    renderMyReports();
-  } catch(e){ hideLoader(); if(btn){btn.disabled=false;_updateSubmitBtn();} alert('Submission failed: '+e.message); }
+  // Reveal Section B, D, E for user to fill before confirming
+  ['r-section-b','r-section-d','r-section-e'].forEach(id => {
+    const el = document.getElementById(id);
+    if(el){ el.style.display='block'; el.querySelectorAll('input,textarea').forEach(i=>i.disabled=false); }
+  });
+  const panel = document.getElementById('r-lock-confirm-panel');
+  if(panel){ panel.style.display='block'; panel.scrollIntoView({behavior:'smooth',block:'start'}); }
 }
 
 function showLockPanel(){
@@ -4611,47 +4589,43 @@ function hideLockPanel(){
 
 async function confirmAndLock(){
   const kmi = document.getElementById('r-kmi')?.value.trim();
-  if(!kmi){ alert('KMI (Key Milestone Indicator) is required before locking.'); document.getElementById('r-kmi')?.focus(); return; }
+  if(!kmi){ alert('KMI (Key Milestone Indicator) is required before submitting.'); document.getElementById('r-kmi')?.focus(); return; }
   const monthPick = document.getElementById('r-month-pick');
   if(!monthPick?.value) return;
   const [yr, mo] = monthPick.value.split('-').map(Number);
   const mNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
   const months = mNames[mo-1] + ' ' + yr;
-  if(!confirm('FINAL CONFIRMATION\n\nSubmit report for ' + months + '?\n\nThis is your FINAL submission. After this you will NOT be able to update or change this month\'s report.\n\nClick OK to submit, or Cancel to go back.')) return;
-  // Save all sections first, then lock
-  await submitMonthlyReport();
-  // Now lock
-  showLoader('Locking report…');
+  const isUpdate = REPORTS.find(r=>r.ngo===currentUser.org && r.month===months && String(r.report_locked)==='true');
+  const confBtn = document.querySelector('#r-lock-confirm-panel button');
+  if(confBtn){ confBtn.disabled=true; confBtn.textContent='Submitting…'; }
   try {
+    await submitMonthlyReport();
+    showLoader('Submitting to PMU…');
     await apiPost({action:'lockReport', ngo:currentUser.org, month:months});
-    const rep = REPORTS.find(r => r.ngo === currentUser.org && r.month === months);
+    const rep = REPORTS.find(r=>r.ngo===currentUser.org && r.month===months);
     if(rep) rep.report_locked = 'true';
     hideLoader();
     hideLockPanel();
-    // Update UI for locked state
+    _formDirty = false;
+    _updateSubmitBtn();
     const wrap = document.getElementById('r-month-status-wrap');
     const stEl = document.getElementById('r-month-status');
     if(wrap && stEl){
       wrap.style.display = 'block';
-      stEl.style.cssText = 'padding:8px 12px;border-radius:7px;font-size:12px;font-weight:600;background:#fce4ec;color:#c62828;border:1px solid #ef9a9a';
-      stEl.textContent = '✅ Submitted — this month\'s report is finalised and submitted to PMU. No further changes allowed.';
+      stEl.style.cssText = 'padding:10px 14px;border-radius:7px;font-size:13px;font-weight:600;background:#e8f5e9;color:#2e7d32;border:1px solid #a5d6a7';
+      stEl.textContent = isUpdate ? '🔄 Report updated and resubmitted to PMU.' : '✅ Report submitted to PMU successfully!';
     }
-    const lockBtn = document.getElementById('r-lock-btn');
-    _formDirty = false;
-    _updateSubmitBtn();
-    // Lock Section A task cards — disable all inputs and hide action buttons
-    const taskCards = document.getElementById('r-task-cards');
-    if(taskCards){
-      taskCards.querySelectorAll('input,select,textarea').forEach(el => el.disabled = true);
-      taskCards.querySelectorAll('button').forEach(btn => { btn.style.display = 'none'; });
-    }
-    // Show B/D/E as read-only summary after submit
+    // Show B/D/E as read-only after submit
     ['r-section-b','r-section-d','r-section-e'].forEach(id => {
       const el = document.getElementById(id);
       if(el){ el.style.display='block'; el.querySelectorAll('input,textarea').forEach(i=>i.disabled=true); }
     });
     renderMyReports();
-  } catch(e){ hideLoader(); alert('Submission failed: ' + e.message); }
+  } catch(e){
+    hideLoader();
+    if(confBtn){ confBtn.disabled=false; confBtn.textContent='✅ Yes, Submit Final Report'; }
+    alert('Submission failed: '+e.message);
+  }
 }
 
 // ── Download full report for a single month (print-to-PDF) ──
