@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- v2026-04-10-d -->
+<!-- v2026-05-07-a -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -362,7 +362,7 @@ tr:hover td{background:#FAFBFF}
 
     <!-- Step 2: Components & Tasks (was Step 3) -->
     <div class="card" id="profile-p2" style="display:none">
-      <div class="card-title">🎯 Define your Components & Tasks</div>
+      <div class="card-title">🎯 Define your Programme Activities</div>
       <div style="background:#f0f6ff;border:1px solid #2E6DB430;border-radius:8px;padding:10px 14px;font-size:12px;color:var(--blue);margin-bottom:14px">
         Select the components you work in — add activities with start &amp; end dates. Save each task individually using <b>💾 Save Task</b>, then click <b>Save Profile</b> when done.
       </div>
@@ -454,11 +454,15 @@ tr:hover td{background:#FAFBFF}
           <button onclick="dismissFirstLoginBanner()" style="position:absolute;top:8px;right:10px;background:none;border:none;font-size:16px;cursor:pointer;color:#6B7280">✕</button>
           <div style="font-size:14px;font-weight:700;color:#1E40AF;margin-bottom:6px">👋 Welcome to the Portal!</div>
           <div style="font-size:13px;color:#1E3A8A;line-height:1.7">
-            Please follow these steps to get started:<br>
-            <b>1.</b> 🏢 Go to <b>My Profile</b> and fill in your organisation's basic details.<br>
-            <b>2.</b> 🎯 Update <b>Major Components &amp; Tasks</b> — define your activities.<br>
-            <b>3.</b> Once everything is correct, <b>Lock</b> your tasks.<br>
-            <b>4.</b> After locking, you can submit your <b>Monthly Report</b>.
+            शुरू करने के लिए इन चरणों का पालन करें / Please follow these steps to get started:<br><br>
+            <b>1.</b> 🏢 <b>My Profile</b> पर जाएं और अपने संगठन की बुनियादी जानकारी भरें।<br>
+            <span style="color:#3b5bab;font-size:12px">Go to <b>My Profile</b> and fill in your organisation's basic details.</span><br><br>
+            <b>2.</b> 🎯 <b>Programme Activities</b> में जाएं — अपनी गतिविधियाँ (activities) परिभाषित करें और <b>💾 Save</b> करें।<br>
+            <span style="color:#3b5bab;font-size:12px">Go to <b>Programme Activities</b> — define your activities and click <b>💾 Save</b>.</span><br><br>
+            <b>3.</b> 📝 <b>Monthly Report</b> में जाएं और अपनी मासिक प्रगति भरें।<br>
+            <span style="color:#3b5bab;font-size:12px">Go to <b>Monthly Report</b> and fill in your monthly progress.</span><br><br>
+            <b>4.</b> ✅ रिपोर्ट जमा करें — आप कभी भी प्रगति सहेज सकते हैं और तैयार होने पर सबमिट कर सकते हैं।<br>
+            <span style="color:#3b5bab;font-size:12px">Submit your report — you can save progress anytime and submit when ready.</span>
           </div>
         </div>
         <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:12px">
@@ -541,10 +545,7 @@ tr:hover td{background:#FAFBFF}
         <div class="card-title">🏢 My organisation profile</div>
         <div id="profile-display"></div>
       </div>
-      <div class="card" id="my-reports-card" style="margin-top:14px;display:none">
-        <div class="card-title">📋 My submitted reports
-          <span id="my-reports-count" style="font-size:12px;font-weight:400;color:var(--muted);margin-left:8px"></span>
-        </div>
+      <div class="card" id="my-reports-card" style="display:none">
         <div id="my-reports-list"></div>
       </div>
     </div>
@@ -552,16 +553,116 @@ tr:hover td{background:#FAFBFF}
     <!-- ── PAGE: MONTHLY REPORT ── -->
     <div class="page" id="page-monthly-report">
 
-      <!-- Tasks-not-locked warning banner -->
-      <div id="report-lock-warning" style="display:none;background:#FFF8E1;border:1px solid #FFD54F;border-radius:10px;padding:14px 16px;margin-bottom:14px">
-        <div style="font-size:14px;font-weight:700;color:#E65100;margin-bottom:4px">⚠️ Please lock your tasks before submitting a report</div>
-        <div style="font-size:13px;color:#7F4F00;line-height:1.6">
-          🎯 <b>Major Components &amp; Tasks</b> are not locked yet.<br>
-          Please go to <a href="#" onclick="showPage('profile-view');return false;" style="color:#1D4ED8;font-weight:600">My Profile → Section 3</a>, save your activities and lock them before submitting a monthly report.
+      <!-- Report Header -->
+      <div class="card" style="margin-bottom:12px">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:12px">
+          <div>
+            <div style="font-size:15px;font-weight:700;color:var(--blue)">📝 Monthly Report</div>
+            <div style="font-size:11px;color:var(--muted)">Samagra Shiksha, Secondary, Uttar Pradesh | PMU</div>
+          </div>
+          <div id="r-autosave-status" style="font-size:11px;color:var(--muted);white-space:nowrap"></div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:12px">
+          <div style="background:#f8f9ff;border-radius:8px;padding:8px 12px">
+            <div style="font-size:10px;color:var(--muted)">Organisation</div>
+            <div style="font-weight:700;color:var(--blue);font-size:13px" id="rh-org">—</div>
+          </div>
+          <div style="background:#f8f9ff;border-radius:8px;padding:8px 12px">
+            <div style="font-size:10px;color:var(--muted)">Nodal Person</div>
+            <div style="font-weight:600;font-size:13px" id="rh-person">—</div>
+          </div>
+          <div style="background:#f8f9ff;border-radius:8px;padding:8px 12px">
+            <div style="font-size:10px;color:var(--muted)">Districts</div>
+            <div style="font-size:12px" id="rh-dist">—</div>
+          </div>
+          <div style="background:#e8f5e9;border-radius:8px;padding:8px 12px">
+            <div style="font-size:10px;color:var(--muted)">Reporting Month</div>
+            <div style="font-weight:700;color:#2e7d32;font-size:14px" id="rh-month-label">—</div>
+          </div>
+        </div>
+        <!-- Hidden inputs kept for JS compat -->
+        <select id="r-month-pick" onchange="onReportMonthChange()" style="display:none"></select>
+        <input id="rh-phone" style="display:none">
+        <input id="rh-email" style="display:none">
+        <div id="r-month-status-wrap" style="display:none">
+          <div id="r-month-status" style="padding:10px 14px;border-radius:7px;font-size:13px;font-weight:600"></div>
         </div>
       </div>
 
-      <!-- Report Header (auto-filled) -->
+      <!-- Task Cards (built by JS) -->
+      <div id="r-task-cards">
+        <div style="color:var(--muted);font-size:13px;padding:20px;text-align:center">Loading activities…</div>
+      </div>
+
+      <!-- Numbers + KMI — always visible -->
+      <div class="card" id="r-section-b" style="margin-bottom:12px">
+        <div class="card-title">🔢 This Month's Numbers</div>
+        <div id="r-cumulative" style="display:none;background:#f0f6ff;border-radius:8px;padding:8px 12px;margin-bottom:10px;font-size:12px;color:var(--blue)"></div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:14px">
+          <div class="wform-group" style="margin:0"><label style="font-size:11px">Schools covered</label><input id="r-schools" type="number" min="0" placeholder="0" oninput="_scheduleAutoSave()"></div>
+          <div class="wform-group" style="margin:0"><label style="font-size:11px">Students benefited</label><input id="r-students" type="number" min="0" placeholder="0" oninput="_scheduleAutoSave()"></div>
+          <div class="wform-group" style="margin:0"><label style="font-size:11px">Girls benefited</label><input id="r-girls" type="number" min="0" placeholder="0" oninput="_scheduleAutoSave()"></div>
+          <div class="wform-group" style="margin:0"><label style="font-size:11px">Teachers trained</label><input id="r-teachers" type="number" min="0" placeholder="0" oninput="_scheduleAutoSave()"></div>
+          <div class="wform-group" style="margin:0"><label style="font-size:11px">Community meetings</label><input id="r-meetings" type="number" min="0" placeholder="0" oninput="_scheduleAutoSave()"></div>
+          <div class="wform-group" style="margin:0"><label style="font-size:11px">Events / workshops</label><input id="r-events" type="number" min="0" placeholder="0" oninput="_scheduleAutoSave()"></div>
+          <div class="wform-group" style="margin:0"><label style="font-size:11px">SC/ST/OBC students</label><input id="r-scst" type="number" min="0" placeholder="0" oninput="_scheduleAutoSave()"></div>
+          <div class="wform-group" style="margin:0"><label style="font-size:11px">Divyang students</label><input id="r-divyang" type="number" min="0" placeholder="0" oninput="_scheduleAutoSave()"></div>
+          <div class="wform-group" style="margin:0"><label style="font-size:11px">Dropouts prevented</label><input id="r-dropout" type="number" min="0" placeholder="0" oninput="_scheduleAutoSave()"></div>
+        </div>
+        <div class="wform-group" style="margin:0">
+          <label style="font-size:12px;color:#222;font-weight:600">KMI — Key Milestone Indicator <span style="color:var(--red)">*</span></label>
+          <input id="r-kmi" placeholder="E.g: 420 dropout girls re-enrolled in 3 districts of Agra" oninput="_scheduleAutoSave()">
+        </div>
+      </div>
+
+      <!-- In-kind support (collapsed by default) -->
+      <div class="card" id="r-section-d" style="margin-bottom:12px">
+        <div style="cursor:pointer;display:flex;align-items:center;justify-content:space-between" onclick="var b=this.nextElementSibling;b.style.display=b.style.display==='none'?'block':'none';this.querySelector('.rsd-arr').textContent=b.style.display==='none'?'▶':'▼'">
+          <div class="card-title" style="margin:0">🎁 In-kind / Material Support <span style="font-size:11px;font-weight:400;color:var(--muted)">(optional)</span></div>
+          <span class="rsd-arr" style="color:var(--muted);font-size:12px">▶</span>
+        </div>
+        <div style="display:none;margin-top:12px">
+          <div class="wform-row">
+            <div class="wform-group"><label>Equipment / Material provided</label><input id="r-equipment" placeholder="E.g: sports kit to 50 schools" oninput="_scheduleAutoSave()"></div>
+            <div class="wform-group"><label>Training material / kits</label><input id="r-training" placeholder="E.g: activity kit to 30 teachers" oninput="_scheduleAutoSave()"></div>
+          </div>
+          <div class="wform-row">
+            <div class="wform-group"><label>Machine / Infrastructure</label><input id="r-machine" placeholder="E.g: computers to 3 schools" oninput="_scheduleAutoSave()"></div>
+            <div class="wform-group"><label>Cash / Monetary donation</label><input id="r-donation" placeholder="E.g: ₹50,000" oninput="_scheduleAutoSave()"></div>
+          </div>
+          <div class="wform-group"><label>Any other support</label><input id="r-other-support" placeholder="E.g: Uniform, stationery..." oninput="_scheduleAutoSave()"></div>
+        </div>
+      </div>
+
+      <!-- Hidden stubs for JS compat -->
+      <div id="r-section-e" style="display:none">
+        <textarea id="r-achieve"></textarea><textarea id="r-challenges"></textarea>
+        <textarea id="r-support"></textarea><textarea id="r-plans"></textarea>
+      </div>
+      <div id="r-lock-confirm-panel" style="display:none"></div>
+
+      <!-- Submit area -->
+      <div id="r-submit-area" style="margin-bottom:24px">
+        <button id="r-lock-btn"
+          style="display:none;width:100%;padding:14px;font-size:15px;font-weight:700;border:none;border-radius:8px;cursor:pointer"
+          onclick="lockReportFinal()">📤 Submit Monthly Report / मासिक रिपोर्ट जमा करें</button>
+        <div id="r-save-btn" style="display:none"></div>
+        <div id="r-lock-wrap" style="display:none"></div>
+      </div>
+
+      <div id="r-success-msg" style="display:none" class="card">
+        <div class="success-box">
+          <div class="success-icon">✓</div>
+          <h3>Report submitted successfully!</h3>
+          <p>Your monthly KPI report has been recorded.<br>PMU will review it and update the dashboard.</p>
+          <button class="btn-blu" style="margin-top:16px;width:auto;padding:8px 20px" onclick="showPage('dashboard')">Go to Dashboard</button>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ── (OLD MONTHLY REPORT CONTENT REMOVED) ── -->
+    <div style="display:none"><!-- old report HTML below is hidden/replaced -->
       <div class="card" style="margin-bottom:12px">
         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:12px">
           <div class="card-title" style="margin:0">📝 Monthly KPI Progress Report</div>
@@ -692,14 +793,17 @@ tr:hover td{background:#FAFBFF}
         </div>
       </div>
 
-      <!-- Lock confirm panel (shown when Lock button clicked) -->
-      <div id="r-lock-confirm-panel" style="display:none;background:#fff8e1;border:1.5px solid #f9a825;border-radius:10px;padding:14px 16px;margin-bottom:12px">
-        <div style="font-size:13px;font-weight:700;color:#e65100;margin-bottom:6px">🔒 Final lock — please fill in the sections above, then confirm</div>
-        <div style="font-size:12px;color:#795548;margin-bottom:12px">Once locked, this month's report cannot be edited. KMI field is required.</div>
+      <!-- Submit confirm panel (shown when Submit Final Report clicked) -->
+      <div id="r-lock-confirm-panel" style="display:none;background:#fff3e0;border:1.5px solid #e65100;border-radius:10px;padding:14px 16px;margin-bottom:12px">
+        <div style="font-size:13px;font-weight:700;color:#bf360c;margin-bottom:6px">⚠️ Review & Submit</div>
+        <div style="font-size:12px;color:#795548;margin-bottom:12px">
+          Please fill Section B (numbers), Section D (support), and the KMI above before submitting.<br>
+          <b>KMI field is required.</b> You can update and re-submit later if needed.
+        </div>
         <div style="display:flex;gap:10px;flex-wrap:wrap">
           <button onclick="confirmAndLock()"
             style="flex:1;min-width:140px;padding:11px;background:#e65100;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer">
-            ✅ Confirm &amp; Lock
+            ✅ Yes, Submit Final Report
           </button>
           <button onclick="hideLockPanel()"
             style="flex:1;min-width:120px;padding:11px;background:#fff;color:var(--muted);border:1px solid var(--border);border-radius:8px;font-size:13px;cursor:pointer">
@@ -708,15 +812,13 @@ tr:hover td{background:#FAFBFF}
         </div>
       </div>
 
-      <!-- Submit -->
+      <!-- Save / Submit buttons -->
       <div id="r-submit-area" style="margin-bottom:24px">
         <button id="r-lock-btn"
-          style="display:none;width:100%;padding:14px;font-size:15px;font-weight:700;background:var(--blue);color:#fff;border:none;border-radius:8px;cursor:pointer"
-          onclick="showLockPanel()">🔒 Lock Month Report</button>
-        <div id="r-lock-wrap" style="display:none"></div><!-- stub kept for JS compat -->
-        <div style="font-size:11px;color:var(--muted);margin-top:8px;text-align:center;line-height:1.5">
-          * Once you update full month report then lock it. Once locked you cannot update this month report.
-        </div>
+          style="display:none;width:100%;padding:14px;font-size:15px;font-weight:700;border:none;border-radius:8px;cursor:pointer"
+          onclick="lockReportFinal()">📤 Submit Monthly Report / मासिक रिपोर्ट जमा करें</button>
+        <div id="r-save-btn" style="display:none"></div><!-- stub for JS compat -->
+        <div id="r-lock-wrap" style="display:none"></div><!-- stub for JS compat -->
       </div>
 
       <!-- Success message -->
@@ -732,63 +834,36 @@ tr:hover td{background:#FAFBFF}
         </div>
       </div>
 
-    </div>
+    </div></div><!-- end hidden old report HTML -->
 
     <!-- ── PAGE: MY REPORTS ── -->
     <div class="page" id="page-my-reports">
-      <div class="card" style="margin-bottom:14px">
+      <div class="card">
         <div class="card-title">📋 My Reports</div>
-
-        <!-- Month selector -->
-        <div style="max-width:320px;margin-bottom:16px">
-          <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px">Select Month</label>
-          <select id="mr-month-filter" onchange="mrOnMonthChange()"
-            style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:14px;background:#fff;outline:none">
-            <option value="">— Select Month —</option>
-          </select>
-        </div>
-
-        <!-- Month summary panel (shown after month selected) -->
-        <div id="mr-status" style="display:none;margin-bottom:14px"></div>
-
-        <!-- Sub-activity entries table -->
-        <div id="mr-table-wrap" style="overflow-x:auto"></div>
+        <div id="mr-reports-table"></div>
       </div>
     </div>
 
     <!-- ── PAGE: ALL NGOs (Admin) ── -->
     <div class="page" id="page-ngo-list">
       <div class="card">
-        <div class="card-title">👥 All partner organisations</div>
-        <table>
-          <thead><tr><th>#</th><th>Organisation</th><th>Nodal Person</th><th>Theme</th><th>Districts</th><th>Schools</th><th>Reports</th><th>Last Report</th><th>Tasks</th></tr></thead>
-          <tbody id="admin-ngo-tbody"></tbody>
-        </table>
-      </div>
-    </div>
-
-    <!-- ── PAGE: UNLOCK COMPONENTS (Admin) ── -->
-    <div class="page" id="page-unlock-tasks">
-      <div class="card">
-        <div class="card-title">🔓 Unlock Components</div>
-        <div style="font-size:12px;color:var(--muted);margin-bottom:14px">Yahan sirf wo components dikh rahe hain jinhe NGO ne lock kiya hai. Unlock karne ke baad NGO us component mein naye tasks add ya edit kar sakta hai.</div>
-        <table>
-          <thead>
-            <tr>
+        <div class="card-title">👥 All Partner Organisations</div>
+        <div style="overflow-x:auto">
+          <table>
+            <thead><tr>
               <th>#</th>
-              <th>NGO / Organisation</th>
-              <th>Component</th>
-              <th>Tasks</th>
+              <th>Organisation</th>
+              <th>Email</th>
+              <th>Reports</th>
+              <th>Status</th>
               <th>Action</th>
-            </tr>
-          </thead>
-          <tbody id="unlock-tasks-tbody"></tbody>
-        </table>
-        <div id="unlock-tasks-empty" style="display:none;text-align:center;color:var(--muted);padding:24px;font-size:13px">
-          Koi locked component nahi mila.
+            </tr></thead>
+            <tbody id="admin-ngo-tbody"></tbody>
+          </table>
         </div>
       </div>
     </div>
+
 
     <!-- ── ADMIN TASK UNLOCK MODAL ── -->
     <div id="admin-task-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:9999;align-items:flex-start;justify-content:center;padding:24px 12px;overflow-y:auto">
@@ -801,6 +876,19 @@ tr:hover td{background:#FAFBFF}
           <button onclick="closeAdminTaskModal()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--muted);line-height:1">&times;</button>
         </div>
         <div id="atm-body"></div>
+      </div>
+    </div>
+
+    <!-- ── PAGE: UNLOCK COMPONENTS (Admin) ── -->
+    <div class="page" id="page-unlock-tasks">
+      <div class="card">
+        <div class="card-title">🔓 Unlock Components</div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:14px">Yahan sirf wo components dikh rahe hain jinhe NGO ne lock kiya hai. Unlock karne ke baad NGO us component mein naye tasks add ya edit kar sakta hai.</div>
+        <table>
+          <thead><tr><th>#</th><th>NGO / Organisation</th><th>Component</th><th>Tasks</th><th>Action</th></tr></thead>
+          <tbody id="unlock-tasks-tbody"></tbody>
+        </table>
+        <div id="unlock-tasks-empty" style="display:none;text-align:center;color:var(--muted);padding:24px;font-size:13px">Koi locked component nahi mila.</div>
       </div>
     </div>
 
@@ -817,7 +905,9 @@ tr:hover td{background:#FAFBFF}
           <select id="rep-month">
             <option value="all">All months</option>
             <option>April 2026</option><option>May 2026</option><option>June 2026</option>
-            <option>March 2026</option><option>February 2026</option><option>January 2026</option>
+            <option>July 2026</option><option>August 2026</option><option>September 2026</option>
+            <option>October 2026</option><option>November 2026</option><option>December 2026</option>
+            <option>January 2027</option><option>February 2027</option><option>March 2027</option>
           </select>
           <button class="btn-report" onclick="generateReport()">⬇ Generate Report</button>
           <button class="btn-report" style="background:var(--green)" onclick="window.print()">🖨 Print / PDF</button>
@@ -935,12 +1025,27 @@ function fmtDate(v){
   return s;
 }
 
+// Convert any month value (ISO date or "April 2026") to "Month YYYY" label
+function _fmtMonthLabel(v){
+  if(!v) return '';
+  const s = String(v).trim();
+  if(/^[A-Za-z]+ \d{4}$/.test(s)) return s; // already "April 2026"
+  if(s.includes('-')){
+    const datePart = s.split('T')[0];
+    const [yr, mo] = datePart.split('-').map(Number);
+    const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    return (months[mo-1]||'') + ' ' + yr;
+  }
+  return s;
+}
+
 // Robust locked check — handles boolean true, string 'true', or uppercase 'TRUE' from Sheets
 function isTaskLocked(v){ return v===true || String(v).toLowerCase()==='true'; }
 
 // Live data — populated from Google Sheets on login
-let SAMPLE_NGOS = [];
-let REPORTS     = [];
+let SAMPLE_NGOS      = [];
+let REPORTS          = [];
+let ADMIN_PARTNERS   = []; // admin-only: all partners with status & MOU date
 
 const DEMO_NGOS    = [];
 const DEMO_REPORTS = [];
@@ -958,6 +1063,8 @@ let activeFilter = 'all';
 async function doSendOTP(isResend){
   const email = document.getElementById('login-email').value.trim();
   if(!email){ alert('Please enter your email address'); return; }
+  const btn = document.getElementById('login-main-btn');
+  btn.disabled = true;
   showLoader(isResend ? 'Resending OTP…' : 'Checking email…');
   try {
     const res = await apiPost({action:'sendOTP', email});
@@ -971,16 +1078,19 @@ async function doSendOTP(isResend){
       document.getElementById('login-otp').focus();
       if(isResend) alert('✅ New OTP sent to ' + email);
     } else if(res.isAdmin){
-      // Admin — show password field
+      // Admin — show password field, change button to Sign In
       document.getElementById('admin-pass-wrap').style.display = 'block';
-      document.getElementById('login-main-btn').textContent = 'Sign In →';
-      document.getElementById('login-main-btn').onclick = doAdminLogin;
+      btn.textContent = 'Sign In →';
+      btn.onclick = doAdminLogin;
+      btn.disabled = false;
       document.getElementById('admin-pass').focus();
     } else {
+      btn.disabled = false;
       alert(res.error || 'Could not send OTP. Please try again.');
     }
   } catch(e){
     hideLoader();
+    btn.disabled = false;
     alert('Connection error: ' + e.message);
   }
 }
@@ -989,6 +1099,8 @@ async function doAdminLogin(){
   const email = document.getElementById('login-email').value.trim();
   const pass  = document.getElementById('admin-pass').value;
   if(!pass){ alert('Please enter password'); return; }
+  const btn = document.getElementById('login-main-btn');
+  btn.disabled = true;
   showLoader('Signing in…');
   try {
     const res = await apiPost({action:'login', email, password: pass});
@@ -999,9 +1111,10 @@ async function doAdminLogin(){
       await loadSheetData();
       startApp();
     } else {
+      btn.disabled = false;
       alert(res.error || 'Invalid password');
     }
-  } catch(e){ hideLoader(); alert('Connection error: ' + e.message); }
+  } catch(e){ hideLoader(); btn.disabled = false; alert('Connection error: ' + e.message); }
 }
 
 async function doVerifyOTP(){
@@ -1153,13 +1266,18 @@ function onReportMonthChange(){
   const [yr, mo] = pick.value.split('-').map(Number);
   const mNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
   const monthLabel = mNames[mo-1] + ' ' + yr;
+  // Update visible month label
+  const mlEl = document.getElementById('rh-month-label');
+  if(mlEl) mlEl.textContent = monthLabel;
 
-  // Check if already submitted for this month
-  const existing = REPORTS.find(r => r.ngo === currentUser.org && r.month === monthLabel);
+  // Check if already submitted for this month — prefer locked (submitted) over draft if duplicates exist
+  const _allForMonth = REPORTS.filter(r => r.ngo === currentUser.org && r.month === monthLabel);
+  const existing = _allForMonth.find(r => String(r.report_locked)==='true') || _allForMonth[0];
   const wrap  = document.getElementById('r-month-status-wrap');
   const stEl  = document.getElementById('r-month-status');
   const lockBtn = document.getElementById('r-lock-btn');
 
+  _formDirty = false;
   // Always reset lock panel and B/D/E visibility first
   hideLockPanel();
 
@@ -1167,18 +1285,26 @@ function onReportMonthChange(){
     const isLocked = String(existing.report_locked) === 'true';
     wrap.style.display = 'block';
     if(isLocked){
-      stEl.style.cssText = 'padding:8px 12px;border-radius:7px;font-size:12px;font-weight:600;background:#fce4ec;color:#c62828;border:1px solid #ef9a9a';
-      stEl.textContent = '🔒 This month is locked — no more changes allowed.';
-      if(lockBtn){ lockBtn.textContent='🔒 '+monthLabel+' — Locked'; lockBtn.disabled=true; lockBtn.style.display='block'; lockBtn.style.opacity='0.5'; }
-      // Show B/D/E as read-only summary for locked month
+      stEl.style.cssText = 'padding:8px 12px;border-radius:7px;font-size:12px;font-weight:600;background:#e8f5e9;color:#2e7d32;border:1px solid #a5d6a7';
+      stEl.textContent = '✅ Report submitted to PMU.';
+      _formDirty = false;
       prefillFromExisting(existing);
       ['r-section-b','r-section-d','r-section-e'].forEach(id => {
         const el = document.getElementById(id);
         if(el){ el.style.display='block'; el.querySelectorAll('input,textarea').forEach(i=>i.disabled=true); }
       });
+      setTimeout(() => {
+        _updateSubmitBtn();
+        // Add dirty listeners so user can update
+        document.getElementById('r-task-cards')?.querySelectorAll('input,select,textarea').forEach(el => {
+          el.addEventListener('change', _markDirty, {once:true});
+        });
+      }, 400);
     } else {
       wrap.style.display = 'none';
-      if(lockBtn){ lockBtn.textContent='🔒 Lock '+monthLabel+' Report'; lockBtn.disabled=false; lockBtn.style.opacity='1'; }
+      if(lockBtn){ lockBtn.textContent='✅ Submit Final Report'; lockBtn.disabled=false; lockBtn.style.opacity='1'; }
+      const saveBtn = document.getElementById('r-save-btn');
+      if(saveBtn){ saveBtn.style.display='block'; }
       prefillFromExisting(existing); // buildReportTaskCards inside will call refreshLockBtn
     }
   } else {
@@ -1484,14 +1610,12 @@ function addCompTask(containerId){
       <span style="font-size:11px;font-weight:700;color:var(--blue);white-space:nowrap">Activity ${taskIdx}:</span>
       <input type="text" class="comp-task-input" placeholder="Activity name (e.g. KGBV - Type I, Free Textbooks)"
         style="flex:1;padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;outline:none">
-      <button type="button" onclick="this.closest('.task-block').remove()" title="Remove Activity"
-        style="padding:4px 10px;background:#fff0f0;border:1px solid #f5c6c6;color:var(--red);border-radius:6px;font-size:16px;cursor:pointer;line-height:1">−</button>
     </div>
     <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap">
-      <label style="font-size:11px;color:var(--muted);white-space:nowrap">Start Date:</label>
+      <label style="font-size:11px;color:var(--muted);white-space:nowrap">Start Date: <span style="color:var(--red)">*</span></label>
       <input type="date" class="act-start-date" title="Activity Start Date"
         style="padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;outline:none">
-      <label style="font-size:11px;color:var(--muted);white-space:nowrap">End Date:</label>
+      <label style="font-size:11px;color:var(--muted);white-space:nowrap">End Date: <span style="color:var(--red)">*</span></label>
       <input type="date" class="act-end-date" title="Activity End Date"
         style="padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;outline:none">
     </div>
@@ -1617,7 +1741,7 @@ function buildStep4Summary(){
         <div style="display:flex;flex-wrap:wrap;gap:3px">${schools.slice(0,6).map(s=>`<span style="background:#fef9e7;color:var(--amber);border-radius:12px;padding:2px 7px;font-size:11px">${s}</span>`).join('')}${schools.length>6?`<span style="font-size:11px;color:var(--muted)">+${schools.length-6} more</span>`:''}</div>
       </div>
       <div>
-        <div style="color:var(--muted);font-size:11px;margin-bottom:4px">Components & Tasks</div>
+        <div style="color:var(--muted);font-size:11px;margin-bottom:4px">Programme Activities</div>
         ${compTaskLines.map(l=>`<div style="margin-bottom:3px;line-height:1.5">${l}</div>`).join('')}
       </div>
       <div style="margin-top:10px;padding-top:8px;border-top:1px solid #2E6DB430;font-size:11px;color:var(--muted)">
@@ -1678,8 +1802,10 @@ async function saveProfile(){
     if(newName) {
       currentUser.name = newName;
       sessionStorage.setItem('ngo_session', JSON.stringify(currentUser));
-      document.getElementById('sb-name').textContent = newName;
-      document.getElementById('sb-avatar').textContent = newName[0].toUpperCase();
+      const _sbn2 = document.getElementById('sb-name');
+      const _sba2 = document.getElementById('sb-avatar');
+      if(_sbn2) _sbn2.textContent = newName;
+      if(_sba2) _sba2.textContent = newName[0].toUpperCase();
     }
     await loadSheetData();
   } catch(e){ console.warn('Profile save error:', e.message); }
@@ -1728,6 +1854,10 @@ async function saveWizardTask(btn){
   if(!compCb){ alert('Please select a component first'); return; }
   const taskName = block.querySelector('.comp-task-input')?.value.trim();
   if(!taskName){ alert('Please enter an activity name'); block.querySelector('.comp-task-input')?.focus(); return; }
+  const taskStartVal = block.querySelector('.act-start-date')?.value;
+  const taskEndVal   = block.querySelector('.act-end-date')?.value;
+  if(!taskStartVal){ alert('Please select a Start Date for this activity'); block.querySelector('.act-start-date')?.focus(); return; }
+  if(!taskEndVal)  { alert('Please select an End Date for this activity');   block.querySelector('.act-end-date')?.focus();   return; }
 
   btn.disabled = true;
   btn.textContent = 'Saving…';
@@ -1801,23 +1931,31 @@ async function apiPost(body, timeoutMs=60000){
 
 async function loadSheetData(){
   try {
-    const [ngoRes, repRes, projRes] = await Promise.all([
+    const isAdmin = currentUser?.role === 'admin';
+    const calls = [
       apiPost({action:'getNGOs'}),
       apiPost({action:'getReports'}),
-      apiPost({action:'getProjects', ngo: currentUser?.role==='admin' ? 'all' : (currentUser?.org||'')})
-    ]);
+      apiPost({action:'getProjects', ngo: isAdmin ? 'all' : (currentUser?.org||'')})
+    ];
+    if(isAdmin) calls.push(apiPost({action:'getAdminPartners'}));
+    const [ngoRes, repRes, projRes, partRes] = await Promise.all(calls);
+
     if(ngoRes.success && ngoRes.data.length){
       SAMPLE_NGOS.length = 0;
-      ngoRes.data.forEach(n => SAMPLE_NGOS.push({
-        id:+n.id||0, name:n.name||'', theme:n.theme||'', person:n.person||'',
-        dist:n.dist||'', x:+n.x||300, y:+n.y||300,
-        schools:+n.schools||0, students:+n.students||0,
-        girls:+n.girls||0, teachers:+n.teachers||0,
-        progress:+n.progress||0, month:n.month||'', kmi:n.kmi||'',
-        // Extended profile fields
-        phone:String(n.phone||''), desig:n.desig||'', org_type:n.org_type||'',
-        start_date:n.start_date||'', blocks:n.blocks||'', schools_list:n.schools_list||''
-      }));
+      ngoRes.data.forEach(n => {
+        // For non-admin: skip inactive NGOs
+        if(!isAdmin && (n.ngo_status||'active') === 'inactive') return;
+        SAMPLE_NGOS.push({
+          id:+n.id||0, name:n.name||'', theme:n.theme||'', person:n.person||'',
+          dist:n.dist||'', x:+n.x||300, y:+n.y||300,
+          schools:+n.schools||0, students:+n.students||0,
+          girls:+n.girls||0, teachers:+n.teachers||0,
+          progress:+n.progress||0, month:n.month||'', kmi:n.kmi||'',
+          phone:String(n.phone||''), desig:n.desig||'', org_type:n.org_type||'',
+          start_date:n.start_date||'', blocks:n.blocks||'', schools_list:n.schools_list||'',
+          ngo_status: n.ngo_status || 'active'
+        });
+      });
     }
     if(repRes.success && repRes.data.length){
       REPORTS.length = 0;
@@ -1826,6 +1964,10 @@ async function loadSheetData(){
     if(projRes && projRes.success && projRes.data.length){
       PROJECTS.length = 0;
       projRes.data.forEach(p => PROJECTS.push(p));
+    }
+    if(isAdmin && partRes?.success){
+      ADMIN_PARTNERS.length = 0;
+      partRes.data.forEach(p => ADMIN_PARTNERS.push(p));
     }
   } catch(e){ console.warn('Could not load Sheet data:', e.message); }
 
@@ -1888,6 +2030,8 @@ function initApp(){
   updateDashboardStats();
   showFirstLoginBannerIfNeeded();
   showPage('dashboard');
+  if(currentUser?.role !== 'admin' && new URLSearchParams(location.search).get('action') === 'submit')
+    showPage('monthly-report');
 }
 
 function showFirstLoginBannerIfNeeded(){
@@ -1993,16 +2137,20 @@ function updateDashboardStats(){
   document.getElementById('ngo-dashboard').style.display='none';
   const total=SAMPLE_NGOS.length;
   document.getElementById('s-partners').textContent=total||'0';
-  document.getElementById('s-partners-sub').textContent=total?`${REPORTS.length} reports submitted`:'No data yet';
+  const submittedReports = REPORTS.filter(r => String(r.report_locked) === 'true').length;
+  document.getElementById('s-partners-sub').textContent=total?`${submittedReports} reports submitted`:'No data yet';
   document.getElementById('s-partners').closest('.stat-card').querySelector('.stat-label').textContent='Active partners';
   const distSet=new Set();
-  SAMPLE_NGOS.forEach(n=>(n.dist||'').split(',').forEach(d=>{if(d.trim())distSet.add(d.trim());}));
+  SAMPLE_NGOS.forEach(n=>(n.dist||'').split(',').forEach(d=>{if(d.trim())distSet.add(d.trim().toUpperCase());}));
+  // Also count districts from task-level coverage (task_dist in PROJECTS)
+  PROJECTS.filter(p=>p.status!=='deleted').forEach(p=>(p.task_dist||'').split(',').forEach(d=>{if(d.trim())distSet.add(d.trim().toUpperCase());}));
   document.getElementById('s-districts').textContent=distSet.size||'0';
   document.getElementById('s-districts').closest('.stat-card').querySelector('.stat-label').textContent='Districts covered';
   document.getElementById('s-districts').closest('.stat-card').querySelector('.stat-sub').textContent='of 75 UP districts';
   const totalSchools=SAMPLE_NGOS.reduce((a,n)=>a+(+n.schools||0),0);
   document.getElementById('s-schools').textContent=totalSchools?totalSchools.toLocaleString('en-IN'):'0';
-  const latestMonth=SAMPLE_NGOS.map(n=>n.month).filter(Boolean).sort().reverse()[0]||'';
+  const latestMonthRaw=SAMPLE_NGOS.map(n=>n.month).filter(Boolean).sort().reverse()[0]||'';
+  const latestMonth=_fmtMonthLabel(latestMonthRaw);
   document.getElementById('s-schools-sub').textContent=latestMonth?'Last: '+latestMonth:'';
   const totalStudents=SAMPLE_NGOS.reduce((a,n)=>a+(+n.students||0),0);
   const totalGirls=SAMPLE_NGOS.reduce((a,n)=>a+(+n.girls||0),0);
@@ -2038,7 +2186,8 @@ function renderAdminCharts(){
   const reports = REPORTS;
 
   // ── Extra KPI cards ──
-  const submitted = ngos.filter(n => n.month).length;
+  const submittedNGOs = new Set(REPORTS.filter(r => String(r.report_locked) === 'true').map(r => r.ngo));
+  const submitted = submittedNGOs.size;
   const pending   = ngos.length - submitted;
   const totalGirls = ngos.reduce((a,n) => a + (+n.girls||0), 0);
 
@@ -2253,14 +2402,7 @@ function showPage(p){
   if(p==='profile-view'){ renderProfileView(); renderMyReports(); }
   if(p==='ngo-list') renderAdminNGOList();
   if(p==='unlock-tasks') renderUnlockTasksPage();
-  if(p==='monthly-report'){
-    reportStep=0;updateReportSteps();prefillReportForm();
-    const warn = document.getElementById('report-lock-warning');
-    if(warn && currentUser?.role !== 'admin'){
-      const hasLocked = PROJECTS.some(pr => pr.ngo === currentUser.org && isTaskLocked(pr.locked));
-      warn.style.display = hasLocked ? 'none' : 'block';
-    }
-  }
+  if(p==='monthly-report'){ reportStep=0;updateReportSteps();prefillReportForm(); }
   if(p==='my-reports') renderReportsPage();
   if(p==='dashboard' && _lmap){ setTimeout(()=>_lmap.invalidateSize(), 100); }
 }
@@ -2540,7 +2682,7 @@ function renderProfileView(){
     <!-- ── SECTION 3: Major Components & Tasks (shown first) ── -->
     <div id="pv-sec3" style="border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:12px">
       <div style="background:var(--blue);color:#fff;padding:8px 14px;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:space-between">
-        🎯 Major Components & Tasks
+        🎯 Programme Activities
         <button onclick="pvEdit(3)" style="padding:3px 12px;background:#fff;color:var(--blue);border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">✏ Edit</button>
       </div>
       <div id="pv-sec3-view" style="padding:12px 14px">
@@ -2548,15 +2690,13 @@ function renderProfileView(){
           <div style="margin-bottom:12px">
             <div style="font-weight:700;color:var(--blue);font-size:12px;margin-bottom:5px;padding:5px 8px;background:#e8f0fe;border-radius:6px">▸ ${comp}</div>
             ${tasks.map(t=>{
-              const isLocked=isTaskLocked(t.locked);
               const dateLabel = t.start_date ? (fmtDate(t.start_date) + (t.end_date ? ' → '+fmtDate(t.end_date) : '')) : '';
               const taskDist  = (t.task_dist||'').split(',').map(d=>d.trim()).filter(Boolean);
               const allSchools= (t.task_schools||'').trim().toUpperCase()==='ALL';
               const taskSchoolList = allSchools ? [] : (t.task_schools||'').split('|').map(s=>s.trim()).filter(Boolean);
-              return `<div style="padding:8px 10px;background:${isLocked?'#f1f8e9':'#f8f9ff'};border-radius:6px;margin-bottom:6px;font-size:12px;border-left:3px solid ${isLocked?'#66bb6a':'#b0bcd4'}">
+              return `<div style="padding:8px 10px;background:#f8f9ff;border-radius:6px;margin-bottom:6px;font-size:12px;border-left:3px solid #b0bcd4">
                 <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
                   <span style="font-weight:600">${t.task_name||'—'}</span>
-                  ${isLocked?'<span style="font-size:10px;color:#2e7d32;background:#c8e6c9;border-radius:10px;padding:1px 8px;font-weight:700">🔒 Locked</span>':'<span style="font-size:10px;color:#b8860b;background:#fff8e1;border-radius:10px;padding:1px 8px">unlocked</span>'}
                   ${dateLabel?`<span style="font-size:11px;color:var(--muted)">${dateLabel}</span>`:''}
                 </div>
                 ${taskDist.length?`<div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:3px">
@@ -2569,16 +2709,16 @@ function renderProfileView(){
           </div>`).join('') : '<div style="color:var(--muted);font-size:12px">No tasks defined yet.</div>'}
       </div>
       <div id="pv-sec3-form" style="display:none;padding:14px;border-top:1px solid var(--border);background:#fafcff">
+        <div id="pv-sec3-saved-panel"></div>
         <div style="font-size:11px;color:var(--blue);background:#eef4ff;border-radius:7px;padding:9px 12px;margin-bottom:12px">
-          Add activities with start &amp; end dates. Click <b>💾 Save</b>, then <b>🔒 Lock Activities</b> — only locked activities appear in the Monthly Report.
+          Add activities with start &amp; end dates. Click <b>💾 Save</b> to save your activities. You can edit or delete them anytime before submitting the monthly report.
         </div>
         <div id="pve-comp-task-builder"></div>
         <div id="pv-sec3-save-msg" style="display:none;background:#e8f5e9;border:1px solid #a5d6a7;border-radius:8px;padding:10px 14px;margin-top:8px;font-size:12px;color:#2e7d32;font-weight:600">
-          ✅ Activities saved! Now click <b>🔒 Lock Activities</b> to include them in the Monthly Report.
+          ✅ Activities saved! They will appear in the Monthly Report.
         </div>
         <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
           <button onclick="pvSave(3)" style="padding:7px 22px;background:var(--green);color:#fff;border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer">💾 Save</button>
-          <button onclick="lockAllSaved()" style="padding:7px 18px;background:#fff8e1;border:1px solid #ffe082;color:#b8860b;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer">🔒 Lock Activities</button>
           <button onclick="pvCancel(3);renderProfileView();renderMyReports();" style="padding:7px 16px;background:#f1f1f1;border:1px solid var(--border);border-radius:7px;font-size:12px;cursor:pointer">✕ Close</button>
         </div>
       </div>
@@ -2687,6 +2827,96 @@ function pveUpdateSelectedSchools(){
     : '';
 }
 
+// Refresh the saved-activities summary view (above the edit form) after saving
+function refreshSec3View(){
+  const el = document.getElementById('pv-sec3-view');
+  if(!el) return;
+  const myProjects = PROJECTS.filter(p => p.ngo === currentUser.org && p.status !== 'deleted');
+  const byComp = {};
+  myProjects.forEach(p => { const c=p.component||'Other'; if(!byComp[c]) byComp[c]=[]; byComp[c].push(p); });
+  el.innerHTML = Object.keys(byComp).length ? Object.entries(byComp).map(([comp,tasks])=>`
+    <div style="margin-bottom:12px">
+      <div style="font-weight:700;color:var(--blue);font-size:12px;margin-bottom:6px;padding:5px 10px;background:#e8f0fe;border-radius:6px">▸ ${comp}</div>
+      ${tasks.map((t,i)=>{
+        const dateLabel = t.start_date ? (fmtDate(t.start_date)+(t.end_date?' → '+fmtDate(t.end_date):'')) : '';
+        const dists = (t.task_dist||'').split(',').map(d=>d.trim()).filter(Boolean);
+        const allDist75 = dists.length >= 75;
+        const distSummary = allDist75 ? 'All Districts (75)' : dists.length > 3 ? dists.slice(0,3).join(', ') + ` +${dists.length-3} more` : dists.join(', ');
+        const allSchools = (t.task_schools||'').trim().toUpperCase()==='ALL';
+        const schoolList = allSchools ? [] : (t.task_schools||'').split('|').map(s=>s.trim()).filter(Boolean);
+        const schoolSummary = allSchools ? 'All Schools' : schoolList.length ? `${schoolList.length} School${schoolList.length>1?'s':''}` : '';
+        return `<div style="padding:10px 12px;background:#fff;border-radius:8px;margin-bottom:6px;border:1px solid #dde8fb;display:flex;align-items:flex-start;gap:10px">
+          <div style="background:#e8f0fe;color:var(--blue);border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;margin-top:1px">${i+1}</div>
+          <div style="flex:1;min-width:0">
+            <div style="font-weight:700;font-size:13px;color:#1a1a2e;margin-bottom:3px">${t.task_name||'—'}</div>
+            ${dateLabel?`<div style="font-size:11px;color:var(--muted);margin-bottom:4px">🗓 ${dateLabel}</div>`:''}
+            ${dists.length?`<div style="font-size:11px;color:#555">📍 ${distSummary}${schoolSummary?' &nbsp;·&nbsp; 🏫 '+schoolSummary:''}</div>`:''}
+          </div>
+        </div>`;
+      }).join('')}
+    </div>`).join('') : '<div style="color:var(--muted);font-size:12px;padding:8px">No activities defined yet.</div>';
+}
+
+// Render saved activities panel inside the edit form (above task builder)
+function renderSavedPanel(){
+  const el = document.getElementById('pv-sec3-saved-panel');
+  if(!el) return;
+  const myProjs = PROJECTS.filter(p => p.ngo === currentUser.org && p.status !== 'deleted');
+  if(!myProjs.length){ el.innerHTML=''; return; }
+  const byComp = {};
+  myProjs.forEach(p=>{ const c=p.component||'Other'; if(!byComp[c]) byComp[c]=[]; byComp[c].push(p); });
+  el.innerHTML = `<div style="background:#f0faf4;border:1px solid #a5d6a7;border-radius:8px;padding:12px 14px;margin-bottom:14px">
+    <div style="font-size:12px;font-weight:700;color:#2e7d32;margin-bottom:10px">
+      <span style="color:var(--blue)">Programme Activities</span>
+      <span style="color:var(--muted);font-weight:400;margin:0 5px">›</span>
+      <span>Your Saved Programme Activities</span>
+    </div>
+    ${Object.entries(byComp).map(([comp,tasks])=>`
+      <div style="margin-bottom:10px">
+        <div style="font-size:11px;font-weight:700;color:var(--blue);background:#e8f0fe;border-radius:5px;padding:4px 10px;margin-bottom:5px">▸ ${comp}</div>
+        ${tasks.map((t,i)=>{
+          const locked = String(t.locked)==='true';
+          const dateStr = t.start_date ? `🗓 ${fmtDate(t.start_date)}${t.end_date?' → '+fmtDate(t.end_date):''}` : '';
+          const dists = (t.task_dist||'').split(',').map(d=>d.trim()).filter(Boolean);
+          const distSummary = dists.length>=75 ? 'All Districts' : dists.length>3 ? dists.slice(0,3).join(', ')+` +${dists.length-3} more` : dists.join(', ');
+          return `<div style="background:#fff;border-radius:7px;padding:8px 12px;margin-bottom:5px;border:1px solid ${locked?'#a5d6a7':'#d0e8ff'};display:flex;align-items:center;gap:10px">
+            <div style="background:${locked?'#e8f5e9':'#e8f0fe'};color:${locked?'#2e7d32':'var(--blue)'};border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0">${i+1}</div>
+            <div style="flex:1;min-width:0">
+              <div style="font-weight:700;font-size:12px;color:#1a1a2e">${t.task_name||'—'} ${locked?'<span style="font-size:10px;color:#2e7d32;background:#e8f5e9;border:1px solid #a5d6a7;border-radius:10px;padding:1px 7px;font-weight:600">🔒 Locked</span>':''}</div>
+              <div style="font-size:11px;color:var(--muted);margin-top:2px">${dateStr}${distSummary?' &nbsp;·&nbsp; 📍 '+distSummary:''}</div>
+            </div>
+            ${!locked?`<button onclick="editSavedActivity('${t.project_id}')" style="padding:4px 12px;background:#e8f0fe;color:var(--blue);border:1px solid #b0c8f0;border-radius:5px;font-size:11px;font-weight:600;cursor:pointer;flex-shrink:0">✏ Edit</button>`:''}
+          </div>`;
+        }).join('')}
+      </div>`).join('')}
+  </div>`;
+}
+
+// Scroll to and highlight the matching task block in the builder
+function editSavedActivity(pid){
+  const block = document.querySelector(`[data-project-id="${pid}"]`);
+  if(!block){ alert('Please expand the component below to edit this activity.'); return; }
+  block.scrollIntoView({behavior:'smooth', block:'center'});
+  block.style.transition='box-shadow .3s';
+  block.style.boxShadow='0 0 0 3px #1a73e8';
+  setTimeout(()=>{ block.style.boxShadow=''; }, 2000);
+}
+
+// Delete a single saved activity, refresh panel + task builder
+async function deleteSavedActivity(pid){
+  if(!confirm('Delete this activity?\n\nThis cannot be undone.')) return;
+  showLoader('Deleting…');
+  try{
+    const res = await apiPost({action:'deleteProject', project_id: pid});
+    if(res && res.success===false){ hideLoader(); alert(res.error||'Delete failed'); return; }
+    await loadSheetData();
+    hideLoader();
+    renderSavedPanel();
+    refreshSec3View();
+    pvInitTasks();
+  }catch(e){ hideLoader(); alert('Delete failed: '+e.message); }
+}
+
 // Section 3 — Component/Task builder initialisation
 function pvInitTasks(){
   const container=document.getElementById('pve-comp-task-builder');
@@ -2731,10 +2961,10 @@ function pvInitTasks(){
       if(edEl) edEl.value=proj.end_date||'';
       // Pre-fill geographic coverage
       prefillTaskGeo(lastBlock, proj.task_dist||'', proj.task_schools||'ALL');
-      // If locked, freeze the block
-      if(lastBlock.dataset.locked==='true') lockTaskBlock(lastBlock);
+      // Tasks are always editable until the monthly report is submitted
     });
   });
+  renderSavedPanel();
 }
 
 // Visually freeze a task block so it cannot be edited or deleted
@@ -2884,8 +3114,10 @@ async function pvSave(sec){
       if(data.person){
         currentUser.name = data.person;
         sessionStorage.setItem('ngo_session', JSON.stringify(currentUser));
-        document.getElementById('sb-name').textContent = data.person;
-        document.getElementById('sb-avatar').textContent = data.person[0].toUpperCase();
+        const _sbn = document.getElementById('sb-name');
+        const _sba = document.getElementById('sb-avatar');
+        if(_sbn) _sbn.textContent = data.person;
+        if(_sba) _sba.textContent = data.person[0].toUpperCase();
       }
     }
 
@@ -2915,7 +3147,7 @@ async function pvSave(sec){
       const checkedComps=[...document.querySelectorAll('.pve-comp-cb:checked')];
       if(!checkedComps.length){ hideLoader(); alert('Please select at least one component'); return; }
 
-      // Validate: every sub-activity must have a name + start date + end date
+      // Validate: every activity must have name + start + end; every sub-activity too
       let validErr='';
       outer: for(const cb of checkedComps){
         const blocks=cb.closest('.comp-block').querySelectorAll('.task-block');
@@ -2923,6 +3155,10 @@ async function pvSave(sec){
           if(block.dataset.locked==='true') continue;
           const taskName=block.querySelector('.comp-task-input')?.value.trim()||'';
           if(!taskName) continue;
+          const tStart=block.querySelector('.act-start-date')?.value||'';
+          const tEnd  =block.querySelector('.act-end-date')?.value||'';
+          if(!tStart){ validErr=`Start Date is required for activity "${taskName}"`; break outer; }
+          if(!tEnd)  { validErr=`End Date is required for activity "${taskName}"`;   break outer; }
           const subRows=[...block.querySelectorAll('.sub-act-rows > div')];
           for(const row of subRows){
             const name =row.querySelector('.sub-act-name')?.value.trim()||'';
@@ -2973,10 +3209,12 @@ async function pvSave(sec){
       const banner=document.getElementById('pv-sec3-save-msg');
       if(banner){
         banner.style.cssText='display:block;background:#e8f5e9;border:1px solid #a5d6a7;border-radius:8px;padding:12px 16px;margin-top:10px;font-size:13px;color:#2e7d32;font-weight:600;text-align:center';
-        banner.innerHTML='✅ <b>Activities saved successfully!</b> Click 🔒 Lock Activities to include them in Monthly Report.';
+        banner.innerHTML='✅ <b>Activities saved successfully!</b>';
         banner.scrollIntoView({behavior:'smooth',block:'nearest'});
         setTimeout(()=>{ banner.style.display='none'; },8000);
       }
+      refreshSec3View();
+      renderSavedPanel();
       return; // don't fall through to pvCancel below
     }
 
@@ -2996,14 +3234,12 @@ function reopenProfileWizard(){
 
 function renderMyReports(){
   if(currentUser.role === 'admin') return;
+  renderReportsPage(); // keep My Reports page in sync
   const myReports = REPORTS.filter(r => r.ngo === currentUser.org)
     .sort((a,b) => (+b.id||0) - (+a.id||0));
   const card  = document.getElementById('my-reports-card');
   const list  = document.getElementById('my-reports-list');
-  const count = document.getElementById('my-reports-count');
-  if(!myReports.length){ card.style.display='none'; return; }
-  card.style.display='block';
-  count.textContent = myReports.length + ' report' + (myReports.length!==1?'s':'') + ' submitted';
+  if(!myReports.length){ if(card) card.style.display='none'; return; }
 
   // Format date "2026-04-01" → "1 Apr 2026"
   const fmtD = fmtDate; // use global — handles ISO timestamps correctly
@@ -3132,24 +3368,65 @@ function renderMyReports(){
 // ════════════════════════════════════
 function renderReportsPage(){
   if(currentUser.role === 'admin') return;
-  const sel = document.getElementById('mr-month-filter');
-  if(!sel) return;
-  const myReports = REPORTS.filter(r => r.ngo === currentUser.org)
-    .sort((a,b) => (+b.id||0) - (+a.id||0));
+  const wrap = document.getElementById('mr-reports-table');
+  if(!wrap) return;
 
-  // Build month options — proper names, no duplicates
-  const seen = new Set();
-  sel.innerHTML = '<option value="">— Select Month —</option>';
-  myReports.forEach(r => {
-    const label = _mrMonthLabel(r.month);
-    if(!label || seen.has(r.month)) return;
-    seen.add(r.month);
-    sel.appendChild(Object.assign(document.createElement('option'), {value: r.month, textContent: label}));
+  const toMs = v => { try{ return new Date(v).getTime(); }catch(e){ return 0; } };
+
+  // deduplicate by month — keep submitted if exists, else latest
+  const monthMap = {};
+  REPORTS.filter(r => r.ngo === currentUser.org).forEach(r => {
+    const key = _normalizeMonth(r.month || r.report_from || '');
+    if(!key) return;
+    const prev = monthMap[key];
+    if(!prev) { monthMap[key] = r; return; }
+    const prevLocked = String(prev.report_locked) === 'true';
+    const currLocked = String(r.report_locked) === 'true';
+    if(currLocked && !prevLocked) { monthMap[key] = r; return; }
+    if(!prevLocked && !currLocked && toMs(r.month||r.report_from||'') > toMs(prev.month||prev.report_from||''))
+      monthMap[key] = r;
   });
 
-  // Auto-select most recent month
-  if(myReports.length) sel.value = myReports[0].month;
-  mrOnMonthChange();
+  const myReports = Object.values(monthMap)
+    .sort((a,b) => toMs(b.month||b.report_from||'') - toMs(a.month||a.report_from||''));
+
+  if(!myReports.length){
+    wrap.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:12px 0">No reports submitted yet.</div>';
+    return;
+  }
+
+  const rows = myReports.map((r,i) => {
+    const month  = _mrMonthLabel(r.month) || r.month || '—';
+    const locked = String(r.report_locked) === 'true';
+    const badge  = locked
+      ? '<span style="background:#e8f5e9;color:#2e7d32;border:1px solid #a5d6a7;border-radius:10px;padding:2px 10px;font-size:11px;font-weight:600">✅ Submitted</span>'
+      : '<span style="background:#e3f2fd;color:#1565c0;border:1px solid #90caf9;border-radius:10px;padding:2px 10px;font-size:11px;font-weight:600">💾 Saved</span>';
+    const rid = r.report_from || r.month;
+    return `<tr style="border-bottom:1px solid var(--border)">
+      <td style="padding:10px 12px;font-size:13px;color:var(--muted);width:36px">${i+1}</td>
+      <td style="padding:10px 12px;font-weight:700;font-size:14px;color:#1a1a2e">${month}</td>
+      <td style="padding:10px 12px">${badge}</td>
+      <td style="padding:10px 12px;text-align:right">
+        <button onclick="downloadMonthReport('${rid}')"
+          style="padding:6px 16px;background:var(--blue);color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap">
+          ⬇ Download PDF
+        </button>
+      </td>
+    </tr>`;
+  }).join('');
+
+  wrap.innerHTML = `
+    <table style="width:100%;border-collapse:collapse;font-size:13px">
+      <thead>
+        <tr style="background:#f4f6fa">
+          <th style="padding:9px 12px;text-align:left;font-size:11px;color:var(--muted);font-weight:600;border-bottom:2px solid var(--border)">#</th>
+          <th style="padding:9px 12px;text-align:left;font-size:11px;color:var(--muted);font-weight:600;border-bottom:2px solid var(--border)">Month</th>
+          <th style="padding:9px 12px;text-align:left;font-size:11px;color:var(--muted);font-weight:600;border-bottom:2px solid var(--border)">Status</th>
+          <th style="padding:9px 12px;text-align:right;font-size:11px;color:var(--muted);font-weight:600;border-bottom:2px solid var(--border)">Report</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>`;
 }
 
 // Format month value to readable label, handling ISO timestamps from old data
@@ -3169,7 +3446,7 @@ function mrOnMonthChange(){
     return;
   }
 
-  const rep = REPORTS.find(r => r.ngo === currentUser.org && r.month === month);
+  const rep = REPORTS.find(r => r.ngo === currentUser.org && _normalizeMonth(r.month) === _normalizeMonth(month));
   if(!rep){
     if(stDiv) stDiv.style.display='none';
     if(wrap)  wrap.innerHTML=`<div style="color:var(--muted);font-size:13px;padding:20px;text-align:center">No saved report found for ${_mrMonthLabel(month)}.</div>`;
@@ -3184,7 +3461,7 @@ function mrOnMonthChange(){
     stDiv.style.display='block';
     const statusBadge = isLocked
       ? `<span style="background:#fce4ec;color:#c62828;border:1px solid #ef9a9a;border-radius:10px;padding:3px 10px;font-size:12px;font-weight:700">🔒 Locked</span>`
-      : `<span style="background:#fff8e1;color:#b8860b;border:1px solid #ffe082;border-radius:10px;padding:3px 10px;font-size:12px;font-weight:600">✏ Draft</span>`;
+      : `<span style="background:#e3f2fd;color:#1565c0;border:1px solid #90caf9;border-radius:10px;padding:3px 10px;font-size:12px;font-weight:600">💾 Saved</span>`;
     stDiv.innerHTML=`
       <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;
         padding:12px 16px;background:#f4f8ff;border:1px solid #c5d5f5;border-radius:10px">
@@ -3295,7 +3572,7 @@ function mrDownloadCSV(){
   const rows = myReports.map(r => [
     r.month||'', (r.report_from&&r.report_to ? r.report_from+' to '+r.report_to : r.month||''),
     r.schools||0, r.students||0, r.girls||0, r.teachers||0, r.meetings||0, r.events||0,
-    String(r.report_locked)==='true' ? 'Locked' : 'Draft'
+    String(r.report_locked)==='true' ? 'Submitted' : 'Saved'
   ]);
   const csv = [headers, ...rows].map(r => r.map(c=>`"${String(c||'').replace(/"/g,'""')}"`).join(',')).join('\r\n');
   const a = document.createElement('a');
@@ -3571,13 +3848,87 @@ function fillFormFromData(data){
   reportStep=0; updateReportSteps();
 }
 
-// Show Lock button only when at least one sub-entry exists across all tasks
+let _formDirty = false;
+let _autoSaveTimer = null;
+
+function _markDirty(){
+  _formDirty = true;
+  _updateSubmitBtn();
+}
+
+function _scheduleAutoSave(){
+  _markDirty();
+  if(_autoSaveTimer) clearTimeout(_autoSaveTimer);
+  _autoSaveTimer = setTimeout(async () => {
+    const pick = document.getElementById('r-month-pick');
+    if(!pick?.value) return;
+    const statusEl = document.getElementById('r-autosave-status');
+    if(statusEl) statusEl.textContent = '💾 Saving…';
+    try {
+      await submitMonthlyReport(true);
+      if(statusEl) statusEl.textContent = '✅ Saved ' + new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
+    } catch(e){
+      if(statusEl) statusEl.textContent = '❌ Save failed — ' + e.message;
+    }
+  }, 3000);
+}
+
+function _updateSubmitBtn(){
+  const btn = document.getElementById('r-lock-btn');
+  if(!btn) return;
+  const pick = document.getElementById('r-month-pick');
+  if(!pick?.value) return;
+  const [yr,mo] = pick.value.split('-').map(Number);
+  const mNames=['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const months = mNames[mo-1]+' '+yr;
+  const _reps = REPORTS.filter(r=>r.ngo===currentUser?.org && r.month===months);
+  const rep = _reps.find(r=>String(r.report_locked)==='true') || _reps[0];
+  const isLocked = rep && String(rep.report_locked)==='true';
+
+  btn.style.display = 'block';
+  btn.disabled = false;
+  btn.style.cursor = 'pointer';
+
+  if(isLocked && !_formDirty){
+    btn.textContent = '✅ Submitted / जमा हो गई';
+    btn.style.background = '#e8f5e9';
+    btn.style.color = '#2e7d32';
+    btn.style.border = '1px solid #a5d6a7';
+    btn.disabled = true;
+    btn.style.cursor = 'default';
+  } else {
+    btn.textContent = '📤 Submit Monthly Report / मासिक रिपोर्ट जमा करें';
+    btn.style.background = '#e65100';
+    btn.style.color = '#fff';
+    btn.style.border = 'none';
+  }
+}
+
 function refreshLockBtn(){
-  const lockBtn = document.getElementById('r-lock-btn');
-  if(!lockBtn) return;
-  if(lockBtn.disabled) return; // already locked — keep as-is
-  const hasEntries = document.querySelectorAll('#r-task-cards .report-sub-entry').length > 0;
-  lockBtn.style.display = hasEntries ? 'block' : 'none';
+  const btn = document.getElementById('r-lock-btn');
+  if(!btn || btn.disabled) return;
+  const hasTasks = document.querySelectorAll('#r-task-cards [id$="_entries"]').length > 0;
+  if(hasTasks) _updateSubmitBtn();
+  else btn.style.display = 'none';
+}
+
+// Save report draft (no lock) — user can keep editing and saving
+async function saveReportDraft(){
+  const saveBtn = document.getElementById('r-save-btn');
+  if(saveBtn){ saveBtn.disabled=true; saveBtn.textContent='💾 Saving…'; }
+  try {
+    await submitMonthlyReport();
+    if(saveBtn){ saveBtn.disabled=false; saveBtn.textContent='💾 Save Progress'; }
+    // Brief visual confirmation
+    const msg = document.createElement('div');
+    msg.style.cssText='position:fixed;top:18px;left:50%;transform:translateX(-50%);background:#2e7d32;color:#fff;padding:10px 24px;border-radius:8px;font-size:13px;font-weight:700;z-index:9999;box-shadow:0 2px 8px rgba(0,0,0,.2)';
+    msg.textContent='✅ Progress saved! You can continue editing.';
+    document.body.appendChild(msg);
+    setTimeout(()=>msg.remove(), 3000);
+  } catch(e){
+    if(saveBtn){ saveBtn.disabled=false; saveBtn.textContent='💾 Save Progress'; }
+    if(e.message !== 'status_required') alert('Save failed: '+e.message);
+  }
 }
 
 function populateReportMonthPicker(){
@@ -3617,145 +3968,246 @@ function populateReportMonthPicker(){
 
 function prefillReportForm(){
   const myNGO = SAMPLE_NGOS.find(n => n.name === currentUser.org) || {};
-
-  // Auto-fill header
-  const set = (id, val) => { const el=document.getElementById(id); if(el) el.value=val||''; };
   const setText = (id, val) => { const el=document.getElementById(id); if(el) el.textContent=val||'—'; };
+  const set = (id, val) => { const el=document.getElementById(id); if(el) el.value=val||''; };
+
   setText('rh-org',    currentUser.org);
   setText('rh-person', myNGO.person || currentUser.name);
   setText('rh-dist',   myNGO.dist || '—');
   set('rh-phone', myNGO.phone);
   set('rh-email', currentUser.email);
 
-  // Populate month dropdown and auto-select current month
   populateReportMonthPicker();
+
+  // Show month label in header
+  const pick = document.getElementById('r-month-pick');
+  if(pick?.value){
+    const [yr2,mo2] = pick.value.split('-').map(Number);
+    const mNames2 = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    setText('rh-month-label', mNames2[mo2-1]+' '+yr2);
+  }
+
   onReportMonthChange();
 
-  // Show cumulative totals from past reports
+  // Show cumulative totals
   const myReps = REPORTS.filter(r=>r.ngo===currentUser.org);
   if(myReps.length){
-    const cum = {schools:0,students:0,girls:0,teachers:0,meetings:0,events:0};
+    const cum = {schools:0,students:0,girls:0,teachers:0};
     myReps.forEach(r=>{ for(const k in cum) cum[k]+=(+r[k]||0); });
     const cumEl = document.getElementById('r-cumulative');
     if(cumEl){
       cumEl.style.display='block';
-      cumEl.innerHTML=`📊 <b>Cumulative totals (all months combined):</b> &nbsp;
-        Schools: <b>${cum.schools}</b> &nbsp;|&nbsp;
-        Students: <b>${cum.students}</b> &nbsp;|&nbsp;
-        Girls: <b>${cum.girls}</b> &nbsp;|&nbsp;
-        Teachers: <b>${cum.teachers}</b> &nbsp;|&nbsp;
-        Meetings: <b>${cum.meetings}</b> &nbsp;|&nbsp;
-        Events: <b>${cum.events}</b>`;
+      cumEl.innerHTML=`📊 <b>Cumulative (all months):</b> Schools: <b>${cum.schools}</b> · Students: <b>${cum.students}</b> · Girls: <b>${cum.girls}</b> · Teachers: <b>${cum.teachers}</b>`;
     }
   }
 
-  // Hide success, show submit
-  document.getElementById('r-success-msg').style.display = 'none';
-  document.getElementById('r-submit-area').style.display = 'block';
+  const ssEl = document.getElementById('r-success-msg');
+  const saEl = document.getElementById('r-submit-area');
+  if(ssEl) ssEl.style.display = 'none';
+  if(saEl) saEl.style.display = 'block';
+}
+
+// ── Saved entry card (view mode) ──
+function _savedCardHtml(sa, idx){
+  const from = sa.from_date ? fmtDate(sa.from_date) : '—';
+  const to   = sa.to_date   ? fmtDate(sa.to_date)   : '—';
+  const text = (sa.details || sa.name || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const preview = text.length > 100 ? text.slice(0,100)+'…' : text;
+  return `<div class="task-entry-card" data-idx="${idx}"
+    data-from="${sa.from_date||''}" data-to="${sa.to_date||''}"
+    data-details="${(sa.details||sa.name||'').replace(/"/g,'&quot;')}"
+    style="background:#eaf3ff;border:1px solid #c5d8f8;border-radius:8px;padding:9px 12px;margin-bottom:6px;display:flex;align-items:flex-start;justify-content:space-between;gap:10px">
+    <div style="flex:1;min-width:0">
+      <div style="font-size:11px;font-weight:700;color:var(--blue);margin-bottom:3px">📅 ${from} → ${to}</div>
+      <div style="font-size:12px;color:#333;line-height:1.5;word-break:break-word">${preview||'<span style="color:var(--muted)">(no details)</span>'}</div>
+    </div>
+    <button type="button" onclick="editTaskEntry(this)"
+      style="flex-shrink:0;padding:4px 10px;background:#fff;color:var(--blue);border:1px solid #c5d8f8;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap">
+      ✏️ Edit
+    </button>
+  </div>`;
+}
+
+// ── Editable entry form (with Save button inside) ──
+function _editFormHtml(monthMin, monthMax, sa, tid){
+  const fromVal   = sa?.from_date || '';
+  const toVal     = sa?.to_date   || '';
+  const detailVal = (sa?.details || sa?.name || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const tidAttr   = tid ? `data-tid="${tid}"` : '';
+  return `<div class="task-entry-form" ${tidAttr} style="background:#f8faff;border:1.5px solid #b3cff5;border-radius:8px;padding:12px 14px;margin-bottom:8px">
+    <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:10px">
+      <div>
+        <label style="font-size:11px;color:#222;font-weight:700;display:block;margin-bottom:4px">From <span style="color:var(--red)">*</span></label>
+        <input type="date" class="entry-from" min="${monthMin}" max="${monthMax}" value="${fromVal}"
+          onchange="_markDirty();_scheduleAutoSave()"
+          style="padding:6px 10px;border:1.5px solid var(--border);border-radius:6px;font-size:13px">
+      </div>
+      <div>
+        <label style="font-size:11px;color:#222;font-weight:700;display:block;margin-bottom:4px">To <span style="color:var(--red)">*</span></label>
+        <input type="date" class="entry-to" min="${monthMin}" max="${monthMax}" value="${toVal}"
+          onchange="_markDirty();_scheduleAutoSave()"
+          style="padding:6px 10px;border:1.5px solid var(--border);border-radius:6px;font-size:13px">
+      </div>
+    </div>
+    <div style="margin-bottom:6px">
+      <label style="font-size:12px;color:#222;font-weight:700">What was done? <span style="color:var(--red)">*</span></label>
+    </div>
+    <textarea class="entry-details" rows="3" placeholder="Describe the activity done in this period..."
+      oninput="_markDirty();_scheduleAutoSave()"
+      style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;font-family:inherit;resize:vertical;outline:none;box-sizing:border-box;margin-bottom:10px">${detailVal}</textarea>
+    <div style="display:flex;gap:8px">
+      <button type="button" onclick="saveTaskEntry(this)"
+        style="padding:7px 18px;background:var(--blue);color:#fff;border:none;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer">
+        💾 Save Entry</button>
+      <button type="button" onclick="cancelTaskEntry(this)"
+        style="padding:7px 12px;background:#fff;color:var(--muted);border:1px solid var(--border);border-radius:6px;font-size:12px;cursor:pointer">
+        Cancel</button>
+    </div>
+  </div>`;
+}
+
+// ── Save current edit form → convert to card ──
+async function saveTaskEntry(btn){
+  const form = btn.closest('.task-entry-form');
+  if(!form) return;
+  const fromV = form.querySelector('.entry-from')?.value;
+  const toV   = form.querySelector('.entry-to')?.value;
+  const detV  = form.querySelector('.entry-details')?.value.trim();
+  if(!fromV){ alert('Please select a From date.'); return; }
+  if(!toV)  { alert('Please select a To date.');   return; }
+  if(!detV) { alert('Please describe what was done.'); return; }
+
+  const sa = { from_date: fromV, to_date: toV, details: detV };
+  const cardDiv = document.createElement('div');
+  cardDiv.innerHTML = _savedCardHtml(sa, Date.now());
+  form.replaceWith(cardDiv.firstChild);
+
+  _markDirty();
+  const statusEl = document.getElementById('r-autosave-status');
+  if(statusEl) statusEl.textContent = '💾 Saving…';
+  try {
+    await submitMonthlyReport(true);
+    if(statusEl) statusEl.textContent = '✅ Saved ' + new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
+  } catch(e){
+    if(statusEl) statusEl.textContent = '❌ Save failed — check connection';
+    alert('Entry could not be saved: ' + e.message + '\n\nPlease try again or check your internet connection.');
+  }
+}
+
+function cancelTaskEntry(btn){
+  const form = btn.closest('.task-entry-form');
+  const container = form?.closest('[id$="_entries"]');
+  if(!container) return;
+  // Only remove if there's at least one saved card
+  if(container.querySelectorAll('.task-entry-card').length > 0) form.remove();
+  else alert('Please save at least one entry before cancelling.');
+}
+
+// ── Edit button on saved card → convert back to form ──
+function editTaskEntry(btn){
+  const card = btn.closest('.task-entry-card');
+  if(!card) return;
+  const container = card.closest('[id$="_entries"]');
+  if(container?.querySelector('.task-entry-form')){ alert('Please save the open entry first.'); return; }
+  const sa = { from_date: card.dataset.from, to_date: card.dataset.to, details: card.dataset.details };
+  const monthMin = container?.dataset.min || '';
+  const monthMax = container?.dataset.max || '';
+  const tid      = container?.id?.replace('_entries','') || '';
+  const wrap = document.createElement('div');
+  wrap.innerHTML = _editFormHtml(monthMin, monthMax, sa, tid);
+  card.replaceWith(wrap.firstChild);
+  _markDirty();
+}
+
+function addTaskEntry(tid, monthMin, monthMax){
+  const container = document.getElementById(tid + '_entries');
+  if(!container) return;
+  if(container.querySelector('.task-entry-form')){ alert('Please save the current entry first, then add another.'); return; }
+  const wrap = document.createElement('div');
+  wrap.innerHTML = _editFormHtml(monthMin, monthMax, null, tid);
+  container.appendChild(wrap.firstChild);
+  container.lastChild.scrollIntoView({behavior:'smooth', block:'nearest'});
+  _markDirty();
+}
+
+function removeTaskEntry(btn){
+  const entry = btn.closest('.task-entry');
+  const container = entry?.parentElement;
+  if(!container || container.querySelectorAll('.task-entry').length <= 1) return;
+  entry.remove();
+  _markDirty();
 }
 
 function buildReportTaskCards(existingRep){
   const container = document.getElementById('r-task-cards');
   if(!container) return;
-  const myProjs = PROJECTS.filter(p => p.ngo === currentUser.org && isTaskLocked(p.locked));
+  const myProjs = PROJECTS.filter(p => p.ngo === currentUser.org && p.status !== 'deleted');
   if(!myProjs.length){
-    const hasAny = PROJECTS.some(p => p.ngo === currentUser.org);
-    container.innerHTML = `<div style="text-align:center;padding:24px 16px;color:var(--muted)">
-      ${hasAny
-        ? `<b style="color:#b8860b">🔒 No locked activities yet.</b><br><span style="font-size:12px">Go to <a href="#" onclick="showPage('profile-view');return false;" style="color:var(--blue2)">My Profile → Section 3</a>, save your activities, then lock each one before submitting a report.</span>`
-        : `No activities found. Go to <a href="#" onclick="showPage('profile-view');return false;" style="color:var(--blue2)">My Profile</a> to add activities.`
-      }
+    container.innerHTML = `<div class="card" style="text-align:center;padding:24px;color:var(--muted)">
+      No activities found. Go to <a href="#" onclick="showPage('profile-view');return false;" style="color:var(--blue2)">My Profile</a> to add Programme Activities first.
     </div>`;
     return;
   }
 
-  // Use provided existing report data for pre-fill, else last report for carry-over
   const lastRep = existingRep || REPORTS.filter(r=>r.ngo===currentUser.org).sort((a,b)=>(+b.id||0)-(+a.id||0))[0] || {};
   let lastTasks = [];
   try { lastTasks = JSON.parse(lastRep.tasks_json || lastRep.tasks || '[]'); } catch(e){}
 
-  // Compute reporting month date range for constraining sub-entry dates
   const monthPickVal = document.getElementById('r-month-pick')?.value || '';
   let monthMin = '', monthMax = '';
   if(monthPickVal){
-    const [yr, mo] = monthPickVal.split('-').map(Number);
+    const [yr2, mo2] = monthPickVal.split('-').map(Number);
     monthMin = monthPickVal + '-01';
-    monthMax = monthPickVal + '-' + String(new Date(yr, mo, 0).getDate()).padStart(2,'0');
+    monthMax = monthPickVal + '-' + String(new Date(yr2, mo2, 0).getDate()).padStart(2,'0');
   }
 
-  // Group by component
   const byComp = {};
   myProjs.forEach(p => { const c=p.component||'Other'; if(!byComp[c]) byComp[c]=[]; byComp[c].push(p); });
 
+  const isLocked = existingRep && String(existingRep.report_locked) === 'true';
+
   container.innerHTML = Object.entries(byComp).map(([comp, tasks]) =>
-    `<div style="margin-bottom:14px">
+    `<div style="margin-bottom:8px">
       <div style="font-size:11px;font-weight:700;color:var(--blue);text-transform:uppercase;letter-spacing:.5px;
-        margin-bottom:6px;padding:5px 10px;background:#e8f0fe;border-radius:6px">▸ ${comp}</div>
+        padding:5px 10px;background:#e8f0fe;border-radius:6px;margin-bottom:8px">▸ ${comp}</div>
       ${tasks.map(t => {
         const tid = 'task_' + (t.project_id || t.task_name).toString().replace(/[^a-z0-9]/gi,'_');
-        const lastAct = lastTasks.find(a => a.task_name === t.task_name) || {};
-        const actStart  = t.start_date || '';
-        const actEnd    = t.end_date   || '';
-        const dateLabel = actStart ? (fmtDate(actStart) + (actEnd ? ' → ' + fmtDate(actEnd) : '')) : '';
-
-        return `<div style="border:1px solid var(--border);border-radius:8px;margin-bottom:10px;overflow:hidden">
-          <div style="background:#f0f6ff;padding:8px 12px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px">
-            <div>
-              <span style="font-weight:700;font-size:13px;color:var(--blue)">${t.task_name}</span>
-              ${dateLabel?`<span style="font-size:11px;color:var(--muted);margin-left:8px">${dateLabel}</span>`:''}
+        const tName = (t.task_name||'').trim().toLowerCase();
+        const lastAct = lastTasks.find(a => (a.task_name||'').trim().toLowerCase() === tName) || {};
+        const subs = lastAct.sub_activities?.length ? lastAct.sub_activities : [null];
+        const dateLabel = t.start_date ? fmtDate(t.start_date)+(t.end_date?' → '+fmtDate(t.end_date):'') : '';
+        const selOpts = ['Not started','In progress','Completed'].map(v =>
+          `<option value="${v}"${lastAct.status===v?' selected':''}>${v}</option>`).join('');
+        // Saved entries → cards; if none saved → one blank edit form
+        const savedCardsHtml = subs.filter(sa=>sa).map((sa,i) =>
+          isLocked ? _savedCardHtml(sa,i) : _savedCardHtml(sa,i)
+        ).join('');
+        const blankFormHtml  = !isLocked && !subs.filter(sa=>sa).length ? _editFormHtml(monthMin, monthMax, null, tid) : '';
+        return `<div class="card" style="margin-bottom:10px;padding:14px">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:12px">
+            <div style="flex:1;min-width:180px">
+              <div style="font-weight:700;font-size:15px;color:#1a1a2e">${t.task_name}</div>
+              ${dateLabel?`<div style="font-size:11px;color:var(--muted);margin-top:2px">${dateLabel}</div>`:''}
             </div>
-            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-              <label style="font-size:11px;color:var(--muted);font-weight:600">Status:</label>
-              <select id="${tid}_status" onchange="onTaskStatusChange('${tid}')"
-                style="padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:#fff;outline:none">
-                <option value="Not started">Not started</option>
-                <option value="In progress">In progress</option>
-                <option value="Completed">Completed</option>
+            <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+              <label style="font-size:11px;color:#222;font-weight:600;white-space:nowrap">Status <span style="color:var(--red)">*</span></label>
+              <select id="${tid}_status" onchange="_markDirty();_scheduleAutoSave()" ${isLocked?'disabled':''}
+                style="padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:#fff">
+                <option value="">— Select —</option>${selOpts}
               </select>
-              <span id="${tid}_completion_wrap" style="display:none;align-items:center;gap:6px">
-                <label style="font-size:11px;color:var(--muted);font-weight:600">Completion Date:</label>
-                <input type="date" id="${tid}_completion_date"
-                  style="padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;outline:none">
-              </span>
             </div>
           </div>
-          <div style="padding:10px 12px">
-            <div class="rse-list" id="${tid}_selist" data-tid="${tid}" data-start="${actStart}" data-end="${actEnd}"></div>
-            <button type="button"
-              onclick="addReportSubEntry('${tid}','${actStart}','${actEnd}','${monthMin}','${monthMax}')"
-              style="margin-top:4px;padding:5px 14px;background:var(--blue);color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer">
-              + Add Sub-Activity Entry
-            </button>
-          </div>
+          <div id="${tid}_entries" data-min="${monthMin}" data-max="${monthMax}">${savedCardsHtml}${blankFormHtml}</div>
+          <div id="${tid}_activity" style="display:none"></div>
+          <div id="${tid}_selist"   style="display:none"></div>
+          ${!isLocked?`<button type="button" onclick="addTaskEntry('${tid}','${monthMin}','${monthMax}')"
+            style="margin-top:4px;padding:6px 16px;background:#e8f0fe;color:var(--blue);border:1px solid #c5d8f8;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer">
+            + Add Entry</button>`:''}
         </div>`;
       }).join('')}
     </div>`
   ).join('');
 
-  // Pre-fill from saved report: if saved sub-activities exist → show view cards
-  // otherwise → show one blank editable entry
-  myProjs.forEach(t => {
-    const tid = 'task_' + (t.project_id || t.task_name).toString().replace(/[^a-z0-9]/gi,'_');
-    // Case-insensitive trimmed match to handle any whitespace/case differences
-    const tName = (t.task_name || '').trim().toLowerCase();
-    const lastAct = lastTasks.find(a => (a.task_name||'').trim().toLowerCase() === tName) || {};
-    const actStart = t.start_date || '';
-    const actEnd   = t.end_date   || '';
-    const subs = lastAct.sub_activities || [];
-    if(subs.length){
-      subs.forEach(sa => addSubEntryViewCard(tid, sa, monthMin, monthMax));
-    } else {
-      addReportSubEntry(tid, actStart, actEnd, null, monthMin, monthMax);
-    }
-    // Pre-fill task status
-    const statusSel = document.getElementById(tid + '_status');
-    if(statusSel && lastAct.status){
-      statusSel.value = lastAct.status;
-      onTaskStatusChange(tid);
-      const compEl = document.getElementById(tid + '_completion_date');
-      if(compEl && lastAct.completion_date) compEl.value = lastAct.completion_date;
-    }
-  });
   refreshLockBtn();
 }
 
@@ -3899,27 +4351,28 @@ function addReportSubEntry(tid, actStart, actEnd, prefill, monthMin, monthMax){
       title="Remove this entry"
       style="position:absolute;top:6px;right:8px;background:none;border:none;font-size:16px;cursor:pointer;color:var(--muted);line-height:1">×</button>
     <div style="margin-bottom:8px">
-      <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:3px">Sub Activity name</label>
+      <label style="font-size:11px;color:#222;font-weight:600;display:block;margin-bottom:3px">Monthly Activity <span style="color:var(--red)">*</span></label>
       <input type="text" class="rse-name" placeholder="e.g. School visit, Parent meeting, Training session…"
         style="width:100%;padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;outline:none">
     </div>
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap">
-      <label style="font-size:11px;color:var(--muted);white-space:nowrap">From:</label>
+      <label style="font-size:11px;color:#222;font-weight:600;white-space:nowrap">From: <span style="color:var(--red)">*</span></label>
       <input type="date" class="rse-from"${minAttr}${maxAttr}
         onchange="validateRseFromTo(this.closest('.report-sub-entry'),'${monthMin}','${monthMax}')"
         style="padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;outline:none">
-      <label style="font-size:11px;color:var(--muted);white-space:nowrap">To:</label>
+      <label style="font-size:11px;color:#222;font-weight:600;white-space:nowrap">To: <span style="color:var(--red)">*</span></label>
       <input type="date" class="rse-to"${minAttr}${maxAttr}
         onchange="validateRseFromTo(this.closest('.report-sub-entry'),'${monthMin}','${monthMax}')"
         style="padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;outline:none">
       ${rangeHint}
     </div>
-    <textarea class="rse-details" rows="2" placeholder="What was done? (required)"
+    <div style="margin-bottom:6px"><label style="font-size:11px;color:#222;font-weight:600">What was done?</label></div>
+    <textarea class="rse-details" rows="2" placeholder="Describe the activity carried out this month…"
       style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;resize:vertical;outline:none;margin-bottom:8px"></textarea>
     <div style="border:1px dashed var(--border);border-radius:7px;padding:8px;background:#fafbff">
-      <div style="font-size:11px;font-weight:600;color:var(--blue);margin-bottom:5px">📷 Photo (optional)</div>
+      <div style="font-size:11px;font-weight:600;color:#222;margin-bottom:5px">📷 Photo (optional)</div>
       <div onclick="document.getElementById('${sid}_file').click()"
-        style="border:1px dashed #b0bcd4;border-radius:6px;padding:7px;text-align:center;cursor:pointer;background:#fff;font-size:11px;color:var(--muted)">
+        style="border:1px dashed #b0bcd4;border-radius:6px;padding:7px;text-align:center;cursor:pointer;background:#fff;font-size:12px;color:#444">
         Click to attach a photo (max 5MB)
       </div>
       <input type="file" id="${sid}_file" accept="image/*" style="display:none"
@@ -3997,15 +4450,20 @@ function collapseSubEntryForm(btn){
   if(!form) return;
   const list = form.closest('.rse-list');
   if(!list) return;
+  const fromVal = form.querySelector('.rse-from')?.value || '';
+  const toVal   = form.querySelector('.rse-to')?.value   || '';
+  if(!fromVal){ alert('Please select a From date'); form.querySelector('.rse-from')?.focus(); return; }
+  if(!toVal)  { alert('Please select a To date');   form.querySelector('.rse-to')?.focus();   return; }
   const sa = {
     name:      form.querySelector('.rse-name')?.value.trim()    || '',
-    from_date: form.querySelector('.rse-from')?.value           || '',
-    to_date:   form.querySelector('.rse-to')?.value             || '',
+    from_date: fromVal,
+    to_date:   toVal,
     details:   form.querySelector('.rse-details')?.value.trim() || '',
     photo_key: form.dataset.sid || ''
   };
   const monthMin = form.querySelector('.rse-from')?.min || '';
   const monthMax = form.querySelector('.rse-from')?.max || '';
+
   _insertSubEntryViewCard(list, sa, monthMin, monthMax, form);
   form.remove();
   refreshLockBtn();
@@ -4134,71 +4592,45 @@ async function submitMonthlyReport(silent = false){
   const toDate   = monthPick.value + '-' + String(lastDay).padStart(2,'0');
   const kmi      = document.getElementById('r-kmi').value.trim();
 
-  // Check if locked
-  const myReps = REPORTS.filter(r => r.ngo === currentUser.org);
-  const existing = myReps.find(r => r.month === months);
-  if(existing && String(existing.report_locked) === 'true'){
-    alert('This month is locked and cannot be edited.');
-    return;
-  }
-
-  // Collect task-wise data — only locked tasks (these are the ones shown in the form)
-  const myProjs = PROJECTS.filter(p => p.ngo === currentUser.org && isTaskLocked(p.locked));
+  // Collect task-wise data from simplified form
+  const myProjs = PROJECTS.filter(p => p.ngo === currentUser.org && p.status !== 'deleted');
   const activities = myProjs.map(t => {
     const tid = 'task_' + (t.project_id || t.task_name).toString().replace(/[^a-z0-9]/gi,'_');
-
-    // Collect sub-activity entries filled in by the user this month
-    const seList = document.getElementById(tid + '_selist');
-    const entries = seList ? Array.from(seList.querySelectorAll('.report-sub-entry')) : [];
-    const sub_activities = entries.map(entry => {
-      if(entry.classList.contains('rse-view-card')){
-        // Locked (unedited) saved entry — collect from dataset
-        return {
-          name:      entry.dataset.name    || '',
-          from_date: entry.dataset.from    || '',
-          to_date:   entry.dataset.to      || '',
-          details:   entry.dataset.details || '',
-          photo_key: entry.dataset.sid     || ''
-        };
-      }
-      const sid = entry.dataset.sid || '';
-      return {
-        name:      entry.querySelector('.rse-name')?.value.trim()    || '',
-        from_date: entry.querySelector('.rse-from')?.value           || '',
-        to_date:   entry.querySelector('.rse-to')?.value             || '',
-        details:   entry.querySelector('.rse-details')?.value.trim() || '',
-        photo_key: sid
-      };
-    }).filter(e => e.name || e.from_date || e.to_date || e.details); // skip completely empty rows
-
-    const statusSel    = document.getElementById(tid + '_status');
-    const taskStatus   = statusSel?.value || (sub_activities.length ? 'In progress' : 'Not started');
-    const completionDate = taskStatus === 'Completed'
-      ? (document.getElementById(tid + '_completion_date')?.value || '') : '';
-
+    const statusSel = document.getElementById(tid + '_status');
+    if(!silent && statusSel && !statusSel.value){
+      alert(`Please select a Status for: "${t.task_name}"`); statusSel.focus(); throw new Error('status_required');
+    }
+    const taskStatus = statusSel?.value || '';
+    // Collect entries: saved cards (data attrs) + any open edit forms
+    const entriesContainer = document.getElementById(tid + '_entries');
+    const sub_activities = entriesContainer ? [
+      // Saved cards
+      ...Array.from(entriesContainer.querySelectorAll('.task-entry-card')).map(card => ({
+          name:'', from_date:card.dataset.from||'', to_date:card.dataset.to||'', details:card.dataset.details||''
+      })),
+      // Open edit forms (unsaved)
+      ...Array.from(entriesContainer.querySelectorAll('.task-entry-form')).map(form => ({
+          name:'',
+          from_date: form.querySelector('.entry-from')?.value  || '',
+          to_date:   form.querySelector('.entry-to')?.value    || '',
+          details:   form.querySelector('.entry-details')?.value.trim() || ''
+      }))
+    ].filter(e => e.from_date || e.to_date || e.details) : [];
     return {
-      task_id:         t.project_id || '',
-      task_name:       t.task_name,
-      component:       t.component,
-      start_date:      t.start_date || '',
-      end_date:        t.end_date   || '',
-      status:          taskStatus,
-      completion_date: completionDate,
-      sub_activities:  sub_activities,
-      photos:          []
+      task_id:        t.project_id || '',
+      task_name:      t.task_name,
+      component:      t.component,
+      start_date:     t.start_date || '',
+      end_date:       t.end_date   || '',
+      status:         taskStatus,
+      completion_date:'',
+      sub_activities: sub_activities,
+      photos:         []
     };
   });
 
   // Overall status: if any task has entries → 60%
   const overallStatus = activities.some(a=>a.sub_activities.length) ? '60' : '0';
-
-  // Collect all sub-entry photos for upload
-  const allTaskPhotos = activities.flatMap(a => {
-    return a.sub_activities.flatMap(sa => {
-      const sid = sa.photo_key;
-      return (taskPhotos[sid] || []).map(f => ({ file: f, tid: sid, task_name: a.task_name }));
-    });
-  });
 
   const report = {
     ngo:           currentUser.org,
@@ -4206,66 +4638,41 @@ async function submitMonthlyReport(silent = false){
     report_from:   fromDate,
     report_to:     toDate,
     report_locked: 'false',
-    schools:      +document.getElementById('r-schools').value  || 0,
-    students:     +document.getElementById('r-students').value || 0,
-    girls:        +document.getElementById('r-girls').value    || 0,
-    teachers:     +document.getElementById('r-teachers').value || 0,
-    meetings:     +document.getElementById('r-meetings').value || 0,
-    events:       +document.getElementById('r-events').value   || 0,
-    scst:         +document.getElementById('r-scst').value     || 0,
-    divyang:      +document.getElementById('r-divyang').value  || 0,
-    dropout:      +document.getElementById('r-dropout').value  || 0,
+    schools:      +document.getElementById('r-schools')?.value  || 0,
+    students:     +document.getElementById('r-students')?.value || 0,
+    girls:        +document.getElementById('r-girls')?.value    || 0,
+    teachers:     +document.getElementById('r-teachers')?.value || 0,
+    meetings:     +document.getElementById('r-meetings')?.value || 0,
+    events:       +document.getElementById('r-events')?.value   || 0,
+    scst:         +document.getElementById('r-scst')?.value     || 0,
+    divyang:      +document.getElementById('r-divyang')?.value  || 0,
+    dropout:      +document.getElementById('r-dropout')?.value  || 0,
     tasks:        JSON.stringify(activities),
     status:       overallStatus,
     kmi:          kmi,
-    equipment:    document.getElementById('r-equipment')?.value || '',
-    training:     document.getElementById('r-training')?.value  || '',
-    machine:      document.getElementById('r-machine')?.value   || '',
-    donation:     document.getElementById('r-donation')?.value  || '',
-    other_support:document.getElementById('r-other-support')?.value || '',
-    achieve:      document.getElementById('r-achieve').value,
-    challenges:   document.getElementById('r-challenges').value,
-    support:      document.getElementById('r-support').value,
-    plans:        document.getElementById('r-plans').value,
-    photos_count: allTaskPhotos.length,
+    equipment:    document.getElementById('r-equipment')?.value    || '',
+    training:     document.getElementById('r-training')?.value     || '',
+    machine:      document.getElementById('r-machine')?.value      || '',
+    donation:     document.getElementById('r-donation')?.value     || '',
+    other_support:document.getElementById('r-other-support')?.value|| '',
+    achieve:      document.getElementById('r-achieve')?.value      || '',
+    challenges:   document.getElementById('r-challenges')?.value   || '',
+    support:      document.getElementById('r-support')?.value      || '',
+    plans:        document.getElementById('r-plans')?.value        || '',
+    photos_count: 0,
     photos_folder: ''
   };
 
-  // Upload per-task photos to Drive
-  let photoFailCount = 0;
-  for(let i = 0; i < allTaskPhotos.length; i++){
-    const { file, task_name } = allTaskPhotos[i];
-    try {
-      showLoader(`Uploading photo ${i+1} of ${allTaskPhotos.length} — ${task_name}…`);
-      const b64 = await fileToBase64(file);
-      const res = await apiPost({ action:'uploadPhoto', ngo:currentUser.org, month:monthPick.value,
-        base64:b64, mimeType:file.type, filename:file.name }, 90000); // 90s timeout for photos
-      if(res.success && res.folderId) report.photos_folder = 'https://drive.google.com/drive/folders/' + res.folderId;
-      else photoFailCount++;
-    } catch(e){ photoFailCount++; console.warn('Photo upload failed:', e.message); }
-  }
-  if(photoFailCount > 0){
-    alert(`⚠️ ${photoFailCount} photo(s) could not be uploaded (network or size issue).\nThe report will still be saved without those photos.`);
-  }
-
-  if(!silent) showLoader('Saving report to Google Sheets…');
+  if(!silent) showLoader('Saving report…');
   let driveDocUrl = '';
-  let submitOk = false;
-  try {
-    const res = await apiPost({action:'submitReport', report: JSON.stringify(report)});
-    if(res && res.error) throw new Error(res.error);
-    if(res && res.success === false) throw new Error('Server rejected report');
-    submitOk = true;
-    if(res && res.docUrl) driveDocUrl = res.docUrl;
-  } catch(e){
-    console.warn('Sync error:', e.message);
-    if(!silent){ hideLoader(); alert('Report save failed: ' + e.message); }
-    return { success: false, error: e.message };
-  }
+  const res = await apiPost({action:'submitReport', report: JSON.stringify(report)});
+  if(!res || res.error) throw new Error(res?.error || 'Server error — report not saved');
+  if(res.docUrl) driveDocUrl = res.docUrl;
 
-  // Update local state — replace existing or push new
-  const idx = REPORTS.findIndex(r => r.ngo === currentUser.org && r.month === months);
-  if(idx >= 0) REPORTS[idx] = report; else REPORTS.push(report);
+  // Update local state — prefer locked entry if duplicates, else first match
+  const _allIdx = REPORTS.map((r,i)=>({r,i})).filter(({r})=>r.ngo===currentUser.org && r.month===months);
+  const _best = _allIdx.find(({r})=>String(r.report_locked)==='true') || _allIdx[0];
+  if(_best) REPORTS[_best.i] = report; else REPORTS.push(report);
   const ngo = SAMPLE_NGOS.find(n => n.name === currentUser.org);
   if(ngo){ ngo.schools=report.schools||ngo.schools; ngo.students=report.students||ngo.students; ngo.month=months; }
   renderPartnerTable(); renderMap(activeFilter);
@@ -4274,16 +4681,9 @@ async function submitMonthlyReport(silent = false){
   uploadedPhotos = [];
 
   if(!silent){
-    const lockBtn = document.getElementById('r-lock-btn');
-    if(lockBtn){ lockBtn.textContent = '🔒 Lock ' + months + ' Report'; lockBtn.disabled = false; lockBtn.style.opacity = '1'; }
     refreshLockBtn();
-    // Rebuild task cards so open forms collapse to view cards
-    const savedRep = REPORTS.find(r => r.ngo === currentUser.org && r.month === months);
-    if(savedRep) buildReportTaskCards(savedRep);
     renderMyReports();
-    document.getElementById('r-submit-area').scrollIntoView({behavior:'smooth'});
   }
-  return { success: true };
 }
 
 // View the currently selected month's report in a print window
@@ -4342,76 +4742,54 @@ function resetMonthlyReport(){
 
 function submitReport(){ submitMonthlyReport(); } // legacy alias
 
-// Show Section B/D/E + lock confirm panel
-function showLockPanel(){
+async function lockReportFinal(){
+  if(_autoSaveTimer){ clearTimeout(_autoSaveTimer); _autoSaveTimer = null; }
   const monthPick = document.getElementById('r-month-pick');
   if(!monthPick?.value){ alert('Please select a Reporting Month first.'); return; }
-  ['r-section-b','r-section-d','r-section-e'].forEach(id => {
-    const el = document.getElementById(id);
-    if(el) el.style.display = 'block';
-  });
-  const panel = document.getElementById('r-lock-confirm-panel');
-  if(panel){ panel.style.display = 'block'; panel.scrollIntoView({behavior:'smooth', block:'start'}); }
-}
-
-function hideLockPanel(){
-  ['r-section-b','r-section-d','r-section-e'].forEach(id => {
-    const el = document.getElementById(id);
-    if(el) el.style.display = 'none';
-  });
-  const panel = document.getElementById('r-lock-confirm-panel');
-  if(panel) panel.style.display = 'none';
-}
-
-async function confirmAndLock(){
   const kmi = document.getElementById('r-kmi')?.value.trim();
-  if(!kmi){ alert('KMI (Key Milestone Indicator) is required before locking.'); document.getElementById('r-kmi')?.focus(); return; }
-  const monthPick = document.getElementById('r-month-pick');
-  if(!monthPick?.value) return;
+  if(!kmi){ alert('Please fill the KMI (Key Milestone Indicator) before submitting.'); document.getElementById('r-kmi')?.focus(); document.getElementById('r-kmi')?.scrollIntoView({behavior:'smooth',block:'center'}); return; }
   const [yr, mo] = monthPick.value.split('-').map(Number);
   const mNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
   const months = mNames[mo-1] + ' ' + yr;
-  if(!confirm('Lock report for ' + months + '?\n\nOnce locked it cannot be edited.')) return;
-  // Save all sections first, then lock
-  const saveResult = await submitMonthlyReport(true);
-  if(saveResult && saveResult.success === false){
-    alert('Report save karne mein error aaya: ' + (saveResult.error||'Unknown error') + '\nPlease try again.');
-    return;
-  }
-  // Now lock
-  showLoader('Locking report…');
+  const mHindi = ['जनवरी','फरवरी','मार्च','अप्रैल','मई','जून','जुलाई','अगस्त','सितंबर','अक्टूबर','नवंबर','दिसंबर'];
+  const monthsHindi = mHindi[mo-1] + ' ' + yr;
+  const isUpdate = _formDirty && REPORTS.find(r=>r.ngo===currentUser.org && r.month===months && String(r.report_locked)==='true');
+  const msg = `⚠️ Submit Monthly Report / मासिक रिपोर्ट जमा करें\n\nAre you sure you want to submit your ${months} report to PMU?\nक्या आप ${monthsHindi} की रिपोर्ट PMU को जमा करना चाहते हैं?\n\nOnce submitted, NO further changes will be allowed for this month.\nएक बार जमा करने के बाद इस माह की रिपोर्ट में कोई भी बदलाव नहीं किया जा सकेगा।\n\nClick OK to Submit / ठीक है दबाएं तो जमा होगी\nClick Cancel to go back / रद्द करें तो वापस जाएं`;
+  if(!confirm(msg)) return;
+  const btn = document.getElementById('r-lock-btn');
+  if(btn){ btn.disabled=true; btn.textContent='Submitting…'; }
   try {
+    await submitMonthlyReport();
+    showLoader('Submitting to PMU…');
     const lockRes = await apiPost({action:'lockReport', ngo:currentUser.org, month:months});
-    if(lockRes && lockRes.success === false){ hideLoader(); alert('Lock failed: ' + (lockRes.error||'Unknown error')); return; }
-    const rep = REPORTS.find(r => r.ngo === currentUser.org && r.month === months);
+    if(!lockRes || !lockRes.success) throw new Error(lockRes?.error || 'Could not lock report on server');
+    const rep = REPORTS.find(r=>r.ngo===currentUser.org && r.month===months);
     if(rep) rep.report_locked = 'true';
     hideLoader();
-    hideLockPanel();
-    // Update UI for locked state
+    _formDirty = false;
+    _updateSubmitBtn();
     const wrap = document.getElementById('r-month-status-wrap');
     const stEl = document.getElementById('r-month-status');
     if(wrap && stEl){
       wrap.style.display = 'block';
-      stEl.style.cssText = 'padding:8px 12px;border-radius:7px;font-size:12px;font-weight:600;background:#fce4ec;color:#c62828;border:1px solid #ef9a9a';
-      stEl.textContent = '🔒 Locked — this month\'s report is finalised and submitted to PMU.';
+      stEl.style.cssText = 'padding:10px 14px;border-radius:7px;font-size:13px;font-weight:600;background:#e8f5e9;color:#2e7d32;border:1px solid #a5d6a7';
+      stEl.textContent = isUpdate ? '🔄 Report updated and resubmitted to PMU.' : '✅ Report submitted to PMU successfully!';
     }
-    const lockBtn = document.getElementById('r-lock-btn');
-    if(lockBtn){ lockBtn.textContent='🔒 '+months+' — Locked'; lockBtn.disabled=true; lockBtn.style.display='block'; lockBtn.style.opacity='0.5'; }
-    
-    
-    // Show B/D/E as read-only summary after lock
-    ['r-section-b','r-section-d','r-section-e'].forEach(id => {
-      const el = document.getElementById(id);
-      if(el){ el.style.display='block'; el.querySelectorAll('input,textarea').forEach(i=>i.disabled=true); }
-    });
+    // Rebuild task cards as read-only and disable all other inputs
+    buildReportTaskCards(REPORTS.find(r=>r.ngo===currentUser.org && r.month===months));
+    document.querySelectorAll('#r-section-b input,#r-section-b textarea,#r-section-b select,#r-section-d input,#r-section-d textarea,#r-section-d select').forEach(el=>{el.disabled=true;el.style.background='#f5f5f5';el.style.color='#888';});
     renderMyReports();
-  } catch(e){ hideLoader(); alert('Lock failed: ' + e.message); }
+  } catch(e){ hideLoader(); if(btn){btn.disabled=false;_updateSubmitBtn();} alert('Submission failed: '+e.message); }
 }
+
+function showLockPanel(){ lockReportFinal(); } // legacy alias
+function hideLockPanel(){ /* no-op — sections always visible now */ }
+function confirmAndLock(){ lockReportFinal(); } // legacy alias
 
 // ── Download full report for a single month (print-to-PDF) ──
 function downloadMonthReport(month){
   const myNGO  = SAMPLE_NGOS.find(n=>n.name===currentUser.org)||{};
-  const myProjs= PROJECTS.filter(p=>p.ngo===currentUser.org && isTaskLocked(p.locked));
+  const myProjs= PROJECTS.filter(p=>p.ngo===currentUser.org && p.status!=='deleted');
   const rep    = REPORTS.find(r=>r.ngo===currentUser.org && (r.report_from===month||r.month===month));
   if(!rep){ alert('Report not found for '+month); return; }
 
@@ -4636,7 +5014,7 @@ function downloadAllNGOsSummary(){
   rows.push([]);
 
   // ── Overall totals ─────────────────────────────────────
-  const allReps = filterMonth === 'all' ? REPORTS : REPORTS.filter(r => r.month === filterMonth);
+  const allReps = filterMonth === 'all' ? REPORTS : REPORTS.filter(r => _normalizeMonth(r.month) === filterMonth);
   const totSchools   = allReps.reduce((a,r)=>a+(+r.schools||0),0);
   const totStudents  = allReps.reduce((a,r)=>a+(+r.students||0),0);
   const totGirls     = allReps.reduce((a,r)=>a+(+r.girls||0),0);
@@ -4659,7 +5037,7 @@ function downloadAllNGOsSummary(){
   SAMPLE_NGOS.forEach(ngo => {
     const ngoReps = filterMonth === 'all'
       ? REPORTS.filter(r => r.ngo === ngo.name).sort((a,b)=>(+a.id||0)-(+b.id||0))
-      : REPORTS.filter(r => r.ngo === ngo.name && r.month === filterMonth);
+      : REPORTS.filter(r => r.ngo === ngo.name && _normalizeMonth(r.month) === filterMonth);
 
     if(!ngoReps.length){
       // NGO has no report for selected period
@@ -4843,19 +5221,13 @@ function renderUnlockTasksPage(){
   const tbody = document.getElementById('unlock-tasks-tbody');
   const empty = document.getElementById('unlock-tasks-empty');
   if(!tbody) return;
-
-  // Collect all locked components across all NGOs
-  const rows = [];
   const compMap = {};
   PROJECTS.filter(p => p.status !== 'deleted').forEach(p => {
     const key = p.ngo + '||' + p.component;
     if(!compMap[key]) compMap[key] = { ngo: p.ngo, component: p.component, tasks: [] };
     compMap[key].tasks.push(p);
   });
-  Object.values(compMap).forEach(c => {
-    if(c.tasks.every(t => isTaskLocked(t.locked))) rows.push(c);
-  });
-
+  const rows = Object.values(compMap).filter(c => c.tasks.every(t => isTaskLocked(t.locked)));
   if(!rows.length){
     tbody.innerHTML = '';
     empty.style.display = 'block';
@@ -4867,36 +5239,83 @@ function renderUnlockTasksPage(){
     <td><strong>${r.ngo}</strong></td>
     <td>${r.component}</td>
     <td style="text-align:center">${r.tasks.length}</td>
-    <td>
-      <button onclick="adminUnlockComponent('${r.component.replace(/'/g,"\\'")}','${r.ngo.replace(/'/g,"\\'")}',this)"
-        style="padding:5px 16px;font-size:12px;font-weight:700;background:#e65100;color:#fff;border:none;border-radius:5px;cursor:pointer">
-        🔓 Unlock
-      </button>
-    </td>
+    <td><button onclick="adminUnlockComponent('${r.component.replace(/'/g,"\\'")}','${r.ngo.replace(/'/g,"\\'")}',this)"
+      style="padding:5px 16px;font-size:12px;font-weight:700;background:#e65100;color:#fff;border:none;border-radius:5px;cursor:pointer">
+      🔓 Unlock</button></td>
   </tr>`).join('');
 }
 
+async function adminUnlockComponent(comp, ngoName, btn){
+  btn.disabled = true; btn.textContent = '...';
+  try {
+    const res = await apiPost({ action:'unlockProjectsByComponent', ngo: ngoName, component: comp });
+    if(res.success){
+      PROJECTS.filter(p => p.ngo === ngoName && p.component === comp && p.status !== 'deleted')
+              .forEach(p => p.locked = 'false');
+      renderUnlockTasksPage();
+    } else {
+      alert('Unlock failed: ' + (res.error||'Unknown error'));
+      btn.disabled = false; btn.textContent = '🔓 Unlock';
+    }
+  } catch(e){
+    alert('Error: ' + e.message);
+    btn.disabled = false; btn.textContent = '🔓 Unlock';
+  }
+}
+
 function renderAdminNGOList(){
-  document.getElementById('admin-ngo-tbody').innerHTML=SAMPLE_NGOS.map((n,i)=>{
-    const taskCount = PROJECTS.filter(p=>p.ngo===n.name && p.status!=='deleted').length;
-    const lockedCount = PROJECTS.filter(p=>p.ngo===n.name && p.status!=='deleted' && isTaskLocked(p.locked)).length;
-    return `<tr>
-      <td>${i+1}</td>
-      <td><strong>${n.name}</strong></td>
-      <td style="font-size:11px">${n.person}</td>
-      <td><span class="badge" style="background:${THEME_COLORS[n.theme]||'#ccc'}22;color:${THEME_COLORS[n.theme]||'#555'}">${n.theme}</span></td>
-      <td style="font-size:11px;color:var(--muted)">${n.dist}</td>
-      <td>${n.schools.toLocaleString()}</td>
-      <td>${REPORTS.filter(r=>r.ngo===n.name).length}</td>
-      <td style="font-size:11px">${n.month}</td>
+  const tbody = document.getElementById('admin-ngo-tbody');
+  if(!tbody) return;
+
+  const rows = ADMIN_PARTNERS.length ? ADMIN_PARTNERS : SAMPLE_NGOS.map(n=>({
+    org: n.name, email: '', status: n.ngo_status||'active'
+  }));
+
+  tbody.innerHTML = rows.map((p, i) => {
+    const ngoName  = p.org || '';
+    const repCount = REPORTS.filter(r => r.ngo===ngoName).length;
+    const isActive = (p.status||'active') === 'active';
+    const ngoEsc   = ngoName.replace(/'/g,"\\'");
+
+    return `<tr style="${isActive?'':'background:#fff5f5;opacity:.85'}">
+      <td style="color:var(--muted);font-size:11px">${i+1}</td>
+      <td><strong style="color:var(--blue)">${ngoName}</strong></td>
+      <td style="font-size:11px;color:var(--muted)">${p.email||'—'}</td>
+      <td style="text-align:center">${repCount}</td>
       <td>
-        <button onclick="openAdminTaskModal('${n.name.replace(/'/g,"\\'")}')
-          " style="padding:4px 10px;font-size:11px;background:var(--blue);color:#fff;border:none;border-radius:5px;cursor:pointer;white-space:nowrap">
-          ${taskCount?`${lockedCount}/${taskCount} 🔒`:'—'} Tasks
+        <span style="padding:3px 10px;border-radius:12px;font-size:11px;font-weight:700;
+          background:${isActive?'#e8f5e9':'#fce4ec'};color:${isActive?'#2e7d32':'#c62828'}">
+          ${isActive ? 'Active' : 'Inactive'}
+        </span>
+      </td>
+      <td>
+        <button onclick="toggleNGOStatus('${ngoEsc}', '${isActive?'inactive':'active'}', this)"
+          style="padding:4px 10px;font-size:11px;font-weight:600;border:none;border-radius:6px;cursor:pointer;white-space:nowrap;
+            background:${isActive?'#fce4ec':'#e8f5e9'};color:${isActive?'#c62828':'#2e7d32'}">
+          ${isActive ? '🔴 Mark Inactive' : '🟢 Mark Active'}
         </button>
       </td>
     </tr>`;
   }).join('');
+}
+
+async function toggleNGOStatus(ngo, newStatus, btn){
+  if(!confirm(`Mark "${ngo}" as ${newStatus}?\n\n${newStatus==='inactive'?'They will not be able to login.':'They will be able to login again.'}`)) return;
+  btn.disabled = true; btn.textContent = '...';
+  try {
+    const res = await apiPost({ action:'setNGOStatus', ngo, status: newStatus });
+    if(res.success){
+      const p = ADMIN_PARTNERS.find(x => x.org === ngo);
+      if(p) p.status = newStatus;
+      // Also update SAMPLE_NGOS
+      const sn = SAMPLE_NGOS.find(n => n.name === ngo);
+      if(sn) sn.ngo_status = newStatus;
+      renderAdminNGOList();
+    } else {
+      alert('Failed: ' + (res.error||'Unknown error'));
+      btn.disabled = false;
+    }
+  } catch(e){ alert('Error: ' + e.message); btn.disabled = false; }
 }
 
 function openAdminTaskModal(ngoName){
@@ -4957,7 +5376,6 @@ async function adminUnlockComponent(comp, ngoName, btn){
     if(res.success){
       PROJECTS.filter(p => p.ngo === ngoName && p.component === comp && p.status !== 'deleted')
               .forEach(p => p.locked = 'false');
-      renderUnlockTasksPage();
       renderAdminNGOList();
     } else {
       alert('Unlock failed: ' + (res.error||'Unknown error'));
@@ -4992,15 +5410,24 @@ function generateReport(){
   const selMonth = document.getElementById('rep-month').value;
   const out      = document.getElementById('report-output');
 
+  // When "All NGOs" is selected, only include NGOs that have submitted a report for the chosen month
+  function ngoHasReport(ngoName){
+    return REPORTS.some(r => r.ngo === ngoName &&
+      (selMonth === 'all' || _normalizeMonth(r.month) === _normalizeMonth(selMonth)) &&
+      String(r.report_locked) === 'true');
+  }
+
   if(selType === 'official'){
     // ── OFFICIAL KPI REPORT (per NGO) ──
-    let targetNGOs = selNGO === 'all' ? SAMPLE_NGOS : SAMPLE_NGOS.filter(n=>n.name===selNGO);
-    if(!targetNGOs.length){ out.innerHTML='<p style="color:var(--muted);padding:16px">No NGO data found.</p>'; return; }
+    let targetNGOs = selNGO === 'all'
+      ? SAMPLE_NGOS.filter(n => ngoHasReport(n.name))
+      : SAMPLE_NGOS.filter(n=>n.name===selNGO);
+    if(!targetNGOs.length){ out.innerHTML='<p style="color:var(--muted);padding:16px">No submitted reports found for the selected filter.</p>'; return; }
     out.innerHTML = targetNGOs.map(n => buildOfficialReport(n, selMonth)).join('');
 
   } else {
     // ── SUMMARY REPORT (all NGOs) ──
-    let ngos = selNGO==='all' ? SAMPLE_NGOS : SAMPLE_NGOS.filter(n=>n.name===selNGO);
+    let ngos = selNGO==='all' ? SAMPLE_NGOS.filter(n => ngoHasReport(n.name)) : SAMPLE_NGOS.filter(n=>n.name===selNGO);
     const tot = (key) => ngos.reduce((a,n)=>a+(+n[key]||0),0);
     out.innerHTML = `
       <div class="official-report">
@@ -5078,9 +5505,19 @@ function buildReportRows(ngoName, taskActs, myProjs){
   return rows;
 }
 
+function _normalizeMonth(val){
+  if(!val) return '';
+  if(/^[A-Za-z]/.test(val)) return val.trim(); // already "April 2026"
+  try {
+    const d = new Date(val);
+    if(!isNaN(d)) return d.toLocaleDateString('en-IN',{month:'long',year:'numeric'});
+  } catch(e){}
+  return val.trim();
+}
+
 function buildOfficialReport(n, selMonth){
   const ngoReps = REPORTS.filter(rep => rep.ngo === n.name &&
-    (selMonth==='all' || rep.month === selMonth))
+    (selMonth==='all' || _normalizeMonth(rep.month) === selMonth))
     .sort((a,b)=>(+b.id||0)-(+a.id||0));
   const r = ngoReps[0] || {};
 

@@ -31,11 +31,14 @@ function doGet(e) {
     else if (action === 'saveProject')          result = saveProject(p);
     else if (action === 'getProjects')          result = getProjects(p);
     else if (action === 'deleteUnlockedProjects') result = deleteUnlockedProjects(p);
+    else if (action === 'deleteProject')          result = deleteProject(p);
     else if (action === 'lockProject')          result = lockProject(p);
     else if (action === 'unlockProject')        result = unlockProject(p);
     else if (action === 'unlockProjectsByComponent') result = unlockProjectsByComponent(p);
     else if (action === 'lockReport')           result = lockReport(p);
     else if (action === 'submitReport')  result = submitReport({ report: JSON.parse(p.report) });
+    else if (action === 'getAdminPartners')     result = getAdminPartners();
+    else if (action === 'setNGOStatus')         result = setNGOStatus(p);
     // legacy — kept for backward compat
     else if (action === 'login')          result = login(p);
     else if (action === 'changePassword') result = changePassword(p);
@@ -66,8 +69,11 @@ function doPost(e) {
     if (action === 'unlockProject') return respond(unlockProject(data));
     if (action === 'unlockProjectsByComponent') return respond(unlockProjectsByComponent(data));
     if (action === 'deleteUnlockedProjects') return respond(deleteUnlockedProjects(data));
-    if (action === 'lockReport')   return respond(lockReport(data));
-    if (action === 'submitReport') return respond(submitReport({ report: JSON.parse(data.report) }));
+    if (action === 'deleteProject')          return respond(deleteProject(data));
+    if (action === 'lockReport')        return respond(lockReport(data));
+    if (action === 'submitReport')      return respond(submitReport({ report: JSON.parse(data.report) }));
+    if (action === 'getAdminPartners')  return respond(getAdminPartners());
+    if (action === 'setNGOStatus')      return respond(setNGOStatus(data));
     return respond({ error: 'Unknown action' });
   } catch (err) {
     return respond({ error: err.message });
@@ -105,11 +111,6 @@ function sendOTP(data) {
       return { success: false, isAdmin: true, error: 'admin' };
     }
 
-    // Check NGO active status
-    if (!isNGOActive(org)) {
-      return { success: false, error: 'Your organisation is currently inactive. Please contact PMU Admin.' };
-    }
-
     // Ensure OTP columns exist (col 7 = otp, col 8 = otp_expiry, col 9 = otp_sent_at)
     const hRow = sheet.getRange(1, 1, 1, 9).getValues()[0];
     if (!hRow[6]) sheet.getRange(1, 7).setValue('otp');
@@ -142,7 +143,7 @@ function sendOTP(data) {
           '  ' + otp + '\n\n' +
           'This OTP is valid for 10 minutes.\n' +
           'Do not share this OTP with anyone.\n\n' +
-          'Login at: https://samsecup.dataimpact.in/\n\n' +
+          'Login at: https://samsecup.egtau.org/\n\n' +
           '— PMU Team, Samagra UP Secondary Education Programme'
       });
       return { success: true };
@@ -261,6 +262,43 @@ function getNGOList() {
   return { success: true, data };
 }
 
+// ── One-time: set ALL NGOs in NGO_List to active ──
+// Run once from Apps Script editor to re-enable all NGOs
+function activateAllNGOs() {
+  const ss        = getSS();
+  const listSheet = ss.getSheetByName('NGO_List');
+  if (!listSheet) { Logger.log('NGO_List not found'); return; }
+
+  const rows = listSheet.getDataRange().getValues();
+  const h    = rows[0];
+  let sIdx   = h.indexOf('status');
+  if (sIdx < 0) { sIdx = h.length; listSheet.getRange(1, sIdx+1).setValue('status'); }
+
+  let count = 0;
+  for (let i = 1; i < rows.length; i++) {
+    if (!String(rows[i][1]||'').trim()) continue;
+    listSheet.getRange(i+1, sIdx+1).setValue('active');
+    count++;
+  }
+
+  // Also clear any 'inactive' status in Users sheet
+  const usersSheet = ss.getSheetByName('Users');
+  if (usersSheet) {
+    const uRows = usersSheet.getDataRange().getValues();
+    const uH    = uRows[0];
+    const usIdx = uH.indexOf('status');
+    if (usIdx >= 0) {
+      for (let i = 1; i < uRows.length; i++) {
+        if (String(uRows[i][usIdx]||'').toLowerCase() === 'inactive') {
+          usersSheet.getRange(i+1, usIdx+1).setValue('active');
+        }
+      }
+    }
+  }
+
+  Logger.log('activateAllNGOs: ' + count + ' NGOs set to active.');
+}
+
 // Check if NGO is active in NGO_List
 function isNGOActive(orgName) {
   const sheet = getSS().getSheetByName('NGO_List');
@@ -275,15 +313,29 @@ function isNGOActive(orgName) {
 }
 
 // ── GET NGOs ─────────────────────────────────────────────────
-// NGOs sheet columns: id|name|theme|person|dist|x|y|schools|students|girls|teachers|progress|month|kmi
+// Returns all NGOs with a 'ngo_status' field (active/inactive) from NGO_List
+// Frontend filters inactive ones for non-admin; admin sees all with toggle
 function getNGOs() {
   const sheet = getSS().getSheetByName('NGOs');
   const rows  = sheet.getDataRange().getValues();
   if (rows.length < 2) return { success: true, data: [] };
   const headers = rows[0];
-  const data    = rows.slice(1).map(row => {
+  // Build status map from NGO_List: name → 'active'/'inactive'
+  const statusMap = {};
+  const listSheet = getSS().getSheetByName('NGO_List');
+  if (listSheet) {
+    const lRows = listSheet.getDataRange().getValues();
+    for (let i = 1; i < lRows.length; i++) {
+      const name   = String(lRows[i][1]||'').trim().toLowerCase();
+      const status = String(lRows[i][2]||'active').toLowerCase().trim();
+      if (name) statusMap[name] = status;
+    }
+  }
+  const data = rows.slice(1).map(row => {
     const obj = {};
     headers.forEach((h, i) => obj[h] = row[i]);
+    const key = String(obj.name||'').trim().toLowerCase();
+    obj.ngo_status = statusMap[key] || 'active'; // default active if not in list
     return obj;
   });
   return { success: true, data };
@@ -298,15 +350,20 @@ function getReports() {
   const rows  = sheet.getDataRange().getValues();
   if (rows.length < 2) return { success: true, data: [] };
   const headers = rows[0];
-  const data    = rows.slice(1).map(row => {
+  const raw = rows.slice(1).map(row => {
     const obj = {};
     headers.forEach((h, i) => obj[h] = row[i]);
-    // Ensure tasks_json is always a string for JSON.parse on client
     if (obj['tasks_json'] && typeof obj['tasks_json'] !== 'string') obj['tasks_json'] = JSON.stringify(obj['tasks_json']);
-    // App reads 'tasks' — serve tasks_json if available, else fallback
     obj['tasks'] = obj['tasks_json'] || obj['tasks'] || '[]';
     return obj;
   });
+  // Deduplicate: one row per ngo+month, prefer locked over draft
+  const best = {};
+  raw.forEach(r => {
+    const key = String(r.ngo) + '|' + String(r.month);
+    if (!best[key] || String(r.report_locked) === 'true') best[key] = r;
+  });
+  const data = Object.values(best);
   return { success: true, data };
 }
 
@@ -370,10 +427,7 @@ function submitReport(data) {
     const sheetNgo   = String(allRows[i][ngoIdx0]   || '').trim().toLowerCase();
     const sheetMonth = String(allRows[i][monthIdx0] || '').trim().toLowerCase();
     if (sheetNgo === rNgo && sheetMonth === rMonth) {
-      if (lockedIdx0 >= 0 && String(allRows[i][lockedIdx0]).toLowerCase() === 'true') {
-        return { success: false, error: 'Report is locked and cannot be updated.' };
-      }
-      updateRow = i + 1; // 1-indexed sheet row
+      updateRow = i + 1; // 1-indexed sheet row — always update, even if previously locked
       break;
     }
   }
@@ -395,10 +449,10 @@ function submitReport(data) {
     r.equipment || '', r.training || '', r.machine || '',
     r.donation  || '', r.other_support || '',
     r.report_from || '', r.report_to || '',
-    'false' // report_locked
+    updateRow > 0 ? (String(allRows[updateRow-1][lockedIdx0]) === 'true' ? 'true' : 'false') : 'false'
   ];
 
-  let savedRow; // track which sheet row was written
+  let savedRow;
   if (updateRow > 0) {
     rSheet.getRange(updateRow, 1, 1, newRow.length).setValues([newRow]);
     savedRow = updateRow;
@@ -411,7 +465,7 @@ function submitReport(data) {
   const nSheet = ss.getSheetByName('NGOs');
   const nRows  = nSheet.getDataRange().getValues();
   for (let i = 1; i < nRows.length; i++) {
-    if (String(nRows[i][1]||'').trim().toLowerCase() === rNgo) {
+    if (String(nRows[i][1] || '').trim().toLowerCase() === rNgo) {
       if (r.schools)  nSheet.getRange(i + 1,  8).setValue(+r.schools);
       if (r.students) nSheet.getRange(i + 1,  9).setValue(+r.students);
       if (r.girls)    nSheet.getRange(i + 1, 10).setValue(+r.girls);
@@ -467,6 +521,7 @@ function lockReport(data) {
   return { success: false, error: 'Report not found' };
 }
 
+
 // ── DRIVE FOLDER HELPERS ─────────────────────────────────────
 
 // Returns (or creates) the NGO's subfolder inside the parent Drive folder
@@ -490,7 +545,7 @@ function saveReportDoc(r, ngoFolder) {
   // Header
   body.appendParagraph('Monthly KPI Progress Report')
       .setHeading(DocumentApp.ParagraphHeading.HEADING1);
-  body.appendParagraph('Samagra Shiksha, Secondary, Uttar Pradesh | PMU')
+  body.appendParagraph('Samagra Shiksha, Secondary, Uttar Pradesh, PMU')
       .setHeading(DocumentApp.ParagraphHeading.HEADING3);
 
   body.appendParagraph('');
@@ -674,6 +729,26 @@ function deleteUnlockedProjects(data) {
   return { success: true };
 }
 
+// Mark a single unlocked project as deleted by project_id
+function deleteProject(data) {
+  if (!data.project_id) return { success: false, error: 'project_id required' };
+  const sheet = getSS().getSheetByName('Projects');
+  if (!sheet) return { success: false, error: 'No Projects sheet' };
+  const rows = sheet.getDataRange().getValues();
+  const h = rows[0];
+  const pidIdx    = h.indexOf('project_id');
+  const statusIdx = h.indexOf('status');
+  const lockedIdx = h.indexOf('locked');
+  for (let i = 1; i < rows.length; i++) {
+    if (String(rows[i][pidIdx]) !== String(data.project_id)) continue;
+    if (lockedIdx >= 0 && String(rows[i][lockedIdx]) === 'true')
+      return { success: false, error: 'Cannot delete a locked activity.' };
+    sheet.getRange(i + 1, statusIdx + 1).setValue('deleted');
+    return { success: true };
+  }
+  return { success: false, error: 'Project not found' };
+}
+
 // Lock a project so it can never be edited or deleted via the UI
 function lockProject(data) {
   const sheet = getSS().getSheetByName('Projects');
@@ -821,21 +896,90 @@ function forgotPassword(data) {
       const temp = 'NGO@' + Math.floor(1000 + Math.random() * 9000);
       sheet.getRange(i + 1, 2).setValue(temp);    // save new password
       sheet.getRange(i + 1, 6).setValue('');       // force password change on next login
-      // Send email
-      try {
-        MailApp.sendEmail({
-          to: rows[i][0],
-          subject: 'Samagra UP NGO Portal — Password Reset',
-          body: `Dear ${rows[i][3] || 'Partner'},\n\nYour password has been reset.\n\nTemporary Password: ${temp}\n\nPlease login and change your password immediately.\n\nLogin at: https://samsecup.dataimpact.in/\n\n— PMU Team, Samagra UP Secondary Education Programme`
-        });
-      } catch(e) {
-        // Email failed — still return temp password so admin can share manually
-        return { success: true, temp, emailSent: false };
-      }
-      return { success: true, emailSent: true };
+      return { success: true, temp };
     }
   }
   return { success: false, error: 'Email not found in system' };
+}
+
+// ── ADMIN: Get all NGO partners ──
+// org + email from Users sheet (positional), status from NGO_List (login source of truth)
+function getAdminPartners() {
+  const ss = getSS();
+
+  // Build status map from NGO_List (same source isNGOActive() uses)
+  const statusMap  = {};
+  const listSheet  = ss.getSheetByName('NGO_List');
+  if (listSheet) {
+    const lRows = listSheet.getDataRange().getValues();
+    for (let i = 1; i < lRows.length; i++) {
+      const name   = String(lRows[i][1]||'').trim().toLowerCase();
+      const status = String(lRows[i][2]||'active').trim().toLowerCase();
+      if (name) statusMap[name] = status;
+    }
+  }
+
+  const usersSheet = ss.getSheetByName('Users');
+  if (!usersSheet) return { success: true, data: [] };
+
+  const uRows    = usersSheet.getDataRange().getValues();
+  const seen     = new Set();
+  const partners = [];
+  for (let i = 1; i < uRows.length; i++) {
+    const email = String(uRows[i][0]||'').trim();
+    const role  = String(uRows[i][2]||'').toLowerCase();
+    const org   = String(uRows[i][4]||'').trim();
+    if (role === 'admin') continue;
+    if (!org || seen.has(org.toLowerCase())) continue;
+    seen.add(org.toLowerCase());
+    partners.push({
+      org,
+      email,
+      status: statusMap[org.toLowerCase()] || 'active'
+    });
+  }
+  return { success: true, data: partners };
+}
+
+// ── ADMIN: Set NGO active/inactive status ──
+// Updates Users sheet (login access) + NGO_List status column
+function setNGOStatus(data) {
+  const ngo    = String(data.ngo||'').trim();
+  const status = String(data.status||'').trim().toLowerCase();
+  if (!ngo || !status) return { success: false, error: 'NGO name and status required' };
+
+  const ss = getSS();
+
+  // Update Users sheet — status column (auto-created if missing)
+  const usersSheet = ss.getSheetByName('Users');
+  if (usersSheet) {
+    const uRows = usersSheet.getDataRange().getValues();
+    const uH    = uRows[0];
+    let sIdx = uH.indexOf('status');
+    if (sIdx < 0) { sIdx = uH.length; usersSheet.getRange(1, sIdx+1).setValue('status'); }
+    for (let i = 1; i < uRows.length; i++) {
+      if (String(uRows[i][4]||'').trim().toLowerCase() === ngo.toLowerCase()) { // col 4 = org
+        usersSheet.getRange(i+1, sIdx+1).setValue(status);
+      }
+    }
+  }
+
+  // Sync to NGO_List for isNGOActive() login check
+  const listSheet = ss.getSheetByName('NGO_List');
+  if (listSheet) {
+    const lRows = listSheet.getDataRange().getValues();
+    const lH    = lRows[0];
+    let   lsIdx = lH.indexOf('status');
+    if (lsIdx < 0) { lsIdx = lH.length; listSheet.getRange(1, lsIdx+1).setValue('status'); }
+    for (let i = 1; i < lRows.length; i++) {
+      if (String(lRows[i][1]||'').trim().toLowerCase() === ngo.toLowerCase()) {
+        listSheet.getRange(i+1, lsIdx+1).setValue(status);
+        break;
+      }
+    }
+  }
+
+  return { success: true };
 }
 
 // ── PERMISSION TEST — run this once manually to authorize MailApp ──
@@ -846,4 +990,151 @@ function authorizeMailPermission() {
     body: 'Mail permission authorized successfully. You can delete this email.'
   });
   Logger.log('Mail sent OK to: ' + Session.getActiveUser().getEmail());
+}
+
+// ══════════════════════════════════════════════════════════════
+// AUTO MONTHLY EMAILS & TRIGGERS
+// ══════════════════════════════════════════════════════════════
+
+const MONTH_NAMES = ['January','February','March','April','May','June',
+                     'July','August','September','October','November','December'];
+const PORTAL_URL  = 'https://samsecup.egtau.org/';
+
+// ── Helpers ──────────────────────────────────────────────────
+
+// Normalize month value (handles ISO date strings or "April 2026" format)
+function normalizeMonthLabel(val) {
+  if (!val) return '';
+  const s = String(val).trim();
+  if (/^[A-Za-z]/.test(s)) return s; // already "April 2026"
+  try {
+    const d = new Date(s);
+    if (!isNaN(d)) return MONTH_NAMES[d.getMonth()] + ' ' + d.getFullYear();
+  } catch(e) {}
+  return s;
+}
+
+// Get all active NGO users: [{email, name, org}]
+// Reads by position: col 0=email, 2=role, 3=name, 4=org (same as login)
+function getActiveNGOUsers() {
+  const sheet = getSS().getSheetByName('Users');
+  if (!sheet) return [];
+  const rows  = sheet.getDataRange().getValues();
+  const users = [];
+  for (let i = 1; i < rows.length; i++) {
+    const email = String(rows[i][0]||'').trim();
+    const role  = String(rows[i][2]||'').toLowerCase();
+    const name  = String(rows[i][3]||'').trim();
+    const org   = String(rows[i][4]||'').trim();
+    if (role === 'admin') continue;
+    if (!email || !org) continue;
+    if (!isNGOActive(org)) continue;
+    users.push({ email, name: name || org, org });
+  }
+  return users;
+}
+
+// Check if a report is locked for NGO + monthLabel
+function isReportLocked(repRows, repHeaders, org, monthLabel) {
+  const ngoIdx    = repHeaders.indexOf('ngo');
+  const monthIdx  = repHeaders.indexOf('month');
+  const lockedIdx = repHeaders.indexOf('report_locked');
+  for (let i = 1; i < repRows.length; i++) {
+    if (String(repRows[i][ngoIdx]).trim() !== org) continue;
+    if (normalizeMonthLabel(repRows[i][monthIdx]) !== monthLabel) continue;
+    return String(repRows[i][lockedIdx]).toLowerCase() === 'true';
+  }
+  return false; // no report found = not locked
+}
+
+// ── 1. 30th of month: Remind NGOs that have NOT yet submitted their report ──
+function sendMonthEndReminders() {
+  const today      = new Date();
+  const monthLabel = MONTH_NAMES[today.getMonth()] + ' ' + today.getFullYear();
+
+  const ss         = getSS();
+  const repSheet   = ss.getSheetByName('Reports');
+  const repRows    = repSheet ? repSheet.getDataRange().getValues() : [[]];
+  const repHeaders = repRows[0] || [];
+  const ngoIdx     = repHeaders.indexOf('ngo');
+  const monthIdx   = repHeaders.indexOf('month');
+  const lockedIdx  = repHeaders.indexOf('report_locked');
+
+  function isSubmitted(org) {
+    for (let i = 1; i < repRows.length; i++) {
+      if (String(repRows[i][ngoIdx]||'').trim() !== org) continue;
+      if (normalizeMonthLabel(repRows[i][monthIdx]) !== monthLabel) continue;
+      return String(repRows[i][lockedIdx]||'').toLowerCase() === 'true';
+    }
+    return false;
+  }
+
+  const users = getActiveNGOUsers();
+  const done  = new Set();
+  let sent = 0;
+
+  users.forEach(u => {
+    if (done.has(u.org)) return;
+    done.add(u.org);
+    if (isSubmitted(u.org)) return;   // already submitted — skip
+
+    try {
+      MailApp.sendEmail({
+        to: u.email,
+        subject: `Action Required: Submit your ${monthLabel} Report — Samagra Shiksha`,
+        htmlBody: `
+<div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;border:1px solid #dde3ee;border-radius:10px;overflow:hidden">
+  <div style="background:#1A3C6E;padding:18px 24px">
+    <h2 style="color:#fff;margin:0;font-size:16px">Samagra Shiksha — NGO Partner Portal</h2>
+    <p style="color:rgba(255,255,255,0.7);margin:4px 0 0;font-size:12px">Madhyamik Shiksha Vibhag, Uttar Pradesh | PMU</p>
+  </div>
+  <div style="padding:24px">
+    <p style="font-size:14px;color:#1a1a2e">Dear <strong>${u.name || u.org}</strong>,</p>
+    <p style="font-size:14px;color:#444;line-height:1.6">
+      This is a reminder that your <strong>${monthLabel}</strong> Monthly Report for
+      <strong>${u.org}</strong> has not been submitted yet.
+    </p>
+    <div style="background:#fff3e0;border-left:4px solid #E24B4A;border-radius:6px;padding:14px 16px;margin:16px 0">
+      <p style="margin:0;font-size:14px;color:#b71c1c;font-weight:700">
+        ⚠️ Please submit your report today. It will not reach the PMU until submitted.
+      </p>
+    </div>
+    <div style="text-align:center;margin:24px 0">
+      <a href="${PORTAL_URL}?action=submit" style="background:#1A3C6E;color:#fff;padding:12px 32px;border-radius:8px;
+        text-decoration:none;font-size:15px;font-weight:700;display:inline-block">Submit Report →</a>
+    </div>
+    <p style="font-size:12px;color:#888;border-top:1px solid #eee;padding-top:14px;margin-top:14px">
+      For help, contact your PMU coordinator.<br>
+      Samagra Shiksha, Secondary, Uttar Pradesh | PMU Office
+    </p>
+  </div>
+</div>`
+      });
+      sent++;
+      Logger.log('Reminder → ' + u.email + ' (' + u.org + ')');
+    } catch(e) {
+      Logger.log('Email failed for ' + u.email + ': ' + e.message);
+    }
+  });
+
+  Logger.log('Month-end reminders sent to ' + sent + ' pending NGOs.');
+}
+
+
+// ── 2. One-time setup: monthly reminder trigger ───────────────
+// Run ONCE manually: Extensions → Apps Script → select setupMonthlyTriggers → Run
+function setupMonthlyTriggers() {
+  // Remove existing trigger for sendMonthEndReminders
+  ScriptApp.getProjectTriggers().forEach(t => {
+    if (t.getHandlerFunction() === 'sendMonthEndReminders') ScriptApp.deleteTrigger(t);
+  });
+
+  // 30th of every month at 10 AM — pending-report reminder
+  ScriptApp.newTrigger('sendMonthEndReminders')
+    .timeBased()
+    .onMonthDay(30)
+    .atHour(10)
+    .create();
+
+  Logger.log('Trigger set: sendMonthEndReminders on 30th at 10 AM');
 }
