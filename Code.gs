@@ -71,7 +71,7 @@ function doPost(e) {
     if (action === 'deleteUnlockedProjects') return respond(deleteUnlockedProjects(data));
     if (action === 'deleteProject')          return respond(deleteProject(data));
     if (action === 'lockReport')        return respond(lockReport(data));
-    if (action === 'submitReport')      return respond(submitReport({ report: JSON.parse(data.report) }));
+    if (action === 'submitReport')      return respond(submitReport({ report: JSON.parse(data.report), lock: !!data.lock }));
     if (action === 'getAdminPartners')  return respond(getAdminPartners());
     if (action === 'setNGOStatus')      return respond(setNGOStatus(data));
     return respond({ error: 'Unknown action' });
@@ -390,133 +390,178 @@ function submitReport(data) {
   const rSheet = ss.getSheetByName('Reports');
   const r      = data.report;
 
-  // Ensure header row has tasks_readable and tasks_json columns
-  const hRow = rSheet.getRange(1, 1, 1, rSheet.getLastColumn()).getValues()[0];
-  if (!hRow.includes('tasks_readable')) {
-    // First time: rename old 'tasks' header to 'tasks_readable', add 'tasks_json' next to it
-    const taskColIdx = hRow.indexOf('tasks');
-    if (taskColIdx >= 0) {
-      rSheet.getRange(1, taskColIdx + 1).setValue('tasks_readable');
-      // Insert new column for tasks_json after tasks_readable
-      rSheet.insertColumnAfter(taskColIdx + 1);
-      rSheet.getRange(1, taskColIdx + 2).setValue('tasks_json');
+  // ── Trim values used throughout ──────────────────────────
+  // Declared here (function scope) so they're accessible after try-finally
+  const rNgo   = String(r.ngo   || '').trim().toLowerCase();
+  const rMonth = String(r.month || '').trim().toLowerCase();
+
+  // ── Ensure required columns exist in header ──────────────
+  // Helper: get/add column index (1-based) by name
+  function ensureCol(name) {
+    const h = rSheet.getRange(1, 1, 1, rSheet.getLastColumn()).getValues()[0];
+    let idx = h.indexOf(name);
+    if (idx < 0) {
+      idx = h.length;
+      rSheet.getRange(1, idx + 1).setValue(name);
+    }
+    return idx + 1; // 1-based
+  }
+
+  // Ensure tasks_json column exists (may have been 'tasks' before migration)
+  {
+    const h = rSheet.getRange(1, 1, 1, rSheet.getLastColumn()).getValues()[0];
+    if (!h.includes('tasks_readable') && !h.includes('tasks_json')) {
+      const taskColIdx = h.indexOf('tasks');
+      if (taskColIdx >= 0) {
+        rSheet.getRange(1, taskColIdx + 1).setValue('tasks_readable');
+        rSheet.insertColumnAfter(taskColIdx + 1);
+        rSheet.getRange(1, taskColIdx + 2).setValue('tasks_json');
+      } else {
+        // No tasks column at all — just add both at end
+        const end = h.length;
+        rSheet.getRange(1, end + 1).setValue('tasks_readable');
+        rSheet.getRange(1, end + 2).setValue('tasks_json');
+      }
+    } else if (!h.includes('tasks_json') && h.includes('tasks_readable')) {
+      // tasks_readable exists but tasks_json missing — add it after tasks_readable
+      const trIdx = h.indexOf('tasks_readable');
+      rSheet.insertColumnAfter(trIdx + 1);
+      rSheet.getRange(1, trIdx + 2).setValue('tasks_json');
     }
   }
+
+  ensureCol('report_from');
+  ensureCol('report_to');
+  ensureCol('report_locked');
+  ensureCol('tasks_json');   // make sure it exists
+  ensureCol('tasks_readable');
 
   const readableText = tasksToReadable(r.tasks);
 
-  // Ensure report_from / report_to columns exist
-  const hRow2 = rSheet.getRange(1, 1, 1, rSheet.getLastColumn()).getValues()[0];
-  if (!hRow2.includes('report_from')) rSheet.getRange(1, hRow2.length + 1).setValue('report_from');
-  if (!hRow2.includes('report_to'))   rSheet.getRange(1, hRow2.length + 2).setValue('report_to');
+  // ── Script lock — prevents concurrent duplicate-row inserts ──
+  const scriptLock = LockService.getScriptLock();
+  scriptLock.waitLock(15000);
 
-  // Ensure report_locked column exists
-  const hRow3 = rSheet.getRange(1, 1, 1, rSheet.getLastColumn()).getValues()[0];
-  if (!hRow3.includes('report_locked')) rSheet.getRange(1, hRow3.length + 1).setValue('report_locked');
-
-  // Use script lock to prevent concurrent duplicate inserts
-  const lock = LockService.getScriptLock();
-  lock.waitLock(15000);
+  // Variables declared before try so they're accessible after finally
+  let savedRow   = -1;
+  let updateRow  = -1;
 
   try {
+    // Re-read header and rows INSIDE the lock
+    const allRows    = rSheet.getDataRange().getValues();
+    const hdr0       = allRows[0];
+    const ngoIdx0    = hdr0.indexOf('ngo');
+    const monthIdx0  = hdr0.indexOf('month');
+    const lockedIdx0 = hdr0.indexOf('report_locked');
 
-  // Check if report for this NGO+month already exists (update instead of insert)
-  const allRows = rSheet.getDataRange().getValues();
-  const hdr0 = allRows[0];
-  const ngoIdx0    = hdr0.indexOf('ngo');
-  const monthIdx0  = hdr0.indexOf('month');
-  const lockedIdx0 = hdr0.indexOf('report_locked');
-  let updateRow = -1;
-  const rNgo   = String(r.ngo   || '').trim().toLowerCase();
-  const rMonth = String(r.month || '').trim().toLowerCase();
-  for (let i = 1; i < allRows.length; i++) {
-    const sheetNgo   = String(allRows[i][ngoIdx0]   || '').trim().toLowerCase();
-    const sheetMonth = String(allRows[i][monthIdx0] || '').trim().toLowerCase();
-    if (sheetNgo === rNgo && sheetMonth === rMonth) {
-      updateRow = i + 1;
-      break;
+    for (let i = 1; i < allRows.length; i++) {
+      const sheetNgo   = String(allRows[i][ngoIdx0]   || '').trim().toLowerCase();
+      const sheetMonth = String(allRows[i][monthIdx0] || '').trim().toLowerCase();
+      if (sheetNgo === rNgo && sheetMonth === rMonth) {
+        updateRow = i + 1; // 1-based sheet row
+        break;
+      }
     }
-  }
 
-  const newRow = [
-    updateRow > 0 ? allRows[updateRow-1][0] : new Date().getTime(), // keep original id if update
-    r.ngo, r.month,
-    r.schools  || 0, r.students  || 0, r.girls   || 0, r.teachers || 0,
-    r.meetings || 0, r.events    || 0, r.scst     || 0, r.divyang  || 0,
-    0, r.dropout || 0,
-    readableText,
-    r.tasks    || '',
-    r.status   || '',
-    r.kmi      || '', r.achieve  || '', r.challenges || '',
-    r.support  || '', r.plans    || '',
-    r.photos_count  || 0,
-    r.photos_folder || '',
-    new Date().toLocaleDateString('en-IN'),
-    r.equipment || '', r.training || '', r.machine || '',
-    r.donation  || '', r.other_support || '',
-    r.report_from || '', r.report_to || '',
-    updateRow > 0 ? (String(allRows[updateRow-1][lockedIdx0]) === 'true' ? 'true' : 'false') : 'false'
-  ];
+    // Build full row (positional — must match sheet column order)
+    const newRow = [
+      updateRow > 0 ? allRows[updateRow - 1][0] : new Date().getTime(),
+      r.ngo, r.month,
+      r.schools  || 0, r.students  || 0, r.girls   || 0, r.teachers || 0,
+      r.meetings || 0, r.events    || 0, r.scst     || 0, r.divyang  || 0,
+      0, r.dropout || 0,
+      readableText,
+      r.tasks    || '',  // tasks_json position (may vary — fixed separately below)
+      r.status   || '',
+      r.kmi      || '', r.achieve  || '', r.challenges || '',
+      r.support  || '', r.plans    || '',
+      r.photos_count  || 0,
+      r.photos_folder || '',
+      new Date().toLocaleDateString('en-IN'),
+      r.equipment || '', r.training || '', r.machine || '',
+      r.donation  || '', r.other_support || '',
+      r.report_from || '', r.report_to || '',
+      updateRow > 0
+        ? (String(allRows[updateRow - 1][lockedIdx0]) === 'true' ? 'true' : 'false')
+        : 'false'
+    ];
 
-  let savedRow;
-  if (updateRow > 0) {
-    rSheet.getRange(updateRow, 1, 1, newRow.length).setValues([newRow]);
-    savedRow = updateRow;
-  } else {
-    rSheet.appendRow(newRow);
-    savedRow = rSheet.getLastRow();
-  }
-  SpreadsheetApp.flush(); // force write before releasing lock
+    if (updateRow > 0) {
+      rSheet.getRange(updateRow, 1, 1, newRow.length).setValues([newRow]);
+      savedRow = updateRow;
+    } else {
+      rSheet.appendRow(newRow);
+      savedRow = rSheet.getLastRow();
+    }
+
+    // ── Always write tasks_json to the correct column by name ──
+    // This ensures the JSON survives regardless of column order
+    const hdrNow  = rSheet.getRange(1, 1, 1, rSheet.getLastColumn()).getValues()[0];
+    const tjCol   = hdrNow.indexOf('tasks_json');
+    if (tjCol >= 0 && (r.tasks || '').length > 2) {
+      rSheet.getRange(savedRow, tjCol + 1).setValue(r.tasks || '');
+    }
+
+    SpreadsheetApp.flush(); // force write before releasing lock
 
   } finally {
-    lock.releaseLock();
+    scriptLock.releaseLock();
   }
 
-  // Update latest values in NGOs sheet
-  const nSheet = ss.getSheetByName('NGOs');
-  const nRows  = nSheet.getDataRange().getValues();
-  for (let i = 1; i < nRows.length; i++) {
-    if (String(nRows[i][1] || '').trim().toLowerCase() === rNgo) {
-      if (r.schools)  nSheet.getRange(i + 1,  8).setValue(+r.schools);
-      if (r.students) nSheet.getRange(i + 1,  9).setValue(+r.students);
-      if (r.girls)    nSheet.getRange(i + 1, 10).setValue(+r.girls);
-      if (r.teachers) nSheet.getRange(i + 1, 11).setValue(+r.teachers);
-      if (r.status)   nSheet.getRange(i + 1, 12).setValue(+r.status);
-      nSheet.getRange(i + 1, 13).setValue(r.month);
-      if (r.kmi)      nSheet.getRange(i + 1, 14).setValue(r.kmi);
-      break;
-    }
-  }
-
-  // Save report as Google Doc in NGO's Drive folder
-  let docUrl = '';
+  // ── Update latest values in NGOs sheet ───────────────────
   try {
-    const ngoFolder = getOrCreateNGOFolder(r.ngo);
-    const docInfo   = saveReportDoc(r, ngoFolder);
-    docUrl = docInfo.docUrl;
-
-    // Write the doc URL back into the correct saved row
-    const hdr = rSheet.getRange(1, 1, 1, rSheet.getLastColumn()).getValues()[0];
-    let docCol = hdr.indexOf('drive_doc_url');
-    if (docCol < 0) {
-      docCol = hdr.length;
-      rSheet.getRange(1, docCol + 1).setValue('drive_doc_url');
+    const nSheet = ss.getSheetByName('NGOs');
+    const nRows  = nSheet.getDataRange().getValues();
+    for (let i = 1; i < nRows.length; i++) {
+      if (String(nRows[i][1] || '').trim().toLowerCase() === rNgo) {
+        if (r.schools)  nSheet.getRange(i + 1,  8).setValue(+r.schools);
+        if (r.students) nSheet.getRange(i + 1,  9).setValue(+r.students);
+        if (r.girls)    nSheet.getRange(i + 1, 10).setValue(+r.girls);
+        if (r.teachers) nSheet.getRange(i + 1, 11).setValue(+r.teachers);
+        if (r.status)   nSheet.getRange(i + 1, 12).setValue(+r.status);
+        nSheet.getRange(i + 1, 13).setValue(r.month);
+        if (r.kmi)      nSheet.getRange(i + 1, 14).setValue(r.kmi);
+        break;
+      }
     }
-    rSheet.getRange(savedRow, docCol + 1).setValue(docUrl);
-  } catch (driveErr) {
-    // Drive save failed — don't block report submission
-    Logger.log('Drive save error: ' + driveErr.message);
+  } catch (ngoErr) {
+    Logger.log('NGO sheet update error: ' + ngoErr.message);
   }
 
-  // If lock:true flag passed, lock the report immediately after saving
-  if (data.lock) {
-    const lockRows = rSheet.getDataRange().getValues();
-    const lh = lockRows[0];
-    const lNgoIdx   = lh.indexOf('ngo');
-    const lMonthIdx = lh.indexOf('month');
-    let lLockedIdx  = lh.indexOf('report_locked');
-    if (lLockedIdx < 0) { lLockedIdx = lh.length; rSheet.getRange(1, lLockedIdx + 1).setValue('report_locked'); }
-    rSheet.getRange(savedRow, lLockedIdx + 1).setValue('true');
+  // ── Save report as Google Doc in NGO's Drive folder ──────
+  let docUrl = '';
+  if (savedRow > 0) {
+    try {
+      const ngoFolder = getOrCreateNGOFolder(r.ngo);
+      const docInfo   = saveReportDoc(r, ngoFolder);
+      docUrl = docInfo.docUrl;
+
+      const hdr    = rSheet.getRange(1, 1, 1, rSheet.getLastColumn()).getValues()[0];
+      let   docCol = hdr.indexOf('drive_doc_url');
+      if (docCol < 0) {
+        docCol = hdr.length;
+        rSheet.getRange(1, docCol + 1).setValue('drive_doc_url');
+      }
+      rSheet.getRange(savedRow, docCol + 1).setValue(docUrl);
+    } catch (driveErr) {
+      Logger.log('Drive save error: ' + driveErr.message);
+    }
+  }
+
+  // ── If lock:true — mark report_locked = 'true' ───────────
+  if (data.lock && savedRow > 0) {
+    try {
+      const lHdr      = rSheet.getRange(1, 1, 1, rSheet.getLastColumn()).getValues()[0];
+      let   lLockedIdx = lHdr.indexOf('report_locked');
+      if (lLockedIdx < 0) {
+        lLockedIdx = lHdr.length;
+        rSheet.getRange(1, lLockedIdx + 1).setValue('report_locked');
+      }
+      rSheet.getRange(savedRow, lLockedIdx + 1).setValue('true');
+      SpreadsheetApp.flush();
+    } catch (lockErr) {
+      Logger.log('Lock write error: ' + lockErr.message);
+    }
   }
 
   return { success: true, docUrl: docUrl };

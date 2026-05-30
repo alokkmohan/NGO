@@ -4075,6 +4075,9 @@ function _editFormHtml(monthMin, monthMax, sa, tid){
 async function saveTaskEntry(btn){
   const form = btn.closest('.task-entry-form');
   if(!form) return;
+  // Prevent double-save if another save is already running
+  if(_saveInProgress){ alert('Already saving, please wait a moment and try again.'); return; }
+
   const fromV = form.querySelector('.entry-from')?.value;
   const toV   = form.querySelector('.entry-to')?.value;
   const detV  = form.querySelector('.entry-details')?.value.trim();
@@ -4755,6 +4758,13 @@ function submitReport(){ submitMonthlyReport(); } // legacy alias
 
 async function lockReportFinal(){
   if(_autoSaveTimer){ clearTimeout(_autoSaveTimer); _autoSaveTimer = null; }
+  // Wait if another save is already in flight
+  if(_saveInProgress){
+    const statusEl = document.getElementById('r-autosave-status');
+    if(statusEl) statusEl.textContent = '⏳ Waiting for save to finish…';
+    let waited = 0;
+    while(_saveInProgress && waited < 8000){ await new Promise(r=>setTimeout(r,200)); waited+=200; }
+  }
   const monthPick = document.getElementById('r-month-pick');
   if(!monthPick?.value){ alert('Please select a Reporting Month first.'); return; }
   const kmi = document.getElementById('r-kmi')?.value.trim();
