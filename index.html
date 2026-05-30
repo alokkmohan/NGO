@@ -4046,16 +4046,16 @@ function addReportSubEntry(tid, actStart, actEnd, prefill, monthMin, monthMax){
       title="Remove this entry"
       style="position:absolute;top:6px;right:8px;background:none;border:none;font-size:16px;cursor:pointer;color:var(--muted);line-height:1">×</button>
     <div style="margin-bottom:8px">
-      <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:3px">Sub Activity name</label>
+      <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:3px">Monthly Activity</label>
       <input type="text" class="rse-name" placeholder="e.g. School visit, Parent meeting, Training session…"
         style="width:100%;padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;outline:none">
     </div>
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap">
-      <label style="font-size:11px;color:var(--muted);white-space:nowrap">From:</label>
+      <label style="font-size:11px;color:var(--muted);white-space:nowrap">From: <span style="color:var(--red)">*</span></label>
       <input type="date" class="rse-from"${minAttr}${maxAttr}
         onchange="validateRseFromTo(this.closest('.report-sub-entry'),'${monthMin}','${monthMax}')"
         style="padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;outline:none">
-      <label style="font-size:11px;color:var(--muted);white-space:nowrap">To:</label>
+      <label style="font-size:11px;color:var(--muted);white-space:nowrap">To: <span style="color:var(--red)">*</span></label>
       <input type="date" class="rse-to"${minAttr}${maxAttr}
         onchange="validateRseFromTo(this.closest('.report-sub-entry'),'${monthMin}','${monthMax}')"
         style="padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;outline:none">
@@ -4144,15 +4144,20 @@ function collapseSubEntryForm(btn){
   if(!form) return;
   const list = form.closest('.rse-list');
   if(!list) return;
+  const fromVal = form.querySelector('.rse-from')?.value || '';
+  const toVal   = form.querySelector('.rse-to')?.value   || '';
+  if(!fromVal){ alert('Please select a From date'); form.querySelector('.rse-from')?.focus(); return; }
+  if(!toVal)  { alert('Please select a To date');   form.querySelector('.rse-to')?.focus();   return; }
   const sa = {
     name:      form.querySelector('.rse-name')?.value.trim()    || '',
-    from_date: form.querySelector('.rse-from')?.value           || '',
-    to_date:   form.querySelector('.rse-to')?.value             || '',
+    from_date: fromVal,
+    to_date:   toVal,
     details:   form.querySelector('.rse-details')?.value.trim() || '',
     photo_key: form.dataset.sid || ''
   };
   const monthMin = form.querySelector('.rse-from')?.min || '';
   const monthMax = form.querySelector('.rse-from')?.max || '';
+
   _insertSubEntryViewCard(list, sa, monthMin, monthMax, form);
   form.remove();
   refreshLockBtn();
