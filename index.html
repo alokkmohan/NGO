@@ -2036,9 +2036,15 @@ function initApp(){
 
 function showFirstLoginBannerIfNeeded(){
   if(currentUser?.role === 'admin') return;
-  const key = 'first_login_banner_' + (currentUser.email||'');
-  if(localStorage.getItem(key)) return;
   const banner = document.getElementById('first-login-banner');
+  const key = 'first_login_banner_' + (currentUser.email||'');
+  // Auto-hide once setup is complete: tasks defined AND a report submitted
+  const hasProjects  = PROJECTS.some(p=>p.ngo===currentUser.org && p.status!=='deleted');
+  const hasSubmitted = REPORTS.some(r=>r.ngo===currentUser.org && String(r.report_locked)==='true');
+  if((hasProjects && hasSubmitted) || localStorage.getItem(key)){
+    if(banner) banner.style.display = 'none';
+    return;
+  }
   if(banner) banner.style.display = 'block';
 }
 
@@ -2074,13 +2080,25 @@ function updateDashboardStats(){
     const lastRep = myReps[myReps.length-1];
 
     // Top stat cards — NGO own data
-    document.getElementById('s-partners').textContent = (myNGO.dist||'').split(',').filter(s=>s.trim()).length || '—';
-    document.getElementById('s-partners-sub').textContent = 'Districts';
-    const distLabel = document.getElementById('s-partners').closest('.stat-card').querySelector('.stat-label');
-    if(distLabel) distLabel.textContent = 'Districts covered';
-    document.getElementById('s-districts').textContent = (myNGO.blocks||'').split(',').filter(s=>s.trim()).length || '—';
-    document.getElementById('s-districts').closest('.stat-card').querySelector('.stat-label').textContent = 'Blocks covered';
-    document.getElementById('s-districts').closest('.stat-card').querySelector('.stat-sub').textContent = '';
+    const distCount  = (myNGO.dist||'').split(',').filter(s=>s.trim()).length;
+    const blockCount = (myNGO.blocks||'').split(',').filter(s=>s.trim()).length;
+    // "Districts covered" card (#s-partners) — hide if NGO has no district data
+    const distCard = document.getElementById('s-partners').closest('.stat-card');
+    if(distCount){
+      distCard.style.display = '';
+      document.getElementById('s-partners').textContent = distCount;
+      document.getElementById('s-partners-sub').textContent = 'Districts';
+      const distLabel = distCard.querySelector('.stat-label');
+      if(distLabel) distLabel.textContent = 'Districts covered';
+    } else { distCard.style.display = 'none'; }
+    // "Blocks covered" card (#s-districts) — hide if NGO has no block data
+    const blockCard = document.getElementById('s-districts').closest('.stat-card');
+    if(blockCount){
+      blockCard.style.display = '';
+      document.getElementById('s-districts').textContent = blockCount;
+      blockCard.querySelector('.stat-label').textContent = 'Blocks covered';
+      blockCard.querySelector('.stat-sub').textContent = '';
+    } else { blockCard.style.display = 'none'; }
     document.getElementById('s-schools').textContent = cumS || myNGO.schools || '—';
     document.getElementById('s-schools-sub').textContent = lastRep ? 'Last: '+lastRep.month : '';
     document.getElementById('s-students').textContent = cumSt ? (cumSt>=100000?(cumSt/100000).toFixed(1)+'L':cumSt) : myNGO.students||'—';
@@ -2115,7 +2133,17 @@ function updateDashboardStats(){
         });
         html+='</div>';
       });
-      html+=`<div style="margin-top:10px"><button class="btn-blu" style="font-size:12px;padding:6px 16px" onclick="showPage('monthly-report')">📝 Submit This Month's Report →</button></div>`;
+      // Current month label e.g. "May 2026" — matches stored report month text
+      const curMonthLabel = new Date().toLocaleDateString('en-IN',{month:'long',year:'numeric'});
+      const curRep = myReps.find(r => _normalizeMonth(r.month) === curMonthLabel);
+      const curLocked = curRep && String(curRep.report_locked)==='true';
+      if(curLocked){
+        html+=`<div style="margin-top:10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <span style="background:#e8f5e9;color:#2e7d32;border:1px solid #a5d6a7;border-radius:8px;padding:6px 14px;font-size:12px;font-weight:600">✅ ${curMonthLabel} report submitted</span>
+          <button class="btn-sec" style="font-size:12px;padding:6px 16px" onclick="showPage('my-reports')">View My Reports →</button></div>`;
+      } else {
+        html+=`<div style="margin-top:10px"><button class="btn-blu" style="font-size:12px;padding:6px 16px" onclick="showPage('monthly-report')">📝 Submit This Month's Report →</button></div>`;
+      }
       projCard.innerHTML=html;
     } else {
       projCard.innerHTML=`<div style="color:var(--muted);font-size:12px;padding:8px">No tasks defined. <a href="#" onclick="reopenProfileWizard();return false;" style="color:var(--blue2)">Add them in your Profile →</a></div>`;
@@ -2135,6 +2163,9 @@ function updateDashboardStats(){
 
   // ─── ADMIN dashboard ──────────────────────────────
   document.getElementById('ngo-dashboard').style.display='none';
+  // Ensure both stat cards are visible (NGO view may have hidden them)
+  document.getElementById('s-partners').closest('.stat-card').style.display='';
+  document.getElementById('s-districts').closest('.stat-card').style.display='';
   const total=SAMPLE_NGOS.length;
   document.getElementById('s-partners').textContent=total||'0';
   const submittedReports = REPORTS.filter(r => String(r.report_locked) === 'true').length;
