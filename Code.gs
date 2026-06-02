@@ -613,27 +613,12 @@ function submitReport(data) {
     Logger.log('NGO sheet update error: ' + ngoErr.message);
   }
 
-  // ── Save report as Google Doc in NGO's Drive folder ──────
-  // Only on final submission (lock=true) — skip for silent auto-saves
-  // to keep saves fast and avoid creating duplicate docs.
-  let docUrl = '';
-  if (savedRow > 0 && data.lock) {
-    try {
-      const ngoFolder = getOrCreateNGOFolder(r.ngo);
-      const docInfo   = saveReportDoc(r, ngoFolder);
-      docUrl = docInfo.docUrl;
-
-      const hdr    = rSheet.getRange(1, 1, 1, rSheet.getLastColumn()).getValues()[0];
-      let   docCol = hdr.indexOf('drive_doc_url');
-      if (docCol < 0) {
-        docCol = hdr.length;
-        rSheet.getRange(1, docCol + 1).setValue('drive_doc_url');
-      }
-      rSheet.getRange(savedRow, docCol + 1).setValue(docUrl);
-    } catch (driveErr) {
-      Logger.log('Drive save error: ' + driveErr.message);
-    }
-  }
+  // ── Drive Google Doc generation DISABLED ─────────────────
+  // Previously each final submit created a new Google Doc (Report_<month>_<timestamp>)
+  // in the NGO's Drive folder, producing a duplicate doc on every (re)submit.
+  // The app already provides an in-app official report + PDF download, so the
+  // Drive doc was redundant and is no longer generated.
+  const docUrl = '';
 
   // ── If lock:true — mark report_locked = 'true' ───────────
   if (data.lock && savedRow > 0) {
