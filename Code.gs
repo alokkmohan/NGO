@@ -1299,6 +1299,7 @@ function sendMonthEndReminders() {
   const users = getActiveNGOUsers();
   const done  = new Set();
   let sent = 0;
+  const recipients = [];
 
   users.forEach(u => {
     if (done.has(u.org)) return;
@@ -1338,6 +1339,7 @@ function sendMonthEndReminders() {
 </div>`
       });
       sent++;
+      recipients.push(u.org + ' <' + u.email + '>');
       Logger.log('Reminder → ' + u.email + ' (' + u.org + ')');
     } catch(e) {
       Logger.log('Email failed for ' + u.email + ': ' + e.message);
@@ -1345,6 +1347,7 @@ function sendMonthEndReminders() {
   });
 
   Logger.log('Month-end reminders sent to ' + sent + ' pending NGOs.');
+  return { sent: sent, month: monthLabel, recipients: recipients };
 }
 
 
