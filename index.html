@@ -2061,6 +2061,12 @@ async function apiPost(body, timeoutMs=60000){
   }
 }
 
+function isTestNGO(name){
+  if(!name) return false;
+  const n = String(name).trim().toLowerCase();
+  return n === 'test ngo' || n.startsWith('test ') || n === 'test' || n.includes('testing ngo') || n.includes('sample ngo');
+}
+
 async function loadSheetData(){
   try {
     const isAdmin = currentUser?.role === 'admin';
@@ -2075,7 +2081,8 @@ async function loadSheetData(){
     if(ngoRes.success && ngoRes.data.length){
       SAMPLE_NGOS.length = 0;
       ngoRes.data.forEach(n => {
-        // For non-admin: skip inactive NGOs
+        // Exclude Test/Sample NGOs and inactive NGOs
+        if(isTestNGO(n.name)) return;
         if(!isAdmin && (n.ngo_status||'active') === 'inactive') return;
         SAMPLE_NGOS.push({
           id:+n.id||0, name:n.name||'', theme:n.theme||'', person:n.person||'',
@@ -2091,15 +2098,24 @@ async function loadSheetData(){
     }
     if(repRes.success && repRes.data.length){
       REPORTS.length = 0;
-      repRes.data.forEach(r => REPORTS.push(r));
+      repRes.data.forEach(r => {
+        if(isTestNGO(r.ngo)) return;
+        REPORTS.push(r);
+      });
     }
     if(projRes && projRes.success && projRes.data.length){
       PROJECTS.length = 0;
-      projRes.data.forEach(p => PROJECTS.push(p));
+      projRes.data.forEach(p => {
+        if(isTestNGO(p.ngo)) return;
+        PROJECTS.push(p);
+      });
     }
     if(isAdmin && partRes?.success){
       ADMIN_PARTNERS.length = 0;
-      partRes.data.forEach(p => ADMIN_PARTNERS.push(p));
+      partRes.data.forEach(p => {
+        if(isTestNGO(p.ngo || p.name)) return;
+        ADMIN_PARTNERS.push(p);
+      });
     }
   } catch(e){ console.warn('Could not load Sheet data:', e.message); }
 
