@@ -5,6 +5,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Samagra Shiksha, Secondary, Uttar Pradesh — NGO Partner Portal</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1A3C6E">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Samagra NGO">
+<link rel="apple-touch-icon" href="icon-192.png">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -393,7 +399,7 @@ tr:hover td{background:#FAFBFF}
       <div class="nav-item" id="nav-myreports-item" onclick="showPage('my-reports')"><span class="ni">📋</span>My Reports</div>
       <div class="nav-sep" id="nav-admin-sep" style="display:none">Admin</div>
       <div class="nav-item" id="nav-ngos-item" style="display:none" onclick="showPage('ngo-list')"><span class="ni">👥</span>All Partners</div>
-      <div class="nav-item" id="nav-unlock-tasks-item" style="display:none" onclick="showPage('unlock-tasks')"><span class="ni">🔓</span>Unlock Components</div>
+      <div class="nav-item" id="nav-unlock-tasks-item" style="display:none" onclick="showPage('unlock-tasks')"><span class="ni">🔓</span>Unlock Center</div>
       <div class="nav-item" id="nav-admin-report-item" style="display:none" onclick="showPage('admin-reports')"><span class="ni">📊</span>Generate Reports</div>
     </div>
     <div class="sidebar-user">
@@ -417,6 +423,7 @@ tr:hover td{background:#FAFBFF}
       <div class="topbar-right">
         <span class="badge badge-blue" id="tb-role-badge">NGO Partner</span>
         <span id="tb-date" style="font-size:11px;color:var(--muted)"></span>
+        <button id="pwa-install-btn" onclick="installPWAApp()" style="display:none;padding:5px 12px;background:var(--gold);color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">📱 Install App</button>
         <button id="dev-seed-btn" onclick="seedSampleData()" style="display:none;padding:5px 12px;background:#f59e0b;color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">⚡ Load Sample Data</button>
       </div>
     </div>
@@ -701,6 +708,9 @@ tr:hover td{background:#FAFBFF}
             <input id="rh-email" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:7px;font-size:13px;background:#f0f4fa" readonly>
           </div>
         </div>
+        <div id="r-autofill-notice" style="display:none;margin-top:10px;padding:9px 14px;background:#e8f5e9;border:1px solid #a5d6a7;border-radius:8px;font-size:12px;color:#2e7d32;font-weight:600">
+          💡 <b>Smart Auto-Fill:</b> Details auto-filled from your previous report (<span id="r-autofill-source"></span>). Update only what changed this month!
+        </div>
       </div>
 
       <!-- SECTION A: Task-wise KPI Progress -->
@@ -879,16 +889,51 @@ tr:hover td{background:#FAFBFF}
       </div>
     </div>
 
-    <!-- ── PAGE: UNLOCK COMPONENTS (Admin) ── -->
+    <!-- ── PAGE: UNLOCK CENTER (Admin) ── -->
     <div class="page" id="page-unlock-tasks">
+      <!-- Activity components unlock -->
       <div class="card">
-        <div class="card-title">🔓 Unlock Components</div>
+        <div class="card-title">🔓 Unlock Activity Components</div>
         <div style="font-size:12px;color:var(--muted);margin-bottom:14px">Yahan sirf wo components dikh rahe hain jinhe NGO ne lock kiya hai. Unlock karne ke baad NGO us component mein naye tasks add ya edit kar sakta hai.</div>
         <table>
           <thead><tr><th>#</th><th>NGO / Organisation</th><th>Component</th><th>Tasks</th><th>Action</th></tr></thead>
           <tbody id="unlock-tasks-tbody"></tbody>
         </table>
         <div id="unlock-tasks-empty" style="display:none;text-align:center;color:var(--muted);padding:24px;font-size:13px">Koi locked component nahi mila.</div>
+      </div>
+
+      <!-- Monthly reports unlock -->
+      <div class="card" style="margin-top:20px">
+        <div class="card-title">🔓 Unlock Monthly Reports</div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:14px">Yahan se aap kisi bhi NGO ki locked monthly report ko unlock kar sakte hain, jisse wo use wapas edit kar sakein.</div>
+        <table>
+          <thead><tr><th>#</th><th>NGO / Organisation</th><th>Month</th><th>Submitted On</th><th>Status</th><th>Action</th></tr></thead>
+          <tbody id="unlock-reports-tbody"></tbody>
+        </table>
+        <div id="unlock-reports-empty" style="display:none;text-align:center;color:var(--muted);padding:24px;font-size:13px">Koi locked monthly report nahi mili.</div>
+      </div>
+
+      <!-- Close Month & Auto-Submit -->
+      <div class="card" style="margin-top:20px;padding:16px">
+        <div class="card-title" style="margin-bottom:10px">⚡ Close Month & Auto-Submit</div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:14px">Kisi bhi mahine ke liye sabhi pending drafts ko submit aur lock karne ke liye, ya bina draft wale active NGOs ke liye blank reports automatic submit karne ke liye yahan select karein.</div>
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+          <div>
+            <div style="font-size:12px;color:var(--muted);margin-bottom:6px">Select Reporting Month</div>
+            <select id="auto-submit-month-select" style="padding:7px 12px;border:1px solid var(--border);border-radius:7px;font-size:13px">
+              <option value="">— Select Month —</option>
+              <option>April 2026</option><option>May 2026</option><option>June 2026</option>
+              <option>July 2026</option><option>August 2026</option><option>September 2026</option>
+              <option>October 2026</option><option>November 2026</option><option>December 2026</option>
+              <option>January 2027</option><option>February 2027</option><option>March 2027</option>
+            </select>
+          </div>
+          <div style="margin-top:18px">
+            <button onclick="adminForceAutoSubmit(this)" style="padding:9px 22px;background:var(--amber);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">
+              ⚡ Force Auto-Submit Month
+            </button>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -1282,6 +1327,8 @@ function onReportMonthChange(){
   hideLockPanel();
 
   if(existing){
+    const autofillNotice = document.getElementById('r-autofill-notice');
+    if (autofillNotice) autofillNotice.style.display = 'none';
     const isLocked = String(existing.report_locked) === 'true';
     wrap.style.display = 'block';
     if(isLocked){
@@ -1310,7 +1357,23 @@ function onReportMonthChange(){
   } else {
     wrap.style.display = 'none';
     if(lockBtn){ lockBtn.style.display='none'; lockBtn.disabled=false; lockBtn.style.opacity='1'; }
-    buildReportTaskCards(); // refreshLockBtn called inside
+    
+    // Smart Auto-Fill: Find the most recent prior report for this NGO
+    const myReps = REPORTS.filter(r => r.ngo === currentUser.org).sort((a,b)=>(+b.id||0)-(+a.id||0));
+    const priorRep = myReps[0];
+    const autofillNotice = document.getElementById('r-autofill-notice');
+    const autofillSource = document.getElementById('r-autofill-source');
+
+    if (priorRep) {
+      prefillFromExisting(priorRep);
+      if (autofillNotice && autofillSource) {
+        autofillSource.textContent = priorRep.month || 'previous report';
+        autofillNotice.style.display = 'block';
+      }
+    } else {
+      if (autofillNotice) autofillNotice.style.display = 'none';
+      buildReportTaskCards();
+    }
   }
 }
 
@@ -1879,9 +1942,8 @@ async function saveWizardTask(btn){
 // ════════════════════════════════════
 // API HELPERS
 // ════════════════════════════════════
-// Use GET for all calls — Apps Script redirects POST responses which breaks CORS.
-// Exception: photo upload (large base64 payload must be POST).
-// Fetch with 15s timeout + 2 retries
+// Use JSONP for standard calls — Apps Script redirects POST responses which breaks CORS in Chrome/Safari.
+// Exception: photo upload or large profile payload (must be POST).
 function apiFetch(params){
   return new Promise((resolve, reject) => {
     const cbName = 'cb_' + Date.now() + '_' + Math.random().toString(36).slice(2);
@@ -1889,8 +1951,8 @@ function apiFetch(params){
     const timer = setTimeout(() => {
       delete window[cbName];
       if(document.head.contains(script)) document.head.removeChild(script);
-      reject(new Error('Timeout'));
-    }, 20000);
+      reject(new Error('Connection timed out. Please check your internet connection and try again.'));
+    }, 25000);
     window[cbName] = (data) => {
       clearTimeout(timer);
       delete window[cbName];
@@ -1903,15 +1965,27 @@ function apiFetch(params){
       clearTimeout(timer);
       delete window[cbName];
       if(document.head.contains(script)) document.head.removeChild(script);
-      reject(new Error('Script load error'));
+      reject(new Error('Could not connect to server. Please check your network connection.'));
     };
     document.head.appendChild(script);
   });
 }
 
 async function apiPost(body, timeoutMs=60000){
+  // JSONP route for standard API calls — bypasses CORS & POST redirect issues completely!
+  if (body.action !== 'uploadPhoto' && body.action !== 'saveProfile') {
+    try {
+      return await apiFetch(body);
+    } catch(err) {
+      console.warn('apiFetch JSONP fallback to POST fetch:', err);
+    }
+  }
+
   const ctrl  = new AbortController();
-  const timer = setTimeout(()=>ctrl.abort(), timeoutMs);
+  const timer = setTimeout(() => {
+    try { ctrl.abort(); } catch(e){}
+  }, timeoutMs);
+
   try {
     const res = await fetch(SCRIPT_URL, {
       method:'POST',
@@ -1925,6 +1999,9 @@ async function apiPost(body, timeoutMs=60000){
     catch(e){ console.warn('apiPost non-JSON response:', text.slice(0,200)); throw new Error('Server returned invalid response'); }
   } catch(e){
     clearTimeout(timer);
+    if (e.name === 'AbortError' || (e.message && e.message.toLowerCase().includes('aborted'))) {
+      throw new Error('Connection timed out. Please check your internet connection and try again.');
+    }
     throw e;
   }
 }
@@ -2421,7 +2498,7 @@ function showPage(p){
     'dashboard':'Dashboard & Map','profile-view':'My Profile',
     'monthly-report':'Monthly Report','my-reports':'My Reports',
     'ngo-list':'All Partners','admin-reports':'Generate Reports',
-    'unlock-tasks':'Unlock Components'
+    'unlock-tasks':'Unlock Center'
   };
   document.getElementById(pageMap[p]).classList.add('active');
   document.getElementById('page-title').textContent = titleMap[p]||p;
@@ -2432,7 +2509,7 @@ function showPage(p){
 
   if(p==='profile-view'){ renderProfileView(); renderMyReports(); }
   if(p==='ngo-list') renderAdminNGOList();
-  if(p==='unlock-tasks') renderUnlockTasksPage();
+  if(p==='unlock-tasks'){ renderUnlockTasksPage(); renderUnlockReportsPage(); }
   if(p==='monthly-report'){ reportStep=0;updateReportSteps();prefillReportForm(); }
   if(p==='my-reports') renderReportsPage();
   if(p==='dashboard' && _lmap){ setTimeout(()=>_lmap.invalidateSize(), 100); }
@@ -5689,6 +5766,131 @@ function buildOfficialReport(n, selMonth){
       }
     } catch(e){ sessionStorage.removeItem('ngo_session'); }
   }
+// ── UNLOCK CENTER REPORT MANAGEMENT ──
+function renderUnlockReportsPage(){
+  const tbody = document.getElementById('unlock-reports-tbody');
+  const empty = document.getElementById('unlock-reports-empty');
+  if(!tbody) return;
+  
+  const lockedReps = REPORTS.filter(r => String(r.report_locked) === 'true');
+  
+  if(!lockedReps.length){
+    tbody.innerHTML = '';
+    if(empty) empty.style.display = 'block';
+    return;
+  }
+  if(empty) empty.style.display = 'none';
+  
+  tbody.innerHTML = lockedReps.map((r, i) => {
+    const progressVal = +r.status || 0;
+    const progressCol = progressVal >= 75 ? '#1D9E75' : progressVal >= 50 ? '#BA7517' : '#E24B4A';
+    const ngoEsc = r.ngo.replace(/'/g, "\\'");
+    const monthEsc = r.month.replace(/'/g, "\\'");
+    return `<tr>
+      <td>${i+1}</td>
+      <td><strong>${r.ngo}</strong></td>
+      <td>${r.month}</td>
+      <td>${r.submitted || '—'}</td>
+      <td style="text-align:center;font-weight:700;color:${progressCol}">${progressVal}%</td>
+      <td>
+        <button onclick="adminUnlockReport('${ngoEsc}','${monthEsc}',this)"
+          style="padding:5px 16px;font-size:12px;font-weight:700;background:#e65100;color:#fff;border:none;border-radius:5px;cursor:pointer">
+          🔓 Unlock Report
+        </button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+async function adminUnlockReport(ngo, month, btn){
+  if(!confirm(`Are you sure you want to Unlock the report for NGO: "${ngo}" for ${month}?\nOnce unlocked, the NGO partner can edit and resubmit this report.`)) return;
+  btn.disabled = true;
+  btn.textContent = '...';
+  try {
+    const res = await apiPost({ action: 'unlockReport', ngo: ngo, month: month });
+    if(res.success){
+      const rep = REPORTS.find(r => r.ngo === ngo && r.month === month);
+      if(rep) rep.report_locked = 'false';
+      
+      showLoader('Reloading data…');
+      await loadSheetData();
+      hideLoader();
+      
+      renderUnlockReportsPage();
+      alert('Report unlocked successfully!');
+    } else {
+      alert('Unlock failed: ' + (res.error || 'Unknown error'));
+      btn.disabled = false;
+      btn.textContent = '🔓 Unlock Report';
+    }
+  } catch(e) {
+    alert('Error: ' + e.message);
+    btn.disabled = false;
+    btn.textContent = '🔓 Unlock Report';
+  }
+}
+
+async function adminForceAutoSubmit(btn){
+  const select = document.getElementById('auto-submit-month-select');
+  if(!select || !select.value){
+    alert('Please select a month first.');
+    return;
+  }
+  const month = select.value;
+  if(!confirm(`Are you sure you want to close the month and Force Auto-Submit for "${month}"?\nThis will submit and lock all draft reports, and create blank reports for active NGOs with no submissions.`)) return;
+  
+  btn.disabled = true;
+  const originalText = btn.textContent;
+  btn.textContent = 'Processing…';
+  showLoader('Closing month & auto-submitting…');
+  try {
+    const res = await apiPost({ action: 'autoSubmitMonth', month: month });
+    if(res.success){
+      await loadSheetData();
+      renderUnlockReportsPage();
+      alert('✅ ' + (res.message || 'Auto-submit process completed successfully.'));
+    } else {
+      alert('Process failed: ' + (res.error || 'Unknown error'));
+    }
+  } catch(e) {
+    alert('Error: ' + e.message);
+  } finally {
+    hideLoader();
+    btn.disabled = false;
+    btn.textContent = originalText;
+  }
+}
+
+// ── PWA SERVICE WORKER & INSTALLATION ──
+let deferredPWAInstallPrompt = null;
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js')
+      .then(reg => console.log('[PWA] ServiceWorker registered:', reg.scope))
+      .catch(err => console.warn('[PWA] ServiceWorker registration failed:', err));
+  });
+}
+
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPWAInstallPrompt = e;
+  const btn = document.getElementById('pwa-install-btn');
+  if (btn) btn.style.display = 'inline-flex';
+});
+
+async function installPWAApp() {
+  if (!deferredPWAInstallPrompt) return;
+  deferredPWAInstallPrompt.prompt();
+  const choice = await deferredPWAInstallPrompt.userChoice;
+  if (choice.outcome === 'accepted') {
+    console.log('[PWA] User accepted install prompt');
+    const btn = document.getElementById('pwa-install-btn');
+    if (btn) btn.style.display = 'none';
+  }
+  deferredPWAInstallPrompt = null;
+}
+
   // No valid session — show login
   document.getElementById('auth-screen').style.display = 'flex';
 })();

@@ -1,0 +1,24 @@
+{
+  "name": "Samagra UP Secondary — NGO Partner Portal",
+  "short_name": "Samagra NGO",
+  "description": "Interactive web portal for NGO partner reporting under Samagra UP Secondary Education Programme, Madhyamik Shiksha Vibhag, UP",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#F4F6FA",
+  "theme_color": "#1A3C6E",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

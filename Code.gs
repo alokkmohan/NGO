@@ -11,7 +11,7 @@
 
 const SHEET_ID        = '1fESLu2sjfmKuszrSUZgCjt296gf2GRTSAMkb2uv7F_M';
 const DRIVE_FOLDER_ID = '151IYtuGpaXal0DiInwUGyaGl7ZX51HD7';
-const VERSION         = 'v9-month-text-2026-05-30'; // bump on each deploy to verify live code
+const VERSION         = 'v10-unlock-reports-2026-08-01'; // bump on each deploy to verify live code
 
 // Cached spreadsheet — avoids repeated openById() calls within one request
 function getSS() { return SpreadsheetApp.openById(SHEET_ID); }
@@ -37,7 +37,9 @@ function doGet(e) {
     else if (action === 'unlockProject')        result = unlockProject(p);
     else if (action === 'unlockProjectsByComponent') result = unlockProjectsByComponent(p);
     else if (action === 'lockReport')           result = lockReport(p);
+    else if (action === 'unlockReport')         result = unlockReport(p);
     else if (action === 'submitReport')  result = submitReport({ report: JSON.parse(p.report), lock: !!p.lock });
+    else if (action === 'autoSubmitMonth')      result = autoSubmitReportsForMonth(p.month);
     else if (action === 'getAdminPartners')     result = getAdminPartners();
     else if (action === 'setNGOStatus')         result = setNGOStatus(p);
     else if (action === 'debugReports')         result = debugReportsInfo();
@@ -76,7 +78,9 @@ function doPost(e) {
     if (action === 'deleteUnlockedProjects') return respond(deleteUnlockedProjects(data));
     if (action === 'deleteProject')          return respond(deleteProject(data));
     if (action === 'lockReport')        return respond(lockReport(data));
+    if (action === 'unlockReport')      return respond(unlockReport(data));
     if (action === 'submitReport')      return respond(submitReport({ report: JSON.parse(data.report), lock: !!data.lock }));
+    if (action === 'autoSubmitMonth')   return respond(autoSubmitReportsForMonth(data.month));
     if (action === 'getAdminPartners')  return respond(getAdminPartners());
     if (action === 'setNGOStatus')      return respond(setNGOStatus(data));
     return respond({ error: 'Unknown action' });
@@ -746,6 +750,152 @@ function lockReport(data) {
     }
   }
   return { success: false, error: 'Report not found' };
+}
+
+// Unlock a locked report so it can be edited by the NGO (admin only)
+function unlockReport(data) {
+  const sheet = getSS().getSheetByName('Reports');
+  if (!sheet) return { success: false, error: 'Reports sheet not found' };
+  const rows = sheet.getDataRange().getValues();
+  const h = rows[0];
+  const ngoIdx    = h.indexOf('ngo');
+  const monthIdx  = h.indexOf('month');
+  let lockedIdx   = h.indexOf('report_locked');
+  if (lockedIdx < 0) {
+    lockedIdx = h.length;
+    sheet.getRange(1, lockedIdx + 1).setValue('report_locked');
+  }
+  const dNgo   = String(data.ngo   || '').trim().toLowerCase();
+  const dMonth = _monthKey(data.month);
+  for (let i = 1; i < rows.length; i++) {
+    const sNgo   = String(rows[i][ngoIdx]   || '').trim().toLowerCase();
+    const sMonth = _monthKey(rows[i][monthIdx]);
+    if (sNgo === dNgo && sMonth === dMonth) {
+      sheet.getRange(i + 1, lockedIdx + 1).setValue('false');
+      return { success: true };
+    }
+  }
+  return { success: false, error: 'Report not found' };
+}
+
+// Auto-submit and lock drafts, or create blank reports for the month
+function autoSubmitReportsForMonth(monthStr) {
+  if (!monthStr) return { success: false, error: 'Month parameter required' };
+  const ss = getSS();
+  const reportsSheet = ss.getSheetByName('Reports');
+  const ngosSheet = ss.getSheetByName('NGOs');
+  
+  if (!reportsSheet || !ngosSheet) return { success: false, error: 'Sheets not found' };
+  
+  const ngoRows = ngosSheet.getDataRange().getValues();
+  const ngoHeaders = ngoRows[0];
+  const nameIdx = ngoHeaders.indexOf('name');
+  
+  const activeNgoNames = [];
+  for (let i = 1; i < ngoRows.length; i++) {
+    const name = String(ngoRows[i][nameIdx] || '').trim();
+    if (name) activeNgoNames.push(name);
+  }
+  
+  const reportRows = reportsSheet.getDataRange().getValues();
+  const reportHeaders = reportRows[0];
+  
+  const ngoColIdx = reportHeaders.map(h => String(h).trim().toLowerCase()).indexOf('ngo');
+  const monthColIdx = reportHeaders.map(h => String(h).trim().toLowerCase()).indexOf('month');
+  const lockColIdx = reportHeaders.map(h => String(h).trim().toLowerCase()).indexOf('report_locked');
+  const idColIdx = reportHeaders.map(h => String(h).trim().toLowerCase()).indexOf('id');
+  const submittedColIdx = reportHeaders.map(h => String(h).trim().toLowerCase()).indexOf('submitted');
+  
+  const existingReports = {};
+  const queryMonthKey = _monthKey(monthStr);
+  
+  for (let i = 1; i < reportRows.length; i++) {
+    const ngoVal = String(reportRows[i][ngoColIdx] || '').trim();
+    const monthVal = _monthKey(reportRows[i][monthColIdx]);
+    if (monthVal === queryMonthKey) {
+      existingReports[ngoVal.toLowerCase()] = {
+        rowNum: i + 1,
+        locked: String(reportRows[i][lockColIdx]).toLowerCase() === 'true'
+      };
+    }
+  }
+  
+  let lockCount = 0;
+  let createCount = 0;
+  
+  activeNgoNames.forEach(ngoName => {
+    const existing = existingReports[ngoName.toLowerCase()];
+    if (existing) {
+      if (!existing.locked) {
+        reportsSheet.getRange(existing.rowNum, lockColIdx + 1).setValue('true');
+        reportsSheet.getRange(existing.rowNum, submittedColIdx + 1).setValue(new Date().toLocaleDateString('en-IN'));
+        lockCount++;
+      }
+    } else {
+      const newReportId = new Date().getTime() + Math.floor(Math.random() * 1000);
+      const vals = {
+        id: newReportId,
+        ngo: ngoName,
+        month: monthStr,
+        schools: 0,
+        students: 0,
+        girls: 0,
+        teachers: 0,
+        meetings: 0,
+        events: 0,
+        scst: 0,
+        divyang: 0,
+        budget: 0,
+        dropout: 0,
+        tasks_readable: '',
+        tasks_json: '[]',
+        status: '0',
+        kmi: 'Auto-submitted blank report due to missing draft.',
+        achieve: 'Auto-submitted',
+        challenges: '',
+        support: '',
+        plans: '',
+        photos_count: 0,
+        photos_folder: '',
+        submitted: new Date().toLocaleDateString('en-IN'),
+        report_locked: 'true'
+      };
+      
+      const rowArr = reportHeaders.map(colName => {
+        const key = String(colName).trim().toLowerCase();
+        return vals.hasOwnProperty(key) ? vals[key] : '';
+      });
+      
+      reportsSheet.appendRow(rowArr);
+      const lastRow = reportsSheet.getLastRow();
+      if (monthColIdx >= 0) {
+        reportsSheet.getRange(lastRow, monthColIdx + 1).setNumberFormat('@').setValue(_monthDisplay(monthStr));
+      }
+      createCount++;
+    }
+  });
+  
+  SpreadsheetApp.flush();
+  return {
+    success: true,
+    message: `Auto-submitted for ${monthStr}: Locked ${lockCount} drafts, created ${createCount} blank reports.`
+  };
+}
+
+// Daily check logic for monthly time-driven trigger
+function dailyAutoSubmitCheck() {
+  const today = new Date();
+  const tomorrow = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
+  // If tomorrow's month is different from today's, then today is the last day of the month!
+  if (tomorrow.getMonth() !== today.getMonth()) {
+    triggerAutoSubmitReports();
+  }
+}
+
+// Trigger function run automatically at the end of the month
+function triggerAutoSubmitReports() {
+  const monthStr = Utilities.formatDate(new Date(), 'Asia/Kolkata', 'MMMM yyyy');
+  return autoSubmitReportsForMonth(monthStr);
 }
 
 
