@@ -342,7 +342,12 @@ function getNGOs() {
   }
   const data = rows.slice(1).map(row => {
     const obj = {};
-    headers.forEach((h, i) => obj[h] = row[i]);
+    headers.forEach((h, i) => {
+      let val = row[i];
+      if (typeof val === 'string') val = val.trim();
+      obj[h] = val;
+    });
+    if (obj.name) obj.name = String(obj.name).trim();
     const key = String(obj.name||'').trim().toLowerCase();
     obj.ngo_status = statusMap[key] || 'active'; // default active if not in list
     return obj;
