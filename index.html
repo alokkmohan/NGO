@@ -1315,51 +1315,31 @@ function onReportMonthChange(){
   const mlEl = document.getElementById('rh-month-label');
   if(mlEl) mlEl.textContent = monthLabel;
 
-  // Check if already submitted for this month — prefer locked (submitted) over draft if duplicates exist
-  const _allForMonth = REPORTS.filter(r => r.ngo === currentUser.org && r.month === monthLabel);
-  const existing = _allForMonth.find(r => String(r.report_locked)==='true') || _allForMonth[0];
+  // Find existing report entry for this month (if any)
+  const _allForMonth = REPORTS.filter(r => _normNgo(r.ngo) === _normNgo(currentUser.org) && _normalizeMonth(r.month) === monthLabel);
+  const existing = _allForMonth[0];
   const wrap  = document.getElementById('r-month-status-wrap');
-  const stEl  = document.getElementById('r-month-status');
   const lockBtn = document.getElementById('r-lock-btn');
+  const saveBtn = document.getElementById('r-save-btn');
 
   _formDirty = false;
-  // Always reset lock panel and B/D/E visibility first
-  hideLockPanel();
+  if (wrap) wrap.style.display = 'none';
+  if (lockBtn) lockBtn.style.display = 'none';
+  if (saveBtn) { saveBtn.style.display = 'block'; saveBtn.disabled = false; }
+
+  // Ensure all form sections and inputs are ALWAYS enabled for live continuous editing
+  ['r-section-b','r-section-d','r-section-e'].forEach(id => {
+    const el = document.getElementById(id);
+    if(el){ el.style.display='block'; el.querySelectorAll('input,textarea,select').forEach(i=>{ i.disabled=false; i.style.background='#fff'; i.style.color='#000'; }); }
+  });
 
   if(existing){
     const autofillNotice = document.getElementById('r-autofill-notice');
     if (autofillNotice) autofillNotice.style.display = 'none';
-    const isLocked = String(existing.report_locked) === 'true';
-    wrap.style.display = 'block';
-    if(isLocked){
-      stEl.style.cssText = 'padding:8px 12px;border-radius:7px;font-size:12px;font-weight:600;background:#e8f5e9;color:#2e7d32;border:1px solid #a5d6a7';
-      stEl.textContent = '✅ Report submitted to PMU.';
-      _formDirty = false;
-      prefillFromExisting(existing);
-      ['r-section-b','r-section-d','r-section-e'].forEach(id => {
-        const el = document.getElementById(id);
-        if(el){ el.style.display='block'; el.querySelectorAll('input,textarea').forEach(i=>i.disabled=true); }
-      });
-      setTimeout(() => {
-        _updateSubmitBtn();
-        // Add dirty listeners so user can update
-        document.getElementById('r-task-cards')?.querySelectorAll('input,select,textarea').forEach(el => {
-          el.addEventListener('change', _markDirty, {once:true});
-        });
-      }, 400);
-    } else {
-      wrap.style.display = 'none';
-      if(lockBtn){ lockBtn.textContent='✅ Submit Final Report'; lockBtn.disabled=false; lockBtn.style.opacity='1'; }
-      const saveBtn = document.getElementById('r-save-btn');
-      if(saveBtn){ saveBtn.style.display='block'; }
-      prefillFromExisting(existing); // buildReportTaskCards inside will call refreshLockBtn
-    }
+    prefillFromExisting(existing);
   } else {
-    wrap.style.display = 'none';
-    if(lockBtn){ lockBtn.style.display='none'; lockBtn.disabled=false; lockBtn.style.opacity='1'; }
-    
     // Smart Auto-Fill: Find the most recent prior report for this NGO
-    const myReps = REPORTS.filter(r => r.ngo === currentUser.org).sort((a,b)=>(+b.id||0)-(+a.id||0));
+    const myReps = REPORTS.filter(r => _normNgo(r.ngo) === _normNgo(currentUser.org)).sort((a,b)=>(+b.id||0)-(+a.id||0));
     const priorRep = myReps[0];
     const autofillNotice = document.getElementById('r-autofill-notice');
     const autofillSource = document.getElementById('r-autofill-source');
@@ -4026,15 +4006,15 @@ async function saveReportDraft(){
   if(saveBtn){ saveBtn.disabled=true; saveBtn.textContent='💾 Saving…'; }
   try {
     await submitMonthlyReport();
-    if(saveBtn){ saveBtn.disabled=false; saveBtn.textContent='💾 Save Progress'; }
-    // Brief visual confirmation
+    if(saveBtn){ saveBtn.disabled=false; saveBtn.textContent='💾 Save Monthly Report'; }
+    // Visual confirmation toast
     const msg = document.createElement('div');
-    msg.style.cssText='position:fixed;top:18px;left:50%;transform:translateX(-50%);background:#2e7d32;color:#fff;padding:10px 24px;border-radius:8px;font-size:13px;font-weight:700;z-index:9999;box-shadow:0 2px 8px rgba(0,0,0,.2)';
-    msg.textContent='✅ Progress saved! You can continue editing.';
+    msg.style.cssText='position:fixed;top:18px;left:50%;transform:translateX(-50%);background:#1b5e20;color:#fff;padding:12px 28px;border-radius:8px;font-size:14px;font-weight:700;z-index:9999;box-shadow:0 4px 14px rgba(0,0,0,.25)';
+    msg.textContent='✅ Report saved & synced with PMU Dashboard!';
     document.body.appendChild(msg);
-    setTimeout(()=>msg.remove(), 3000);
+    setTimeout(()=>msg.remove(), 4000);
   } catch(e){
-    if(saveBtn){ saveBtn.disabled=false; saveBtn.textContent='💾 Save Progress'; }
+    if(saveBtn){ saveBtn.disabled=false; saveBtn.textContent='💾 Save Monthly Report'; }
     if(e.message !== 'status_required') alert('Save failed: '+e.message);
   }
 }
@@ -5530,11 +5510,10 @@ function generateReport(){
 
   const _normNgo = (s) => String(s == null ? '' : s).trim().toLowerCase();
 
-  // When "All NGOs" is selected, only include NGOs that have submitted a report for the chosen month
+  // All saved reports are live and visible to PMU Admin!
   function ngoHasReport(ngoName){
     return REPORTS.some(r => _normNgo(r.ngo) === _normNgo(ngoName) &&
-      (selMonth === 'all' || _normalizeMonth(r.month) === _normalizeMonth(selMonth)) &&
-      String(r.report_locked) === 'true');
+      (selMonth === 'all' || _normalizeMonth(r.month) === _normalizeMonth(selMonth)));
   }
 
   if(selType === 'official'){
