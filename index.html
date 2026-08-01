@@ -5502,6 +5502,52 @@ async function adminLockComponent(comp, ngoName, btn){
   }
 }
 
+function ngoHasFilledReport(ngoName, targetMonth){
+  const _normNgo = (s) => String(s == null ? '' : s).trim().toLowerCase();
+  const myReps = REPORTS.filter(r => _normNgo(r.ngo) === _normNgo(ngoName) &&
+    (targetMonth === 'all' || _normalizeMonth(r.month) === _normalizeMonth(targetMonth))
+  );
+
+  return myReps.some(r => {
+    // Ignore system auto-submitted blank text
+    if (r.kmi === 'Auto-submitted blank report due to missing draft.') return false;
+
+    // Check if any numerical metrics > 0
+    const hasNumbers = (+r.schools > 0 || +r.students > 0 || +r.girls > 0 || +r.teachers > 0 ||
+                        +r.meetings > 0 || +r.events > 0 || +r.scst > 0 || +r.divyang > 0 || +r.dropout > 0);
+    if (hasNumbers) return true;
+
+    // Check user-filled narrative fields
+    const hasNarrative = (r.kmi && r.kmi.trim().length > 0) ||
+                         (r.achieve && r.achieve.trim().length > 0 && r.achieve !== 'Auto-submitted') ||
+                         (r.challenges && r.challenges.trim().length > 0) ||
+                         (r.plans && r.plans.trim().length > 0) ||
+                         (r.support && r.support.trim().length > 0) ||
+                         (r.equipment && r.equipment.trim().length > 0) ||
+                         (r.training && r.training.trim().length > 0) ||
+                         (r.machine && r.machine.trim().length > 0) ||
+                         (r.donation && r.donation.trim().length > 0) ||
+                         (r.other_support && r.other_support.trim().length > 0);
+    if (hasNarrative) return true;
+
+    // Check task updates or sub-activity entries
+    try {
+      const raw = r.tasks_json || r.tasks || '[]';
+      const tasks = typeof raw === 'string' ? JSON.parse(raw) : (Array.isArray(raw) ? raw : []);
+      const hasTaskUpdates = tasks.some(t => {
+        if (t.status && t.status !== 'Not started') return true;
+        if (t.activity && t.activity.trim().length > 0) return true;
+        if (t.update && t.update.trim().length > 0) return true;
+        if (Array.isArray(t.sub_activities) && t.sub_activities.length > 0) return true;
+        return false;
+      });
+      if (hasTaskUpdates) return true;
+    } catch(e){}
+
+    return false;
+  });
+}
+
 function generateReport(){
   const selType  = document.getElementById('rep-type').value;
   const selNGO   = document.getElementById('rep-ngo').value;
@@ -5510,23 +5556,26 @@ function generateReport(){
 
   const _normNgo = (s) => String(s == null ? '' : s).trim().toLowerCase();
 
-  // All saved reports are live and visible to PMU Admin!
-  function ngoHasReport(ngoName){
-    return REPORTS.some(r => _normNgo(r.ngo) === _normNgo(ngoName) &&
-      (selMonth === 'all' || _normalizeMonth(r.month) === _normalizeMonth(selMonth)));
-  }
-
   if(selType === 'official'){
     // ── OFFICIAL KPI REPORT (per NGO) ──
     let targetNGOs = selNGO === 'all'
-      ? SAMPLE_NGOS.filter(n => ngoHasReport(n.name))
-      : SAMPLE_NGOS.filter(n => _normNgo(n.name) === _normNgo(selNGO));
-    if(!targetNGOs.length){ out.innerHTML='<p style="color:var(--muted);padding:16px">No submitted reports found for the selected filter.</p>'; return; }
+      ? SAMPLE_NGOS.filter(n => ngoHasFilledReport(n.name, selMonth))
+      : SAMPLE_NGOS.filter(n => _normNgo(n.name) === _normNgo(selNGO) && ngoHasFilledReport(n.name, selMonth));
+    if(!targetNGOs.length){
+      out.innerHTML='<div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:32px;text-align:center;color:var(--muted);font-weight:600">⚠️ No filled reports found for the selected filter (' + (selMonth === 'all' ? 'All Months' : selMonth) + '). Only NGOs that have entered report data are displayed.</div>';
+      return;
+    }
     out.innerHTML = targetNGOs.map(n => buildOfficialReport(n, selMonth)).join('');
 
   } else {
     // ── SUMMARY REPORT (all NGOs) ──
-    let ngos = selNGO==='all' ? SAMPLE_NGOS.filter(n => ngoHasReport(n.name)) : SAMPLE_NGOS.filter(n=>n.name===selNGO);
+    let ngos = selNGO === 'all'
+      ? SAMPLE_NGOS.filter(n => ngoHasFilledReport(n.name, selMonth))
+      : SAMPLE_NGOS.filter(n => _normNgo(n.name) === _normNgo(selNGO) && ngoHasFilledReport(n.name, selMonth));
+    if(!ngos.length){
+      out.innerHTML='<div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:32px;text-align:center;color:var(--muted);font-weight:600">⚠️ No filled reports found for the selected filter (' + (selMonth === 'all' ? 'All Months' : selMonth) + ').</div>';
+      return;
+    }
     const tot = (key) => ngos.reduce((a,n)=>a+(+n[key]||0),0);
     out.innerHTML = `
       <div class="official-report">
