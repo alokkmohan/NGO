@@ -11,6 +11,9 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Samagra NGO">
 <link rel="apple-touch-icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -22,7 +25,67 @@
   --bg:#F4F6FA;--card:#fff;--border:#DDE3EE;--text:#1a1a2e;--muted:#6b7280;
   --sidebar:240px;
 }
-body{font-family:'Segoe UI',Arial,sans-serif;background:var(--bg);color:var(--text);font-size:14px}
+body{font-family:'Outfit','Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);font-size:14px;letter-spacing:-0.01em}
+a{text-decoration:none;color:inherit}
+
+.card{
+  background:var(--card);
+  border-radius:14px;
+  padding:20px 22px;
+  margin-bottom:18px;
+  border:1px solid rgba(221,227,238,0.8);
+  box-shadow:0 4px 20px rgba(0,0,0,0.03), 0 1px 3px rgba(0,0,0,0.02);
+  transition:transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.card:hover{
+  box-shadow:0 8px 26px rgba(26,60,110,0.07);
+}
+
+/* ── MOBILE BOTTOM NAVIGATION BAR ── */
+#mobile-bottom-nav {
+  display: none;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 62px;
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-top: 1px solid var(--border);
+  z-index: 9990;
+  justify-content: space-around;
+  align-items: center;
+  box-shadow: 0 -4px 20px rgba(0,0,0,0.06);
+}
+.mb-nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  height: 100%;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color 0.2s, transform 0.2s;
+  padding: 4px 0;
+}
+.mb-nav-item.active {
+  color: var(--blue);
+}
+.mb-nav-item:active {
+  transform: scale(0.92);
+}
+.mb-nav-icon {
+  font-size: 18px;
+  margin-bottom: 2px;
+}
+@media (max-width: 768px) {
+  #mobile-bottom-nav { display: flex; }
+  .main-content { padding-bottom: 80px !important; }
+}
 a{text-decoration:none;color:inherit}
 
 /* ── AUTH SCREEN ── */
@@ -594,6 +657,18 @@ tr:hover td{background:#FAFBFF}
         <div id="r-month-status-wrap" style="display:none">
           <div id="r-month-status" style="padding:10px 14px;border-radius:7px;font-size:13px;font-weight:600"></div>
         </div>
+      </div>
+
+      <!-- Live Form Progress Meter -->
+      <div id="r-form-progress-wrap" style="margin-bottom:14px;background:#f0f6ff;border-radius:12px;padding:14px 18px;border:1px solid #d0e2ff">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+          <span style="font-size:12px;font-weight:700;color:var(--blue)">⚡ Monthly Report Form Completion Status</span>
+          <span id="r-form-progress-pct" style="font-size:13px;font-weight:800;color:var(--blue)">0% Complete</span>
+        </div>
+        <div style="width:100%;height:10px;background:#e2e8f0;border-radius:5px;overflow:hidden">
+          <div id="r-form-progress-bar" style="width:0%;height:100%;background:linear-gradient(90deg, #3b82f6 0%, #10b981 100%);transition:width 0.4s ease;border-radius:5px"></div>
+        </div>
+        <div id="r-form-progress-text" style="font-size:11px;color:var(--muted);margin-top:6px;font-weight:500">Fill in Section A tasks and Section B numbers to complete your report.</div>
       </div>
 
       <!-- Task Cards (built by JS) -->
@@ -5921,9 +5996,95 @@ async function installPWAApp() {
   deferredPWAInstallPrompt = null;
 }
 
+// ── MOBILE BOTTOM NAV & FORM PROGRESS CALCULATOR ──
+function updateFormProgress(){
+  const pctEl = document.getElementById('r-form-progress-pct');
+  const barEl = document.getElementById('r-form-progress-bar');
+  const textEl = document.getElementById('r-form-progress-text');
+  if(!pctEl || !barEl) return;
+
+  let totalWeight = 0;
+  let filledWeight = 0;
+
+  // Check month selected
+  totalWeight += 10;
+  if(document.getElementById('r-month-pick')?.value) filledWeight += 10;
+
+  // Check Task Cards Statuses
+  const taskSelects = document.querySelectorAll('#r-task-cards select, #r-task-cards textarea');
+  if(taskSelects.length){
+    taskSelects.forEach(el => {
+      totalWeight += 15;
+      if(el.value && el.value.trim() !== '' && el.value !== 'Not started') filledWeight += 15;
+    });
+  } else {
+    totalWeight += 30;
+    filledWeight += 15;
+  }
+
+  // Check Section B numbers
+  const numInputs = ['r-schools','r-students','r-girls','r-teachers','r-meetings','r-events','r-scst','r-divyang','r-dropout'];
+  numInputs.forEach(id => {
+    totalWeight += 5;
+    const val = document.getElementById(id)?.value;
+    if(val && Number(val) > 0) filledWeight += 5;
+  });
+
+  // Check KMI
+  totalWeight += 15;
+  if(document.getElementById('r-kmi')?.value?.trim()) filledWeight += 15;
+
+  const pct = Math.min(100, Math.round((filledWeight / Math.max(1, totalWeight)) * 100));
+  pctEl.textContent = pct + '% Complete';
+  barEl.style.width = pct + '%';
+
+  if(pct === 100) {
+    pctEl.style.color = '#10b981';
+    if(textEl) textEl.textContent = '🎉 Form 100% complete! All sections filled out.';
+  } else if(pct >= 60) {
+    pctEl.style.color = '#3b82f6';
+    if(textEl) textEl.textContent = '👍 Great progress! Keep going to complete remaining fields.';
+  } else {
+    pctEl.style.color = 'var(--blue)';
+    if(textEl) textEl.textContent = 'Fill in Section A tasks and Section B numbers to complete your report.';
+  }
+}
+
+// Attach input listeners for live progress calculation
+document.addEventListener('input', (e) => {
+  if (e.target.closest('#page-monthly-report')) {
+    updateFormProgress();
+  }
+});
+document.addEventListener('change', (e) => {
+  if (e.target.closest('#page-monthly-report')) {
+    updateFormProgress();
+  }
+});
+
   // No valid session — show login
   document.getElementById('auth-screen').style.display = 'flex';
 })();
 </script>
+
+<!-- Mobile Bottom Navigation Bar -->
+<nav id="mobile-bottom-nav">
+  <div class="mb-nav-item active" onclick="showPage('dash-ngo')">
+    <span class="mb-nav-icon">🏠</span>
+    <span>Home</span>
+  </div>
+  <div class="mb-nav-item" onclick="showPage('report-view')">
+    <span class="mb-nav-icon">📝</span>
+    <span>Reports</span>
+  </div>
+  <div class="mb-nav-item" onclick="showPage('admin-reports')">
+    <span class="mb-nav-icon">📊</span>
+    <span>Analytics</span>
+  </div>
+  <div class="mb-nav-item" onclick="showPage('profile-view')">
+    <span class="mb-nav-icon">👤</span>
+    <span>Profile</span>
+  </div>
+</nav>
 </body>
 </html>
