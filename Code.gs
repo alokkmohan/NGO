@@ -47,6 +47,7 @@ function doGet(e) {
     else if (action === 'cleanupDuplicates')    result = { message: cleanupDuplicateReports() };
     else if (action === 'repairHeader')         result = { message: repairReportsHeader() };
     // legacy — kept for backward compat
+    else if (action === 'cleanWhitespace')      result = cleanAllSheetWhitespace();
     else if (action === 'login')          result = login(p);
     else if (action === 'changePassword') result = changePassword(p);
     else result = { error: 'Unknown action' };
@@ -1085,12 +1086,51 @@ function getProjects(data) {
   const headers = rows[0];
   let projects = rows.slice(1).map(row => {
     const obj = {};
-    headers.forEach((h, i) => obj[h] = row[i]);
+    headers.forEach((h, i) => {
+      let val = row[i];
+      if (typeof val === 'string') val = val.trim();
+      obj[h] = val;
+    });
+    if (obj.ngo) obj.ngo = String(obj.ngo).trim();
     return obj;
   });
   // Filter by NGO if requested (non-admin); 'all' means return everything
-  if (data.ngo && data.ngo !== 'all') projects = projects.filter(p => p.ngo === data.ngo);
+  if (data.ngo && data.ngo !== 'all') {
+    const targetNgo = String(data.ngo).trim().toLowerCase();
+    projects = projects.filter(p => String(p.ngo||'').trim().toLowerCase() === targetNgo);
+  }
   return { success: true, data: projects };
+}
+
+// Utility to clean trailing carriage returns and whitespace across all sheet cells
+function cleanAllSheetWhitespace() {
+  const ss = getSS();
+  const sheetNames = ['NGOs', 'Projects', 'Reports', 'NGO_List'];
+  let totalCleaned = 0;
+  sheetNames.forEach(name => {
+    const sheet = ss.getSheetByName(name);
+    if (!sheet) return;
+    const range = sheet.getDataRange();
+    const values = range.getValues();
+    let modified = false;
+    for (let r = 0; r < values.length; r++) {
+      for (let c = 0; c < values[r].length; c++) {
+        if (typeof values[r][c] === 'string') {
+          const trimmed = values[r][c].trim();
+          if (trimmed !== values[r][c]) {
+            values[r][c] = trimmed;
+            modified = true;
+            totalCleaned++;
+          }
+        }
+      }
+    }
+    if (modified) {
+      range.setValues(values);
+    }
+  });
+  Logger.log('Cleaned ' + totalCleaned + ' whitespace cells across sheets.');
+  return { success: true, cleaned: totalCleaned };
 }
 
 // Mark all UNLOCKED projects for an NGO as deleted (called before re-saving tasks)
