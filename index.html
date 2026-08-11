@@ -645,13 +645,14 @@ tr:hover td{background:#FAFBFF}
             <div style="font-size:10px;color:var(--muted)">Districts</div>
             <div style="font-size:12px" id="rh-dist">—</div>
           </div>
-          <div style="background:#e8f5e9;border-radius:8px;padding:8px 12px">
-            <div style="font-size:10px;color:var(--muted)">Reporting Month</div>
-            <div style="font-weight:700;color:#2e7d32;font-size:14px" id="rh-month-label">—</div>
+          <div style="background:#e8f5e9;border-radius:8px;padding:8px 12px;border:1px solid #c8e6c9">
+            <div style="font-size:10px;color:#2e7d32;font-weight:700;margin-bottom:3px">📅 Reporting Month / रिपोर्टिंग माह</div>
+            <select id="r-month-pick" onchange="onReportMonthChange()"
+              style="width:100%;padding:4px 8px;border:1px solid #a5d6a7;border-radius:6px;font-size:13px;font-weight:700;color:#1b5e20;background:#fff;cursor:pointer;outline:none">
+            </select>
+            <div id="rh-month-label" style="display:none"></div>
           </div>
         </div>
-        <!-- Hidden inputs kept for JS compat -->
-        <select id="r-month-pick" onchange="onReportMonthChange()" style="display:none"></select>
         <input id="rh-phone" style="display:none">
         <input id="rh-email" style="display:none">
         <div id="r-month-status-wrap" style="display:none">
@@ -966,16 +967,6 @@ tr:hover td{background:#FAFBFF}
 
     <!-- ── PAGE: UNLOCK CENTER (Admin) ── -->
     <div class="page" id="page-unlock-tasks">
-      <!-- Activity components unlock -->
-      <div class="card">
-        <div class="card-title">🔓 Unlock Activity Components</div>
-        <div style="font-size:12px;color:var(--muted);margin-bottom:14px">Yahan sirf wo components dikh rahe hain jinhe NGO ne lock kiya hai. Unlock karne ke baad NGO us component mein naye tasks add ya edit kar sakta hai.</div>
-        <table>
-          <thead><tr><th>#</th><th>NGO / Organisation</th><th>Component</th><th>Tasks</th><th>Action</th></tr></thead>
-          <tbody id="unlock-tasks-tbody"></tbody>
-        </table>
-        <div id="unlock-tasks-empty" style="display:none;text-align:center;color:var(--muted);padding:24px;font-size:13px">Koi locked component nahi mila.</div>
-      </div>
 
       <!-- Monthly reports unlock -->
       <div class="card" style="margin-top:20px">
@@ -1159,8 +1150,22 @@ function _fmtMonthLabel(v){
   return s;
 }
 
-// Robust locked check — handles boolean true, string 'true', or uppercase 'TRUE' from Sheets
-function isTaskLocked(v){ return v===true || String(v).toLowerCase()==='true'; }
+// Task locking disabled — tasks can always be edited, updated, or added
+function isTaskLocked(v){ return false; }
+
+// Normalize NGO name string for case & whitespace insensitive comparison
+function _normNgo(s){ return String(s == null ? '' : s).trim().toLowerCase(); }
+
+// Normalize month string (handles ISO dates and month strings)
+function _normalizeMonth(val){
+  if(!val) return '';
+  if(/^[A-Za-z]/.test(val)) return String(val).trim();
+  try {
+    const d = new Date(val);
+    if(!isNaN(d)) return d.toLocaleDateString('en-IN',{month:'long',year:'numeric'});
+  } catch(e){}
+  return String(val).trim();
+}
 
 // Live data — populated from Google Sheets on login
 let SAMPLE_NGOS      = [];
@@ -1382,7 +1387,10 @@ function onReportDateChange(){ /* legacy — no-op */ }
 
 function onReportMonthChange(){
   const pick = document.getElementById('r-month-pick');
-  if(!pick?.value) return;
+  if(!pick?.value) {
+    buildReportTaskCards();
+    return;
+  }
   const [yr, mo] = pick.value.split('-').map(Number);
   const mNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
   const monthLabel = mNames[mo-1] + ' ' + yr;
@@ -2121,6 +2129,11 @@ async function loadSheetData(){
 
   if(!SAMPLE_NGOS.length && DEMO_NGOS.length) DEMO_NGOS.forEach(n => SAMPLE_NGOS.push(n));
   if(!REPORTS.length && DEMO_REPORTS.length)   DEMO_REPORTS.forEach(r => REPORTS.push(r));
+
+  // If user is currently viewing the Monthly Report page, refresh cards with freshly loaded projects/reports
+  if (typeof currentPage !== 'undefined' && currentPage === 'monthly-report') {
+    try { prefillReportForm(); } catch(e){}
+  }
 }
 
 // ════════════════════════════════════
@@ -4123,12 +4136,13 @@ function populateReportMonthPicker(){
     {y:2026,m:12},{y:2027,m:1},{y:2027,m:2},{y:2027,m:3}
   ];
 
-  // Only months up to the current month are available (1st of that month = available)
+  // Include months up to current month (e.g. August 2026), minimum up to August 2026
   const now = new Date();
-  const curY = now.getFullYear(), curM = now.getMonth() + 1;
+  let curY = now.getFullYear(), curM = now.getMonth() + 1;
+  if(curY < 2026 || (curY === 2026 && curM < 8)) { curY = 2026; curM = 8; }
 
   const prevValue = sel.value; // preserve selection if re-populating
-  sel.innerHTML = '<option value="">— Select Reporting Month —</option>';
+  sel.innerHTML = '';
 
   let defaultVal = '';
   reportingMonths.forEach(({y, m}) => {
@@ -4138,8 +4152,14 @@ function populateReportMonthPicker(){
     opt.value = val;
     opt.textContent = mNames[m-1] + ' ' + y;
     sel.appendChild(opt);
-    defaultVal = val; // last available = current month
+    defaultVal = val; // default to latest available month (current month)
   });
+
+  if(!sel.children.length){
+    // Fallback if none matched
+    sel.innerHTML = '<option value="2026-08">August 2026</option><option value="2026-07">July 2026</option>';
+    defaultVal = '2026-08';
+  }
 
   // Restore previous selection or default to current month
   sel.value = prevValue && sel.querySelector(`option[value="${prevValue}"]`) ? prevValue : defaultVal;
@@ -4320,74 +4340,102 @@ function removeTaskEntry(btn){
 function buildReportTaskCards(existingRep){
   const container = document.getElementById('r-task-cards');
   if(!container) return;
-  const myProjs = PROJECTS.filter(p => p.ngo === currentUser.org && p.status !== 'deleted');
-  if(!myProjs.length){
-    container.innerHTML = `<div class="card" style="text-align:center;padding:24px;color:var(--muted)">
-      No activities found. Go to <a href="#" onclick="showPage('profile-view');return false;" style="color:var(--blue2)">My Profile</a> to add Programme Activities first.
+  try {
+    const userOrg = currentUser?.org || '';
+    const myProjs = PROJECTS.filter(p => _normNgo(p.ngo) === _normNgo(userOrg) && String(p.status||'').toLowerCase() !== 'deleted');
+    if(!myProjs.length){
+      container.innerHTML = `<div class="card" style="text-align:center;padding:28px 20px">
+        <div style="font-size:32px;margin-bottom:8px">📋</div>
+        <div style="font-size:15px;font-weight:700;color:var(--blue);margin-bottom:6px">No Programme Activities Defined Yet</div>
+        <div style="font-size:12px;color:var(--muted);max-width:440px;margin:0 auto 16px;line-height:1.6">
+          You haven't defined any activities/tasks for <b>${userOrg||'your organisation'}</b> yet. Please go to <b>My Profile</b> to add your components and activities first.
+        </div>
+        <button class="btn-blu" onclick="showPage('profile-view')" style="padding:9px 22px;font-size:13px;border-radius:8px">
+          🏢 Add Activities in My Profile
+        </button>
+      </div>`;
+      refreshLockBtn();
+      return;
+    }
+
+    const lastRep = existingRep || REPORTS.filter(r=>_normNgo(r.ngo)===_normNgo(userOrg)).sort((a,b)=>(+b.id||0)-(+a.id||0))[0] || {};
+    let lastTasks = [];
+    try {
+      const rawTasks = lastRep.tasks_json || lastRep.tasks || '[]';
+      lastTasks = typeof rawTasks === 'string' ? JSON.parse(rawTasks) : (Array.isArray(rawTasks) ? rawTasks : []);
+    } catch(e){ lastTasks = []; }
+
+    const monthPickVal = document.getElementById('r-month-pick')?.value || '';
+    let monthMin = '', monthMax = '';
+    if(monthPickVal){
+      const [yr2, mo2] = monthPickVal.split('-').map(Number);
+      if(yr2 && mo2){
+        monthMin = monthPickVal + '-01';
+        monthMax = monthPickVal + '-' + String(new Date(yr2, mo2, 0).getDate()).padStart(2,'0');
+      }
+    }
+
+    const byComp = {};
+    myProjs.forEach(p => { const c=(p.component||'Other').trim(); if(!byComp[c]) byComp[c]=[]; byComp[c].push(p); });
+
+    const isLocked = existingRep && String(existingRep.report_locked) === 'true';
+
+    container.innerHTML = Object.entries(byComp).map(([comp, tasks]) =>
+      `<div style="margin-bottom:12px">
+        <div style="font-size:12px;font-weight:700;color:var(--blue);text-transform:uppercase;letter-spacing:.5px;
+          padding:7px 12px;background:#e8f0fe;border-radius:8px;margin-bottom:10px;border-left:4px solid var(--blue)">▸ ${comp}</div>
+        ${tasks.map(t => {
+          const tIdRaw = t.project_id || t.id || t.task_name || Math.random().toString(36).substring(2);
+          const tid = 'task_' + String(tIdRaw).replace(/[^a-z0-9]/gi,'_');
+          const tName = String(t.task_name||'').trim().toLowerCase();
+          const lastAct = (Array.isArray(lastTasks) ? lastTasks.find(a => String(a.task_name||'').trim().toLowerCase() === tName) : null) || {};
+          
+          let subs = [null];
+          if (Array.isArray(lastAct.sub_activities) && lastAct.sub_activities.length > 0) {
+            subs = lastAct.sub_activities;
+          }
+          
+          const dateLabel = t.start_date ? fmtDate(t.start_date)+(t.end_date?' → '+fmtDate(t.end_date):'') : '';
+          const selOpts = ['Not started','In progress','Completed'].map(v =>
+            `<option value="${v}"${lastAct.status===v?' selected':''}>${v}</option>`).join('');
+
+          const savedCardsHtml = subs.filter(sa=>sa && typeof sa === 'object').map((sa,i) =>
+            _savedCardHtml(sa,i)
+          ).join('');
+          const blankFormHtml  = !isLocked && !subs.filter(sa=>sa && typeof sa === 'object').length ? _editFormHtml(monthMin, monthMax, null, tid) : '';
+
+          return `<div class="card" style="margin-bottom:12px;padding:16px;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,0.03)">
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:12px">
+              <div style="flex:1;min-width:180px">
+                <div style="font-weight:700;font-size:15px;color:#1a1a2e">${t.task_name || 'Activity'}</div>
+                ${dateLabel?`<div style="font-size:11px;color:var(--muted);margin-top:3px">📅 ${dateLabel}</div>`:''}
+              </div>
+              <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+                <label style="font-size:11px;color:#222;font-weight:700;white-space:nowrap">Status <span style="color:var(--red)">*</span></label>
+                <select id="${tid}_status" onchange="_markDirty();_scheduleAutoSave()" ${isLocked?'disabled':''}
+                  style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:#fff;font-weight:600">
+                  <option value="">— Select —</option>${selOpts}
+                </select>
+              </div>
+            </div>
+            <div id="${tid}_entries" data-min="${monthMin}" data-max="${monthMax}">${savedCardsHtml}${blankFormHtml}</div>
+            <div id="${tid}_activity" style="display:none"></div>
+            <div id="${tid}_selist"   style="display:none"></div>
+            ${!isLocked?`<button type="button" onclick="addTaskEntry('${tid}','${monthMin}','${monthMax}')"
+              style="margin-top:6px;padding:6px 16px;background:#e8f0fe;color:var(--blue);border:1px solid #c5d8f8;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer">
+              + Add Entry</button>`:''}
+          </div>`;
+        }).join('')}
+      </div>`
+    ).join('');
+
+    refreshLockBtn();
+  } catch(err) {
+    console.error('Error rendering activity task cards:', err);
+    container.innerHTML = `<div class="card" style="padding:20px;color:var(--red);text-align:center">
+      ⚠️ Error loading activity cards. Please <a href="#" onclick="onReportMonthChange();return false;" style="text-decoration:underline">click here to retry</a>.
     </div>`;
-    return;
   }
-
-  const lastRep = existingRep || REPORTS.filter(r=>r.ngo===currentUser.org).sort((a,b)=>(+b.id||0)-(+a.id||0))[0] || {};
-  let lastTasks = [];
-  try { lastTasks = JSON.parse(lastRep.tasks_json || lastRep.tasks || '[]'); } catch(e){}
-
-  const monthPickVal = document.getElementById('r-month-pick')?.value || '';
-  let monthMin = '', monthMax = '';
-  if(monthPickVal){
-    const [yr2, mo2] = monthPickVal.split('-').map(Number);
-    monthMin = monthPickVal + '-01';
-    monthMax = monthPickVal + '-' + String(new Date(yr2, mo2, 0).getDate()).padStart(2,'0');
-  }
-
-  const byComp = {};
-  myProjs.forEach(p => { const c=p.component||'Other'; if(!byComp[c]) byComp[c]=[]; byComp[c].push(p); });
-
-  const isLocked = existingRep && String(existingRep.report_locked) === 'true';
-
-  container.innerHTML = Object.entries(byComp).map(([comp, tasks]) =>
-    `<div style="margin-bottom:8px">
-      <div style="font-size:11px;font-weight:700;color:var(--blue);text-transform:uppercase;letter-spacing:.5px;
-        padding:5px 10px;background:#e8f0fe;border-radius:6px;margin-bottom:8px">▸ ${comp}</div>
-      ${tasks.map(t => {
-        const tid = 'task_' + (t.project_id || t.task_name).toString().replace(/[^a-z0-9]/gi,'_');
-        const tName = (t.task_name||'').trim().toLowerCase();
-        const lastAct = lastTasks.find(a => (a.task_name||'').trim().toLowerCase() === tName) || {};
-        const subs = lastAct.sub_activities?.length ? lastAct.sub_activities : [null];
-        const dateLabel = t.start_date ? fmtDate(t.start_date)+(t.end_date?' → '+fmtDate(t.end_date):'') : '';
-        const selOpts = ['Not started','In progress','Completed'].map(v =>
-          `<option value="${v}"${lastAct.status===v?' selected':''}>${v}</option>`).join('');
-        // Saved entries → cards; if none saved → one blank edit form
-        const savedCardsHtml = subs.filter(sa=>sa).map((sa,i) =>
-          isLocked ? _savedCardHtml(sa,i) : _savedCardHtml(sa,i)
-        ).join('');
-        const blankFormHtml  = !isLocked && !subs.filter(sa=>sa).length ? _editFormHtml(monthMin, monthMax, null, tid) : '';
-        return `<div class="card" style="margin-bottom:10px;padding:14px">
-          <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:12px">
-            <div style="flex:1;min-width:180px">
-              <div style="font-weight:700;font-size:15px;color:#1a1a2e">${t.task_name}</div>
-              ${dateLabel?`<div style="font-size:11px;color:var(--muted);margin-top:2px">${dateLabel}</div>`:''}
-            </div>
-            <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
-              <label style="font-size:11px;color:#222;font-weight:600;white-space:nowrap">Status <span style="color:var(--red)">*</span></label>
-              <select id="${tid}_status" onchange="_markDirty();_scheduleAutoSave()" ${isLocked?'disabled':''}
-                style="padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:#fff">
-                <option value="">— Select —</option>${selOpts}
-              </select>
-            </div>
-          </div>
-          <div id="${tid}_entries" data-min="${monthMin}" data-max="${monthMax}">${savedCardsHtml}${blankFormHtml}</div>
-          <div id="${tid}_activity" style="display:none"></div>
-          <div id="${tid}_selist"   style="display:none"></div>
-          ${!isLocked?`<button type="button" onclick="addTaskEntry('${tid}','${monthMin}','${monthMax}')"
-            style="margin-top:4px;padding:6px 16px;background:#e8f0fe;color:var(--blue);border:1px solid #c5d8f8;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer">
-            + Add Entry</button>`:''}
-        </div>`;
-      }).join('')}
-    </div>`
-  ).join('');
-
-  refreshLockBtn();
 }
 
 function onProjectChange(){ /* legacy stub */ }
@@ -5534,24 +5582,13 @@ function renderAdminTaskModalBody(ngoName){
   });
   let html = '';
   Object.entries(compMap).forEach(([comp, ctasks]) => {
-    const isLocked = ctasks.every(t => isTaskLocked(t.locked));
     const taskCount = ctasks.length;
-    const compEsc = comp.replace(/'/g,"\\'");
-    const ngoEsc  = ngoName.replace(/'/g,"\\'");
-    html += `<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 14px;border:1px solid var(--border);border-radius:8px;margin-bottom:8px;background:${isLocked?'#fff8f8':'#f8fff8'}">
+    html += `<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 14px;border:1px solid var(--border);border-radius:8px;margin-bottom:8px;background:#f8fff8">
       <div>
         <div style="font-size:13px;font-weight:700;color:var(--blue)">${comp}</div>
-        <div style="font-size:11px;color:var(--muted);margin-top:2px">${taskCount} task${taskCount!==1?'s':''} &nbsp;•&nbsp;
-          <span style="font-weight:600;${isLocked?'color:#c62828':'color:#2e7d32'}">${isLocked?'🔒 Locked':'🔓 Unlocked'}</span>
-        </div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px">${taskCount} task${taskCount!==1?'s':''}</div>
       </div>
-      ${isLocked
-        ? `<button onclick="adminUnlockComponent('${compEsc}','${ngoEsc}',this)"
-            style="padding:6px 18px;font-size:13px;font-weight:700;background:#e65100;color:#fff;border:none;border-radius:6px;cursor:pointer;white-space:nowrap">
-            🔓 Unlock
-          </button>`
-        : `<span style="font-size:12px;color:#2e7d32;font-weight:600;padding:6px 12px;background:#e8f5e9;border-radius:6px">Already Unlocked</span>`
-      }
+      <span style="font-size:12px;color:#2e7d32;font-weight:600;padding:6px 12px;background:#e8f5e9;border-radius:6px">Active</span>
     </div>`;
   });
   body.innerHTML = html;

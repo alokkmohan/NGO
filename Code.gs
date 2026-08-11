@@ -42,6 +42,7 @@ function doGet(e) {
     else if (action === 'autoSubmitMonth')      result = autoSubmitReportsForMonth(p.month);
     else if (action === 'getAdminPartners')     result = getAdminPartners();
     else if (action === 'setNGOStatus')         result = setNGOStatus(p);
+    else if (action === 'renameNGO')            result = renameNGO(p);
     else if (action === 'debugReports')         result = debugReportsInfo();
     else if (action === 'version')              result = { version: VERSION };
     else if (action === 'cleanupDuplicates')    result = { message: cleanupDuplicateReports() };
@@ -84,6 +85,7 @@ function doPost(e) {
     if (action === 'autoSubmitMonth')   return respond(autoSubmitReportsForMonth(data.month));
     if (action === 'getAdminPartners')  return respond(getAdminPartners());
     if (action === 'setNGOStatus')      return respond(setNGOStatus(data));
+    if (action === 'renameNGO')         return respond(renameNGO(data));
     return respond({ error: 'Unknown action' });
   } catch (err) {
     return respond({ error: err.message });
@@ -1043,11 +1045,8 @@ function saveProject(data) {
     const rows = sheet.getDataRange().getValues();
     const h = rows[0];
     const pidIdx    = h.indexOf('project_id');
-    const lockedIdx = h.indexOf('locked');
     for (let i = 1; i < rows.length; i++) {
       if (String(rows[i][pidIdx]) !== String(data.project_id)) continue;
-      // Never update a locked task
-      if (lockedIdx >= 0 && String(rows[i][lockedIdx]) === 'true') return { success: true, project_id: data.project_id, skipped: true };
       const set = (col, val) => { const ci = h.indexOf(col); if(ci>=0) sheet.getRange(i+1,ci+1).setValue(val); };
       set('component',     data.component   || '');
       set('task_name',     data.task_name   || '');
@@ -1133,7 +1132,7 @@ function cleanAllSheetWhitespace() {
   return { success: true, cleaned: totalCleaned };
 }
 
-// Mark all UNLOCKED projects for an NGO as deleted (called before re-saving tasks)
+// Mark all projects for an NGO as deleted (called before re-saving tasks)
 function deleteUnlockedProjects(data) {
   const sheet = getSS().getSheetByName('Projects');
   if (!sheet) return { success: true };
@@ -1141,17 +1140,15 @@ function deleteUnlockedProjects(data) {
   const h = rows[0];
   const ngoIdx    = h.indexOf('ngo');
   const statusIdx = h.indexOf('status');
-  const lockedIdx = h.indexOf('locked');
   for (let i = 1; i < rows.length; i++) {
     if (rows[i][ngoIdx] !== data.ngo) continue;
     if (rows[i][statusIdx] === 'deleted') continue;
-    const isLocked = lockedIdx >= 0 && String(rows[i][lockedIdx]) === 'true';
-    if (!isLocked) sheet.getRange(i + 1, statusIdx + 1).setValue('deleted');
+    sheet.getRange(i + 1, statusIdx + 1).setValue('deleted');
   }
   return { success: true };
 }
 
-// Mark a single unlocked project as deleted by project_id
+// Mark a single project as deleted by project_id
 function deleteProject(data) {
   if (!data.project_id) return { success: false, error: 'project_id required' };
   const sheet = getSS().getSheetByName('Projects');
@@ -1160,11 +1157,8 @@ function deleteProject(data) {
   const h = rows[0];
   const pidIdx    = h.indexOf('project_id');
   const statusIdx = h.indexOf('status');
-  const lockedIdx = h.indexOf('locked');
   for (let i = 1; i < rows.length; i++) {
     if (String(rows[i][pidIdx]) !== String(data.project_id)) continue;
-    if (lockedIdx >= 0 && String(rows[i][lockedIdx]) === 'true')
-      return { success: false, error: 'Cannot delete a locked activity.' };
     sheet.getRange(i + 1, statusIdx + 1).setValue('deleted');
     return { success: true };
   }
@@ -1306,6 +1300,42 @@ function saveProfile(data) {
   return { success: true, action: 'created' };
 }
 
+// ── ADMIN: Rename an NGO across NGOs, Reports, Projects, Users sheets ──
+function renameNGO(data) {
+  const oldName = String(data.oldName || '').trim();
+  const newName = String(data.newName || '').trim();
+  if (!oldName || !newName) return { success: false, error: 'oldName and newName required' };
+  const oldKey = oldName.toLowerCase();
+
+  const ss = getSS();
+  let updated = {};
+
+  [
+    { sheet: 'NGOs',     col: 'name' },
+    { sheet: 'Reports',  col: 'ngo'  },
+    { sheet: 'Projects', col: 'ngo'  },
+    { sheet: 'Users',    col: 'org'  }
+  ].forEach(({ sheet: sheetName, col }) => {
+    const sheet = ss.getSheetByName(sheetName);
+    if (!sheet) return;
+    const rows = sheet.getDataRange().getValues();
+    if (rows.length < 2) return;
+    const hdr = rows[0];
+    const ci  = hdr.findIndex(h => String(h).trim().toLowerCase() === col);
+    if (ci < 0) return;
+    let count = 0;
+    for (let i = 1; i < rows.length; i++) {
+      if (String(rows[i][ci] || '').trim().toLowerCase() === oldKey) {
+        sheet.getRange(i + 1, ci + 1).setValue(newName);
+        count++;
+      }
+    }
+    updated[sheetName] = count;
+  });
+
+  return { success: true, updated: updated };
+}
+
 // ── FORGOT PASSWORD ──────────────────────────────────────────
 // Generates a 6-char temp password, saves it, and emails the user
 function forgotPassword(data) {
@@ -1424,15 +1454,51 @@ const PORTAL_URL  = 'https://samsecup.dataimpact.in/';
 
 // ── Helpers ──────────────────────────────────────────────────
 
-// Normalize month value (handles ISO date strings or "April 2026" format)
+// Normalize month value (handles ISO date strings, "July 2026", "Jul-26", "Jul 2026", etc.)
 function normalizeMonthLabel(val) {
   if (!val) return '';
   const s = String(val).trim();
-  if (/^[A-Za-z]/.test(s)) return s; // already "April 2026"
+  if (!s) return '';
+
+  const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const SHORT_MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+  for (let i = 0; i < 12; i++) {
+    const full = MONTHS[i].toLowerCase();
+    const short = SHORT_MONTHS[i].toLowerCase();
+    const sLower = s.toLowerCase();
+    if (sLower.includes(full) || sLower.includes(short)) {
+      const yrMatch = s.match(/\b(20\d\d|\d\d)\b/);
+      if (yrMatch) {
+        let yr = yrMatch[1];
+        if (yr.length === 2) yr = '20' + yr;
+        return MONTHS[i] + ' ' + yr;
+      }
+    }
+  }
+
+  const yyyymm = s.match(/^(20\d\d)[-/\._](\d{1,2})/);
+  if (yyyymm) {
+    const yr = yyyymm[1];
+    const mo = parseInt(yyyymm[2], 10);
+    if (mo >= 1 && mo <= 12) return MONTHS[mo - 1] + ' ' + yr;
+  }
+
+  const mmyyyy = s.match(/^(\d{1,2})[-/\._](20\d\d)/);
+  if (mmyyyy) {
+    const mo = parseInt(mmyyyy[1], 10);
+    const yr = mmyyyy[2];
+    if (mo >= 1 && mo <= 12) return MONTHS[mo - 1] + ' ' + yr;
+  }
+
   try {
-    const d = new Date(s);
-    if (!isNaN(d)) return MONTH_NAMES[d.getMonth()] + ' ' + d.getFullYear();
+    const cleanStr = s.includes('-') && s.length === 7 ? s + '-15' : s;
+    const d = new Date(cleanStr);
+    if (!isNaN(d.getTime())) {
+      return MONTHS[d.getUTCMonth()] + ' ' + d.getUTCFullYear();
+    }
   } catch(e) {}
+
   return s;
 }
 

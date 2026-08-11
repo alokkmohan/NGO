@@ -1,5 +1,5 @@
 // Service Worker for Samagra UP NGO Partner Portal
-const CACHE_NAME = 'samagra-ngo-v1';
+const CACHE_NAME = 'samagra-ngo-v2';
 const ASSETS_TO_CACHE = [
   './index.html',
   './manifest.json',
