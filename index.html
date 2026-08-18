@@ -883,6 +883,14 @@ tr:hover td{background:#FAFBFF}
 </div>
 <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
 
+<!-- CENTER-SCREEN SUCCESS TOAST -->
+<div id="success-toast-overlay" style="display:none;position:fixed;inset:0;background:rgba(15,30,60,0.5);z-index:10000;align-items:center;justify-content:center" onclick="hideSuccessToast()">
+  <div style="background:#fff;border-radius:14px;padding:28px 32px;max-width:340px;width:90%;text-align:center;box-shadow:0 10px 40px rgba(0,0,0,0.25)" onclick="event.stopPropagation()">
+    <div id="success-toast-msg" style="font-size:16px;font-weight:700;color:#1b5e20;line-height:1.5"></div>
+    <button onclick="hideSuccessToast()" style="margin-top:18px;padding:8px 24px;background:#2e7d32;color:#fff;border:none;border-radius:7px;font-size:13px;font-weight:700;cursor:pointer">OK</button>
+  </div>
+</div>
+
 <script>
 // ════════════════════════════════════
 // DATA
@@ -1981,6 +1989,21 @@ function showLoader(msg){
 }
 function hideLoader(){
   document.getElementById('loader-overlay').style.display = 'none';
+}
+
+// ════════════════════════════════════
+// CENTER-SCREEN SUCCESS TOAST
+// ════════════════════════════════════
+let _successToastTimer = null;
+function showSuccessToast(msg){
+  document.getElementById('success-toast-msg').textContent = msg;
+  document.getElementById('success-toast-overlay').style.display = 'flex';
+  clearTimeout(_successToastTimer);
+  _successToastTimer = setTimeout(hideSuccessToast, 4000);
+}
+function hideSuccessToast(){
+  document.getElementById('success-toast-overlay').style.display = 'none';
+  clearTimeout(_successToastTimer);
 }
 
 // ════════════════════════════════════
@@ -4873,6 +4896,7 @@ async function lockReportFinal(){
       stEl.style.cssText = 'padding:10px 14px;border-radius:7px;font-size:13px;font-weight:600;background:#e8f5e9;color:#2e7d32;border:1px solid #a5d6a7';
       stEl.textContent = isUpdate ? '🔄 Report updated and synced with PMU.' : '✅ Report submitted to PMU successfully!';
     }
+    showSuccessToast(isUpdate ? '🔄 Report updated and synced with PMU.' : '✅ Report submitted to PMU successfully!');
     // Keep all inputs enabled and editable
     buildReportTaskCards(REPORTS.find(r=>_normNgo(r.ngo)===_normNgo(currentUser.org) && _normalizeMonth(r.month)===months));
     document.querySelectorAll('#r-section-b input,#r-section-b textarea,#r-section-b select,#r-section-d input,#r-section-d textarea,#r-section-d select').forEach(el=>{el.disabled=false;el.style.background='#fff';el.style.color='#000';});
