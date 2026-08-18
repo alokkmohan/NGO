@@ -1,5 +1,5 @@
 // Service Worker for Samagra UP NGO Partner Portal
-const CACHE_NAME = 'samagra-ngo-v2';
+const CACHE_NAME = 'samagra-ngo-v3';
 const ASSETS_TO_CACHE = [
   './index.html',
   './manifest.json',
@@ -41,22 +41,35 @@ self.addEventListener('fetch', (event) => {
   if (event.request.url.includes('script.google.com')) {
     return;
   }
-  
+
+  // Network-first for page navigations and same-origin files (index.html,
+  // manifest.json, etc.) so a new deploy shows up on the very next load
+  // instead of being stuck behind whatever got cached first. Falls back to
+  // cache only when offline.
+  const isSameOrigin = new URL(event.request.url).origin === self.location.origin;
+  if (event.request.mode === 'navigate' || isSameOrigin) {
+    event.respondWith(
+      fetch(event.request).then((fetchRes) => {
+        return caches.open(CACHE_NAME).then((cache) => {
+          if (event.request.method === 'GET') cache.put(event.request, fetchRes.clone());
+          return fetchRes;
+        });
+      }).catch(() => caches.match(event.request).then((cached) => {
+        return cached || (event.request.mode === 'navigate' ? caches.match('./index.html') : undefined);
+      }))
+    );
+    return;
+  }
+
+  // Cache-first for cross-origin CDN assets (rarely change, safe to cache)
   event.respondWith(
     caches.match(event.request).then((response) => {
       return response || fetch(event.request).then((fetchRes) => {
         return caches.open(CACHE_NAME).then((cache) => {
-          // Cache HTTP/HTTPS GET requests dynamically
-          if (event.request.method === 'GET' && (event.request.url.startsWith('http://') || event.request.url.startsWith('https://'))) {
-            cache.put(event.request, fetchRes.clone());
-          }
+          if (event.request.method === 'GET') cache.put(event.request, fetchRes.clone());
           return fetchRes;
         });
       });
-    }).catch(() => {
-      if (event.request.mode === 'navigate') {
-        return caches.match('./index.html');
-      }
     })
   );
 });
