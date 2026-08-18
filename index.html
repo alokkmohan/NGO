@@ -1964,10 +1964,7 @@ async function loadSheetData(){
     }
     if(isAdmin && partRes?.success){
       ADMIN_PARTNERS.length = 0;
-      partRes.data.forEach(p => {
-        if(isTestNGO(p.ngo || p.name)) return;
-        ADMIN_PARTNERS.push(p);
-      });
+      partRes.data.forEach(p => ADMIN_PARTNERS.push(p));
     }
   } catch(e){ console.warn('Could not load Sheet data:', e.message); }
 
