@@ -4131,8 +4131,12 @@ function _editFormHtml(monthMin, monthMax, sa, tid){
           style="padding:6px 10px;border:1.5px solid var(--border);border-radius:6px;font-size:13px">
       </div>
     </div>
-    <div style="margin-bottom:6px">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;margin-bottom:6px">
       <label style="font-size:12px;color:#222;font-weight:700">What was done? <span style="color:var(--red)">*</span></label>
+      <label class="photo-upload-label" style="padding:4px 10px;background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:4px">
+        📷 Attach Photo / Proof (Drive Upload)
+        <input type="file" accept="image/*, .pdf" onchange="handleEntryPhotoUpload(this)" style="display:none">
+      </label>
     </div>
     <textarea class="entry-details" rows="3" placeholder="Describe the activity done in this period..."
       oninput="_markDirty();_scheduleAutoSave()"
@@ -6369,6 +6373,70 @@ async function submitQuickAddActivity(btn){
   } finally {
     btn.disabled = false;
     btn.textContent = '💾 Save & Add Activity';
+  }
+}
+
+// ── PHOTO & DOCUMENT ATTACHMENT UPLOADER FOR TASK ENTRIES ──
+async function handleEntryPhotoUpload(input){
+  const file = input.files?.[0];
+  if(!file) return;
+
+  const form = input.closest('.task-entry-form');
+  const detailsEl = form?.querySelector('.entry-details');
+  const labelEl = form?.querySelector('.photo-upload-label');
+  if(!detailsEl) return;
+
+  if(file.size > 10 * 1024 * 1024){
+    alert('File size must be less than 10MB.');
+    input.value = '';
+    return;
+  }
+
+  if(labelEl){
+    labelEl.textContent = '⏳ Uploading to Drive…';
+    labelEl.style.opacity = '0.7';
+  }
+
+  try {
+    showLoader('Uploading attachment to Google Drive…');
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      try {
+        const base64 = e.target.result.split(',')[1];
+        const res = await apiPost({
+          action:   'uploadPhoto',
+          base64:   base64,
+          mimeType: file.type,
+          filename: file.name,
+          ngo:      currentUser?.org || 'Test',
+          month:    document.getElementById('r-month-pick')?.value || 'General'
+        });
+        hideLoader();
+        if(res.success && res.url){
+          const linkText = `\n📷 Proof Attachment: ${res.url}`;
+          detailsEl.value = (detailsEl.value + linkText).trim();
+          if(labelEl){
+            labelEl.textContent = '✅ Attachment Uploaded!';
+            labelEl.style.background = '#dcfce7';
+            labelEl.style.color = '#15803d';
+            labelEl.style.borderColor = '#86efac';
+          }
+          _markDirty();
+          _scheduleAutoSave();
+        } else {
+          alert('Upload failed: ' + (res.error || 'Unknown error'));
+        }
+      } catch(err){
+        hideLoader();
+        alert('Upload error: ' + err.message);
+      } finally {
+        input.value = '';
+      }
+    };
+    reader.readAsDataURL(file);
+  } catch(err){
+    hideLoader();
+    alert('Failed to read file: ' + err.message);
   }
 }
 
