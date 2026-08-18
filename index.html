@@ -661,29 +661,6 @@ tr:hover td{background:#FAFBFF}
         </div>
       </div>
 
-      <!-- Excel Import & Sample Template Card -->
-      <div class="card" style="margin-bottom:14px;background:linear-gradient(135deg, #f0f7ff 0%, #f7f9fc 100%);border:1px solid #cce3fe;border-radius:10px;padding:14px 16px">
-        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
-          <div>
-            <div style="font-size:14px;font-weight:700;color:#1e40af">📊 Excel Data Import & Blank Sample Template / एक्सेल अपलोड एवं टेंप्लेट</div>
-            <div style="font-size:11px;color:#475569;margin-top:3px">
-              आप एक्सेल शीट में रिपोर्ट भरकर 1-क्लिक में ऑटो-अपलोड कर सकते हैं। ब्लैंक सैंपल टेंप्लेट डाउनलोड करें, डेटा भरें और यहाँ अपलोड करें।
-            </div>
-          </div>
-          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-            <button onclick="downloadExcelSampleTemplate()" type="button"
-              style="padding:8px 16px;background:#ffffff;color:#1e40af;border:1px solid #93c5fd;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px;box-shadow:0 1px 3px rgba(0,0,0,0.05)">
-              📥 Download Sample Template (.xlsx)
-            </button>
-            <label style="padding:8px 16px;background:#2563eb;color:#ffffff;border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px;box-shadow:0 2px 5px rgba(37,99,235,0.25)">
-              📤 Upload Excel Report (.xlsx)
-              <input type="file" id="excel-import-file" accept=".xlsx, .xls, .csv" onchange="handleExcelFileUpload(this)" style="display:none">
-            </label>
-          </div>
-        </div>
-        <div id="excel-import-status" style="display:none;margin-top:10px;padding:9px 12px;border-radius:7px;font-size:12px;font-weight:600"></div>
-      </div>
-
       <!-- Live Form Progress Meter -->
       <div id="r-form-progress-wrap" style="margin-bottom:14px;background:#f0f6ff;border-radius:12px;padding:14px 18px;border:1px solid #d0e2ff">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
