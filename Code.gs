@@ -1562,6 +1562,13 @@ function sendMonthEndReminders() {
   let sent = 0;
   const recipients = [];
 
+  // ── Auto Mail Toggle ──
+  const ENABLE_AUTO_MAILS = false; // Set to false to disable automatic month-end emails
+  if (!ENABLE_AUTO_MAILS) {
+    Logger.log('Auto-mails are disabled (ENABLE_AUTO_MAILS = false). Skipping reminders.');
+    return { sent: 0, status: 'disabled', message: 'Auto-mails are disabled.' };
+  }
+
   users.forEach(u => {
     if (done.has(u.org)) return;
     done.add(u.org);
@@ -1629,3 +1636,19 @@ function setupMonthlyTriggers() {
 
   Logger.log('Trigger set: sendMonthEndReminders on 30th at 10 AM');
 }
+
+// ── 3. Stop / Remove all automated mail triggers ──────────────
+// Run manually to stop all scheduled triggers and auto emails
+function stopAllAutoMails() {
+  let count = 0;
+  ScriptApp.getProjectTriggers().forEach(t => {
+    const fn = t.getHandlerFunction();
+    if (fn === 'sendMonthEndReminders' || fn === 'dailyAutoSubmitCheck' || fn === 'triggerAutoSubmitReports') {
+      ScriptApp.deleteTrigger(t);
+      count++;
+    }
+  });
+  Logger.log('Successfully removed ' + count + ' automated trigger(s). Auto emails stopped.');
+  return 'Stopped ' + count + ' trigger(s).';
+}
+

@@ -15,6 +15,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
@@ -660,6 +661,29 @@ tr:hover td{background:#FAFBFF}
         </div>
       </div>
 
+      <!-- Excel Import & Sample Template Card -->
+      <div class="card" style="margin-bottom:14px;background:linear-gradient(135deg, #f0f7ff 0%, #f7f9fc 100%);border:1px solid #cce3fe;border-radius:10px;padding:14px 16px">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+          <div>
+            <div style="font-size:14px;font-weight:700;color:#1e40af">📊 Excel Data Import & Blank Sample Template / एक्सेल अपलोड एवं टेंप्लेट</div>
+            <div style="font-size:11px;color:#475569;margin-top:3px">
+              आप एक्सेल शीट में रिपोर्ट भरकर 1-क्लिक में ऑटो-अपलोड कर सकते हैं। ब्लैंक सैंपल टेंप्लेट डाउनलोड करें, डेटा भरें और यहाँ अपलोड करें।
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            <button onclick="downloadExcelSampleTemplate()" type="button"
+              style="padding:8px 16px;background:#ffffff;color:#1e40af;border:1px solid #93c5fd;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px;box-shadow:0 1px 3px rgba(0,0,0,0.05)">
+              📥 Download Sample Template (.xlsx)
+            </button>
+            <label style="padding:8px 16px;background:#2563eb;color:#ffffff;border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px;box-shadow:0 2px 5px rgba(37,99,235,0.25)">
+              📤 Upload Excel Report (.xlsx)
+              <input type="file" id="excel-import-file" accept=".xlsx, .xls, .csv" onchange="handleExcelFileUpload(this)" style="display:none">
+            </label>
+          </div>
+        </div>
+        <div id="excel-import-status" style="display:none;margin-top:10px;padding:9px 12px;border-radius:7px;font-size:12px;font-weight:600"></div>
+      </div>
+
       <!-- Live Form Progress Meter -->
       <div id="r-form-progress-wrap" style="margin-bottom:14px;background:#f0f6ff;border-radius:12px;padding:14px 18px;border:1px solid #d0e2ff">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
@@ -744,184 +768,6 @@ tr:hover td{background:#FAFBFF}
 
     </div>
 
-    <!-- ── (OLD MONTHLY REPORT CONTENT REMOVED) ── -->
-    <div style="display:none"><!-- old report HTML below is hidden/replaced -->
-      <div class="card" style="margin-bottom:12px">
-        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:12px">
-          <div class="card-title" style="margin:0">📝 Monthly KPI Progress Report</div>
-          <div style="font-size:11px;color:var(--muted)">Samagra Shiksha, Secondary, Uttar Pradesh | PMU</div>
-        </div>
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:10px">
-          <div style="background:#f8f9ff;border-radius:8px;padding:8px 12px">
-            <div style="font-size:10px;color:var(--muted)">Organisation</div>
-            <div style="font-weight:700;color:var(--blue)" id="rh-org">—</div>
-          </div>
-          <div style="background:#f8f9ff;border-radius:8px;padding:8px 12px">
-            <div style="font-size:10px;color:var(--muted)">Nodal Person</div>
-            <div style="font-weight:600" id="rh-person">—</div>
-          </div>
-          <div style="background:#f8f9ff;border-radius:8px;padding:8px 12px">
-            <div style="font-size:10px;color:var(--muted)">Districts</div>
-            <div style="font-size:12px" id="rh-dist">—</div>
-          </div>
-        </div>
-        <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
-          <div class="wform-group" style="margin:0;flex:1;min-width:180px">
-            <label style="font-size:11px">Reporting Month <span style="color:var(--red)">*</span></label>
-            <select id="r-month-pick" onchange="onReportMonthChange()" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:7px;font-size:13px;background:#fff">
-              <option value="">— Select Reporting Month —</option>
-            </select>
-          </div>
-          <div id="r-month-status-wrap" style="flex:1;min-width:200px;display:none">
-            <div id="r-month-status" style="padding:8px 12px;border-radius:7px;font-size:12px;font-weight:600"></div>
-          </div>
-          <div class="wform-group" style="margin:0;flex:1;min-width:160px">
-            <label style="font-size:11px">Contact Number</label>
-            <input id="rh-phone" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:7px;font-size:13px;background:#f0f4fa" readonly>
-          </div>
-          <div class="wform-group" style="margin:0;flex:1;min-width:160px">
-            <label style="font-size:11px">Email</label>
-            <input id="rh-email" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:7px;font-size:13px;background:#f0f4fa" readonly>
-          </div>
-        </div>
-        <div id="r-autofill-notice" style="display:none;margin-top:10px;padding:9px 14px;background:#e8f5e9;border:1px solid #a5d6a7;border-radius:8px;font-size:12px;color:#2e7d32;font-weight:600">
-          💡 <b>Smart Auto-Fill:</b> Details auto-filled from your previous report (<span id="r-autofill-source"></span>). Update only what changed this month!
-        </div>
-      </div>
-
-      <!-- SECTION A: Task-wise KPI Progress -->
-      <div class="card" style="margin-bottom:12px">
-        <div class="card-title">📊 Section A — Task-wise KPI Progress</div>
-        <div style="font-size:12px;color:var(--muted);margin-bottom:12px">Write this month's activity, status and update for each task.</div>
-        <div id="r-task-cards">
-          <div style="color:var(--muted);font-size:13px;padding:20px;text-align:center">
-            Loading tasks… (please define tasks in My Profile first)
-          </div>
-        </div>
-        <div style="margin-top:8px">
-          <a href="#" onclick="showPage('profile-view');return false;" style="font-size:12px;color:var(--blue2)">+ To add a new task, go to My Profile</a>
-        </div>
-      </div>
-
-      <!-- SECTION B: Monthly Summary Numbers (hidden until Lock) -->
-      <div id="r-section-b" class="card" style="display:none;margin-bottom:12px">
-        <div class="card-title">🔢 Section B — This Month's Numbers
-          <span style="font-size:11px;font-weight:400;color:var(--muted);margin-left:8px">Cumulative total shown below</span>
-        </div>
-        <div id="r-cumulative" style="display:none;background:#f0f6ff;border-radius:8px;padding:8px 12px;margin-bottom:10px;font-size:12px;color:var(--blue)"></div>
-        <div class="wform-row3">
-          <div class="wform-group"><label>Schools covered</label><input id="r-schools" type="number" min="0" placeholder="0"></div>
-          <div class="wform-group"><label>Students benefited</label><input id="r-students" type="number" min="0" placeholder="0"></div>
-          <div class="wform-group"><label>Girls benefited</label><input id="r-girls" type="number" min="0" placeholder="0"></div>
-          <div class="wform-group"><label>Teachers trained</label><input id="r-teachers" type="number" min="0" placeholder="0"></div>
-          <div class="wform-group"><label>Community meetings</label><input id="r-meetings" type="number" min="0" placeholder="0"></div>
-          <div class="wform-group"><label>Events / workshops</label><input id="r-events" type="number" min="0" placeholder="0"></div>
-          <div class="wform-group"><label>SC/ST/OBC students</label><input id="r-scst" type="number" min="0" placeholder="0"></div>
-          <div class="wform-group"><label>Divyang students</label><input id="r-divyang" type="number" min="0" placeholder="0"></div>
-          <div class="wform-group"><label>Dropouts prevented</label><input id="r-dropout" type="number" min="0" placeholder="0"></div>
-        </div>
-      </div>
-
-      <!-- SECTION C: Photos are now per-task inside each task card -->
-
-      <!-- SECTION D: In-kind / Material Support (hidden until Lock) -->
-      <div id="r-section-d" class="card" style="display:none;margin-bottom:12px">
-        <div class="card-title">🎁 Section D — In-kind / Material / Donation Support</div>
-        <div style="font-size:12px;color:var(--muted);margin-bottom:10px">Record any equipment, material, training kit, machine or donation provided this month.</div>
-        <div class="wform-row">
-          <div class="wform-group">
-            <label>Equipment / Material provided</label>
-            <input id="r-equipment" placeholder="E.g: sports kit to 50 schools, cycles to 200 students">
-          </div>
-          <div class="wform-group">
-            <label>Training material / kits</label>
-            <input id="r-training" placeholder="E.g: activity kit to 30 teachers, library books to 5 schools">
-          </div>
-        </div>
-        <div class="wform-row">
-          <div class="wform-group">
-            <label>Machine / Infrastructure</label>
-            <input id="r-machine" placeholder="E.g: computers to 3 schools, projectors to 2 schools">
-          </div>
-          <div class="wform-group">
-            <label>Cash / Monetary donation (if any)</label>
-            <input id="r-donation" placeholder="E.g: ₹50,000 — for school renovation">
-          </div>
-        </div>
-        <div class="wform-group">
-          <label>Any other support / in-kind contribution</label>
-          <input id="r-other-support" placeholder="E.g: Uniform, stationery, school bag, food kit...">
-        </div>
-      </div>
-
-      <!-- SECTION E: Narrative (hidden until Lock) -->
-      <div id="r-section-e" class="card" style="display:none;margin-bottom:12px">
-        <div class="card-title">📋 Section E — Narrative Report</div>
-        <div class="wform-group">
-          <label>KMI — Key Milestone Indicator (one line) <span style="color:var(--red)">*</span></label>
-          <input id="r-kmi" placeholder="E.g: 420 dropout girls re-enrolled in 3 districts of Agra">
-        </div>
-        <div class="wform-group">
-          <label>Key achievements this month</label>
-          <textarea id="r-achieve" placeholder="Describe 2-3 major achievements..."></textarea>
-        </div>
-        <div class="wform-group">
-          <label>Key challenges faced</label>
-          <textarea id="r-challenges" placeholder="What challenges were faced? What was the impact?"></textarea>
-        </div>
-        <div class="wform-group">
-          <label>Support required from PMU / State</label>
-          <textarea id="r-support" placeholder="Any specific support, coordination or policy help needed?"></textarea>
-        </div>
-        <div class="wform-group">
-          <label>Plans for next month</label>
-          <textarea id="r-plans" placeholder="Key activities planned for next month..."></textarea>
-        </div>
-      </div>
-
-      <!-- Submit confirm panel (shown when Submit Final Report clicked) -->
-      <div id="r-lock-confirm-panel" style="display:none;background:#fff3e0;border:1.5px solid #e65100;border-radius:10px;padding:14px 16px;margin-bottom:12px">
-        <div style="font-size:13px;font-weight:700;color:#bf360c;margin-bottom:6px">⚠️ Review & Submit</div>
-        <div style="font-size:12px;color:#795548;margin-bottom:12px">
-          Please fill Section B (numbers), Section D (support), and the KMI above before submitting.<br>
-          <b>KMI field is required.</b> You can update and re-submit later if needed.
-        </div>
-        <div style="display:flex;gap:10px;flex-wrap:wrap">
-          <button onclick="confirmAndLock()"
-            style="flex:1;min-width:140px;padding:11px;background:#e65100;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer">
-            ✅ Yes, Submit Final Report
-          </button>
-          <button onclick="hideLockPanel()"
-            style="flex:1;min-width:120px;padding:11px;background:#fff;color:var(--muted);border:1px solid var(--border);border-radius:8px;font-size:13px;cursor:pointer">
-            Cancel
-          </button>
-        </div>
-      </div>
-
-      <!-- Save / Submit buttons -->
-      <div id="r-submit-area" style="margin-bottom:24px">
-        <button id="r-lock-btn"
-          style="display:none;width:100%;padding:14px;font-size:15px;font-weight:700;border:none;border-radius:8px;cursor:pointer"
-          onclick="lockReportFinal()">📤 Submit Monthly Report / मासिक रिपोर्ट जमा करें</button>
-        <div id="r-save-btn" style="display:none"></div><!-- stub for JS compat -->
-        <div id="r-lock-wrap" style="display:none"></div><!-- stub for JS compat -->
-      </div>
-
-      <!-- Success message -->
-      <div id="r-success-msg" style="display:none" class="card">
-        <div class="success-box">
-          <div class="success-icon">✓</div>
-          <h3>Report submitted successfully!</h3>
-          <p>Your monthly KPI report has been recorded.<br>PMU will review it and update the dashboard.</p>
-          <!-- Drive link shown only to admin, not NGO -->
-          <button class="btn-blu" style="margin-top:16px;width:auto;padding:8px 20px" onclick="showPage('dashboard')">Go to Dashboard</button>
-          <button class="btn-grn" style="margin-top:8px;width:auto;padding:8px 20px" onclick="downloadKPIReport()">⬇ Download this month's KPI Report</button>
-          <button class="btn-sec" style="margin-top:8px;width:auto;padding:8px 20px" onclick="resetMonthlyReport()">Submit new report</button>
-        </div>
-      </div>
-
-    </div><!-- end hidden old report HTML -->
-
     <!-- ── PAGE: MY REPORTS ── -->
     <div class="page" id="page-my-reports">
       <div class="card">
@@ -965,38 +811,40 @@ tr:hover td{background:#FAFBFF}
       </div>
     </div>
 
-    <!-- ── PAGE: UNLOCK CENTER (Admin) ── -->
+    <!-- ── PAGE: SUBMISSIONS & MONTH-END (Admin) ── -->
     <div class="page" id="page-unlock-tasks">
 
-      <!-- Monthly reports unlock -->
+      <!-- Monthly reports submissions list -->
       <div class="card" style="margin-top:20px">
-        <div class="card-title">🔓 Unlock Monthly Reports</div>
-        <div style="font-size:12px;color:var(--muted);margin-bottom:14px">Yahan se aap kisi bhi NGO ki locked monthly report ko unlock kar sakte hain, jisse wo use wapas edit kar sakein.</div>
+        <div class="card-title">📋 Partner Monthly Submissions</div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:14px">
+          ⚡ <b>Continuous Auto-Sync Active:</b> All NGO monthly reports and task cards are permanently unlocked. NGOs can submit or update their reports at any time.
+        </div>
         <table>
-          <thead><tr><th>#</th><th>NGO / Organisation</th><th>Month</th><th>Submitted On</th><th>Status</th><th>Action</th></tr></thead>
+          <thead><tr><th>#</th><th>NGO / Organisation</th><th>Month</th><th>Status / Progress</th><th>Action</th></tr></thead>
           <tbody id="unlock-reports-tbody"></tbody>
         </table>
-        <div id="unlock-reports-empty" style="display:none;text-align:center;color:var(--muted);padding:24px;font-size:13px">Koi locked monthly report nahi mili.</div>
+        <div id="unlock-reports-empty" style="display:none;text-align:center;color:var(--muted);padding:24px;font-size:13px">No submitted monthly reports found.</div>
       </div>
 
       <!-- Close Month & Auto-Submit -->
       <div class="card" style="margin-top:20px;padding:16px">
-        <div class="card-title" style="margin-bottom:10px">⚡ Close Month & Auto-Submit</div>
-        <div style="font-size:12px;color:var(--muted);margin-bottom:14px">Kisi bhi mahine ke liye sabhi pending drafts ko submit aur lock karne ke liye, ya bina draft wale active NGOs ke liye blank reports automatic submit karne ke liye yahan select karein.</div>
+        <div class="card-title" style="margin-bottom:10px">⚡ Month-End Auto-Sync / Auto-Submit</div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:14px">
+          Select a month to auto-generate default month-end entries for NGOs that have not submitted a report for the selected month.
+        </div>
         <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
           <div>
             <div style="font-size:12px;color:var(--muted);margin-bottom:6px">Select Reporting Month</div>
             <select id="auto-submit-month-select" style="padding:7px 12px;border:1px solid var(--border);border-radius:7px;font-size:13px">
               <option value="">— Select Month —</option>
               <option>April 2026</option><option>May 2026</option><option>June 2026</option>
-              <option>July 2026</option><option>August 2026</option><option>September 2026</option>
-              <option>October 2026</option><option>November 2026</option><option>December 2026</option>
-              <option>January 2027</option><option>February 2027</option><option>March 2027</option>
+              <option>July 2026</option><option>August 2026</option>
             </select>
           </div>
           <div style="margin-top:18px">
             <button onclick="adminForceAutoSubmit(this)" style="padding:9px 22px;background:var(--amber);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">
-              ⚡ Force Auto-Submit Month
+              ⚡ Run Month-End Auto-Sync
             </button>
           </div>
         </div>
@@ -1016,9 +864,7 @@ tr:hover td{background:#FAFBFF}
           <select id="rep-month">
             <option value="all">All months</option>
             <option>April 2026</option><option>May 2026</option><option>June 2026</option>
-            <option>July 2026</option><option>August 2026</option><option>September 2026</option>
-            <option>October 2026</option><option>November 2026</option><option>December 2026</option>
-            <option>January 2027</option><option>February 2027</option><option>March 2027</option>
+            <option>July 2026</option><option>August 2026</option>
           </select>
           <button class="btn-report" onclick="generateReport()">⬇ Generate Report</button>
           <button class="btn-report" style="background:var(--green)" onclick="window.print()">🖨 Print / PDF</button>
@@ -1034,9 +880,7 @@ tr:hover td{background:#FAFBFF}
             <select id="dl-month" style="padding:7px 12px;border:1px solid var(--border);border-radius:7px;font-size:13px">
               <option value="all">All months</option>
               <option>April 2026</option><option>May 2026</option><option>June 2026</option>
-              <option>July 2026</option><option>August 2026</option><option>September 2026</option>
-              <option>October 2026</option><option>November 2026</option><option>December 2026</option>
-              <option>January 2027</option><option>February 2027</option><option>March 2027</option>
+              <option>July 2026</option><option>August 2026</option>
             </select>
           </div>
           <div style="margin-top:18px">
@@ -1159,12 +1003,20 @@ function _normNgo(s){ return String(s == null ? '' : s).trim().toLowerCase(); }
 // Normalize month string (handles ISO dates and month strings)
 function _normalizeMonth(val){
   if(!val) return '';
-  if(/^[A-Za-z]/.test(val)) return String(val).trim();
+  const str = String(val).trim();
+  if(/^[A-Za-z]/.test(str)) return str;
+  const mMatch = str.match(/^(\d{4})-(\d{2})/);
+  if(mMatch){
+    const yr = parseInt(mMatch[1], 10);
+    const mo = parseInt(mMatch[2], 10);
+    const mNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    if(mo >= 1 && mo <= 12) return mNames[mo-1] + ' ' + yr;
+  }
   try {
-    const d = new Date(val);
+    const d = new Date(str);
     if(!isNaN(d)) return d.toLocaleDateString('en-IN',{month:'long',year:'numeric'});
   } catch(e){}
-  return String(val).trim();
+  return str;
 }
 
 // Live data — populated from Google Sheets on login
@@ -1953,7 +1805,7 @@ async function _saveWizardTaskBlock(block, comp){
   const taskStart = block.querySelector('.act-start-date')?.value || '';
   const taskEnd   = block.querySelector('.act-end-date')?.value   || '';
   const geo       = getTaskGeo(block);
-  await apiPost({
+  const res = await apiPost({
     action:          'saveProject',
     ngo:             currentUser.org,
     component:       comp,
@@ -1971,6 +1823,22 @@ async function _saveWizardTaskBlock(block, comp){
     task_dist:       geo.task_dist,
     task_schools:    geo.task_schools
   });
+
+  // Immediately push/update to local PROJECTS memory array
+  const pId = res?.project_id || 'proj_' + Date.now();
+  const existingIdx = PROJECTS.findIndex(p => _normNgo(p.ngo) === _normNgo(currentUser.org) && String(p.task_name||'').trim().toLowerCase() === taskName.toLowerCase());
+  const newProjObj = {
+    project_id: pId,
+    id: pId,
+    ngo: currentUser.org,
+    component: comp,
+    task_name: taskName,
+    start_date: taskStart,
+    end_date: taskEnd,
+    status: 'active'
+  };
+  if(existingIdx >= 0) PROJECTS[existingIdx] = newProjObj;
+  else PROJECTS.push(newProjObj);
 }
 
 // Per-task Save button in wizard — saves immediately and marks block as saved
@@ -1995,6 +1863,7 @@ async function saveWizardTask(btn){
     btn.style.color = '#2e7d32';
     btn.style.border = '1px solid #a5d6a7';
     block.style.borderColor = '#a5d6a7';
+    if(document.getElementById('r-task-cards')) prefillReportForm();
   } catch(e){
     btn.disabled = false;
     btn.textContent = '💾 Save Task';
@@ -2086,11 +1955,13 @@ async function loadSheetData(){
     if(isAdmin) calls.push(apiPost({action:'getAdminPartners'}));
     const [ngoRes, repRes, projRes, partRes] = await Promise.all(calls);
 
+    const isUserOwnOrg = (name) => currentUser?.org && _normNgo(currentUser.org) === _normNgo(name);
+
     if(ngoRes.success && ngoRes.data.length){
       SAMPLE_NGOS.length = 0;
       ngoRes.data.forEach(n => {
-        // Exclude Test/Sample NGOs and inactive NGOs
-        if(isTestNGO(n.name)) return;
+        // Exclude Test/Sample NGOs except if it's the logged-in user's own organisation
+        if(isTestNGO(n.name) && !isUserOwnOrg(n.name)) return;
         if(!isAdmin && (n.ngo_status||'active') === 'inactive') return;
         SAMPLE_NGOS.push({
           id:+n.id||0, name:n.name||'', theme:n.theme||'', person:n.person||'',
@@ -2107,14 +1978,14 @@ async function loadSheetData(){
     if(repRes.success && repRes.data.length){
       REPORTS.length = 0;
       repRes.data.forEach(r => {
-        if(isTestNGO(r.ngo)) return;
+        if(isTestNGO(r.ngo) && !isUserOwnOrg(r.ngo)) return;
         REPORTS.push(r);
       });
     }
     if(projRes && projRes.success && projRes.data.length){
       PROJECTS.length = 0;
       projRes.data.forEach(p => {
-        if(isTestNGO(p.ngo)) return;
+        if(isTestNGO(p.ngo) && !isUserOwnOrg(p.ngo)) return;
         PROJECTS.push(p);
       });
     }
@@ -2159,7 +2030,7 @@ function initApp(){
   document.getElementById('sb-avatar').textContent = (currentUser.name||currentUser.email||'?')[0].toUpperCase();
   document.getElementById('tb-role-badge').textContent = currentUser.role==='admin'?'PMU Admin':'NGO Partner';
   document.getElementById('tb-date').textContent = new Date().toLocaleDateString('en-IN',{day:'numeric',month:'long',year:'numeric'});
-  if(currentUser.email === 'alokmohann@gmail.com')
+  if(currentUser.role === 'admin')
     document.getElementById('dev-seed-btn').style.display = 'inline-block';
 
   if(currentUser.role==='admin'){
@@ -2189,6 +2060,7 @@ function initApp(){
   if(!isNGO) renderMap('all');
   renderPartnerTable();
   updateDashboardStats();
+  if(currentUser?.role !== 'admin') prefillReportForm();
   showFirstLoginBannerIfNeeded();
   showPage('dashboard');
   if(currentUser?.role !== 'admin' && new URLSearchParams(location.search).get('action') === 'submit')
@@ -3026,7 +2898,7 @@ function pveUpdateSelectedSchools(){
 function refreshSec3View(){
   const el = document.getElementById('pv-sec3-view');
   if(!el) return;
-  const myProjects = PROJECTS.filter(p => p.ngo === currentUser.org && p.status !== 'deleted');
+  const myProjects = PROJECTS.filter(p => _normNgo(p.ngo) === _normNgo(currentUser?.org) && String(p.status||'').toLowerCase() !== 'deleted');
   const byComp = {};
   myProjects.forEach(p => { const c=p.component||'Other'; if(!byComp[c]) byComp[c]=[]; byComp[c].push(p); });
   el.innerHTML = Object.keys(byComp).length ? Object.entries(byComp).map(([comp,tasks])=>`
@@ -3049,14 +2921,14 @@ function refreshSec3View(){
           </div>
         </div>`;
       }).join('')}
-    </div>`).join('') : '<div style="color:var(--muted);font-size:12px;padding:8px">No activities defined yet.</div>';
+    </div>`).join('') : '<div style="color:var(--muted);font-size:12px;padding:8px">No activities defined yet. <button onclick="showQuickAddActivityModal()" style="margin-left:8px;padding:4px 10px;background:#2563eb;color:#fff;border:none;border-radius:5px;font-size:11px;font-weight:700;cursor:pointer">➕ Add Activity</button></div>';
 }
 
 // Render saved activities panel inside the edit form (above task builder)
 function renderSavedPanel(){
   const el = document.getElementById('pv-sec3-saved-panel');
   if(!el) return;
-  const myProjs = PROJECTS.filter(p => p.ngo === currentUser.org && p.status !== 'deleted');
+  const myProjs = PROJECTS.filter(p => _normNgo(p.ngo) === _normNgo(currentUser?.org) && String(p.status||'').toLowerCase() !== 'deleted');
   if(!myProjs.length){ el.innerHTML=''; return; }
   const byComp = {};
   myProjs.forEach(p=>{ const c=p.component||'Other'; if(!byComp[c]) byComp[c]=[]; byComp[c].push(p); });
@@ -4073,21 +3945,19 @@ function _updateSubmitBtn(){
   const [yr,mo] = pick.value.split('-').map(Number);
   const mNames=['January','February','March','April','May','June','July','August','September','October','November','December'];
   const months = mNames[mo-1]+' '+yr;
-  const _reps = REPORTS.filter(r=>r.ngo===currentUser?.org && r.month===months);
-  const rep = _reps.find(r=>String(r.report_locked)==='true') || _reps[0];
-  const isLocked = rep && String(rep.report_locked)==='true';
+  const _reps = REPORTS.filter(r=>_normNgo(r.ngo)===_normNgo(currentUser?.org) && _normalizeMonth(r.month)===months);
+  const rep = _reps[0];
+  const isSubmitted = Boolean(rep);
 
   btn.style.display = 'block';
   btn.disabled = false;
   btn.style.cursor = 'pointer';
 
-  if(isLocked && !_formDirty){
-    btn.textContent = '✅ Submitted / जमा हो गई';
-    btn.style.background = '#e8f5e9';
-    btn.style.color = '#2e7d32';
-    btn.style.border = '1px solid #a5d6a7';
-    btn.disabled = true;
-    btn.style.cursor = 'default';
+  if(isSubmitted){
+    btn.textContent = '📤 Update Monthly Report / मासिक रिपोर्ट अपडेट करें';
+    btn.style.background = '#2563eb';
+    btn.style.color = '#fff';
+    btn.style.border = 'none';
   } else {
     btn.textContent = '📤 Submit Monthly Report / मासिक रिपोर्ट जमा करें';
     btn.style.background = '#e65100';
@@ -4125,44 +3995,57 @@ async function saveReportDraft(){
 
 function populateReportMonthPicker(){
   const sel = document.getElementById('r-month-pick');
-  if(!sel) return;
-
   const mNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 
-  // Reporting year: April 2026 → March 2027
+  // Financial Year Months: April 2026 → March 2027
   const reportingMonths = [
     {y:2026,m:4},{y:2026,m:5},{y:2026,m:6},{y:2026,m:7},
     {y:2026,m:8},{y:2026,m:9},{y:2026,m:10},{y:2026,m:11},
     {y:2026,m:12},{y:2027,m:1},{y:2027,m:2},{y:2027,m:3}
   ];
 
-  // Include months up to current month (e.g. August 2026), minimum up to August 2026
+  // Strictly cap available reporting months up to current calendar month (e.g. August 2026)
   const now = new Date();
   let curY = now.getFullYear(), curM = now.getMonth() + 1;
   if(curY < 2026 || (curY === 2026 && curM < 8)) { curY = 2026; curM = 8; }
 
-  const prevValue = sel.value; // preserve selection if re-populating
-  sel.innerHTML = '';
+  // Filter out any future months (September 2026 onwards) to prevent filling in advance
+  const allowedMonths = reportingMonths.filter(({y, m}) => !(y > curY || (y === curY && m > curM)));
 
-  let defaultVal = '';
-  reportingMonths.forEach(({y, m}) => {
-    if(y > curY || (y === curY && m > curM)) return; // future month — skip
-    const val = y + '-' + String(m).padStart(2,'0');
-    const opt = document.createElement('option');
-    opt.value = val;
-    opt.textContent = mNames[m-1] + ' ' + y;
-    sel.appendChild(opt);
-    defaultVal = val; // default to latest available month (current month)
-  });
-
-  if(!sel.children.length){
-    // Fallback if none matched
-    sel.innerHTML = '<option value="2026-08">August 2026</option><option value="2026-07">July 2026</option>';
-    defaultVal = '2026-08';
+  if(sel){
+    const prevValue = sel.value;
+    sel.innerHTML = '';
+    let defaultVal = '';
+    allowedMonths.forEach(({y, m}) => {
+      const val = y + '-' + String(m).padStart(2,'0');
+      const opt = document.createElement('option');
+      opt.value = val;
+      opt.textContent = mNames[m-1] + ' ' + y;
+      sel.appendChild(opt);
+      defaultVal = val; // Default to latest available month (current month, e.g. August 2026)
+    });
+    if(!sel.children.length){
+      sel.innerHTML = '<option value="2026-08">August 2026</option><option value="2026-07">July 2026</option>';
+      defaultVal = '2026-08';
+    }
+    sel.value = prevValue && sel.querySelector(`option[value="${prevValue}"]`) ? prevValue : defaultVal;
   }
 
-  // Restore previous selection or default to current month
-  sel.value = prevValue && sel.querySelector(`option[value="${prevValue}"]`) ? prevValue : defaultVal;
+  // Also dynamically update Admin month dropdowns to only include months up to current month
+  ['auto-submit-month-select', 'rep-month', 'dl-month'].forEach(id => {
+    const s = document.getElementById(id);
+    if(!s) return;
+    const pVal = s.value;
+    s.innerHTML = id === 'auto-submit-month-select' ? '<option value="">— Select Month —</option>' : '<option value="all">All months</option>';
+    allowedMonths.forEach(({y, m}) => {
+      const label = mNames[m-1] + ' ' + y;
+      const opt = document.createElement('option');
+      opt.value = label;
+      opt.textContent = label;
+      s.appendChild(opt);
+    });
+    if(pVal && s.querySelector(`option[value="${pVal}"]`)) s.value = pVal;
+  });
 }
 
 function prefillReportForm(){
@@ -4282,8 +4165,6 @@ function saveTaskEntry(btn){
   cardDiv.innerHTML = _savedCardHtml(sa, Date.now());
   form.replaceWith(cardDiv.firstChild);
 
-  // Entry is held in the page only. Nothing is written to the sheet until the
-  // user clicks "Submit Monthly Report". This guarantees a single write = no duplicates.
   _markDirty();
   refreshLockBtn();
   const statusEl = document.getElementById('r-autosave-status');
@@ -4297,7 +4178,6 @@ function cancelTaskEntry(btn){
   const form = btn.closest('.task-entry-form');
   const container = form?.closest('[id$="_entries"]');
   if(!container) return;
-  // Only remove if there's at least one saved card
   if(container.querySelectorAll('.task-entry-card').length > 0) form.remove();
   else alert('Please save at least one entry before cancelling.');
 }
@@ -4342,45 +4222,57 @@ function buildReportTaskCards(existingRep){
   if(!container) return;
   try {
     const userOrg = currentUser?.org || '';
-    const myProjs = PROJECTS.filter(p => _normNgo(p.ngo) === _normNgo(userOrg) && String(p.status||'').toLowerCase() !== 'deleted');
+    let myProjs = PROJECTS.filter(p => _normNgo(p.ngo) === _normNgo(userOrg) && String(p.status||'').toLowerCase() !== 'deleted');
     if(!myProjs.length){
-      container.innerHTML = `<div class="card" style="text-align:center;padding:28px 20px">
-        <div style="font-size:32px;margin-bottom:8px">📋</div>
-        <div style="font-size:15px;font-weight:700;color:var(--blue);margin-bottom:6px">No Programme Activities Defined Yet</div>
-        <div style="font-size:12px;color:var(--muted);max-width:440px;margin:0 auto 16px;line-height:1.6">
-          You haven't defined any activities/tasks for <b>${userOrg||'your organisation'}</b> yet. Please go to <b>My Profile</b> to add your components and activities first.
-        </div>
-        <button class="btn-blu" onclick="showPage('profile-view')" style="padding:9px 22px;font-size:13px;border-radius:8px">
-          🏢 Add Activities in My Profile
-        </button>
-      </div>`;
-      refreshLockBtn();
-      return;
+      myProjs = [{
+        project_id: 'default_gen_task',
+        id: 'default_gen_task',
+        ngo: userOrg,
+        component: 'General Activities',
+        task_name: 'General Programme Implementation / सामान्य कार्यक्रम कार्यान्वयन',
+        start_date: '',
+        end_date: '',
+        status: 'active'
+      }];
     }
 
-    const lastRep = existingRep || REPORTS.filter(r=>_normNgo(r.ngo)===_normNgo(userOrg)).sort((a,b)=>(+b.id||0)-(+a.id||0))[0] || {};
+    const monthPickVal = document.getElementById('r-month-pick')?.value || '';
+    let monthMin = '', monthMax = '';
+    let monthLabel = '';
+    if(monthPickVal){
+      const [yr2, mo2] = monthPickVal.split('-').map(Number);
+      if(yr2 && mo2){
+        monthMin = monthPickVal + '-01';
+        monthMax = monthPickVal + '-' + String(new Date(yr2, mo2, 0).getDate()).padStart(2,'0');
+        const mNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+        monthLabel = mNames[mo2-1] + ' ' + yr2;
+      }
+    }
+
+    const targetRep = existingRep || REPORTS.find(r => _normNgo(r.ngo) === _normNgo(userOrg) && _normalizeMonth(r.month) === monthLabel);
+    const isForThisMonth = Boolean(targetRep && monthLabel && _normalizeMonth(targetRep.month) === monthLabel);
+    const isLocked = false; // Locking system disabled — forms are always unlocked and editable
+
+    const lastRep = targetRep || REPORTS.filter(r=>_normNgo(r.ngo)===_normNgo(userOrg)).sort((a,b)=>(+b.id||0)-(+a.id||0))[0] || {};
     let lastTasks = [];
     try {
       const rawTasks = lastRep.tasks_json || lastRep.tasks || '[]';
       lastTasks = typeof rawTasks === 'string' ? JSON.parse(rawTasks) : (Array.isArray(rawTasks) ? rawTasks : []);
     } catch(e){ lastTasks = []; }
 
-    const monthPickVal = document.getElementById('r-month-pick')?.value || '';
-    let monthMin = '', monthMax = '';
-    if(monthPickVal){
-      const [yr2, mo2] = monthPickVal.split('-').map(Number);
-      if(yr2 && mo2){
-        monthMin = monthPickVal + '-01';
-        monthMax = monthPickVal + '-' + String(new Date(yr2, mo2, 0).getDate()).padStart(2,'0');
-      }
-    }
-
     const byComp = {};
     myProjs.forEach(p => { const c=(p.component||'Other').trim(); if(!byComp[c]) byComp[c]=[]; byComp[c].push(p); });
 
-    const isLocked = existingRep && String(existingRep.report_locked) === 'true';
+    const headerBarHtml = `
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:12px;padding:10px 14px;background:#ffffff;border:1px solid var(--border);border-radius:10px">
+        <div style="font-size:13px;font-weight:700;color:var(--blue)">🎯 Section A — Programme Activities & Monthly Status</div>
+        <button type="button" onclick="showQuickAddActivityModal()"
+          style="padding:6px 14px;background:#2563eb;color:#fff;border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:5px;box-shadow:0 1px 3px rgba(37,99,235,0.2)">
+          ➕ Add Activity / न्यू गतिविधि जोड़ें
+        </button>
+      </div>`;
 
-    container.innerHTML = Object.entries(byComp).map(([comp, tasks]) =>
+    container.innerHTML = headerBarHtml + Object.entries(byComp).map(([comp, tasks]) =>
       `<div style="margin-bottom:12px">
         <div style="font-size:12px;font-weight:700;color:var(--blue);text-transform:uppercase;letter-spacing:.5px;
           padding:7px 12px;background:#e8f0fe;border-radius:8px;margin-bottom:10px;border-left:4px solid var(--blue)">▸ ${comp}</div>
@@ -4390,8 +4282,8 @@ function buildReportTaskCards(existingRep){
           const tName = String(t.task_name||'').trim().toLowerCase();
           const lastAct = (Array.isArray(lastTasks) ? lastTasks.find(a => String(a.task_name||'').trim().toLowerCase() === tName) : null) || {};
           
-          let subs = [null];
-          if (Array.isArray(lastAct.sub_activities) && lastAct.sub_activities.length > 0) {
+          let subs = [];
+          if (isForThisMonth && Array.isArray(lastAct.sub_activities) && lastAct.sub_activities.length > 0) {
             subs = lastAct.sub_activities;
           }
           
@@ -4992,16 +4884,16 @@ async function lockReportFinal(){
   const months = mNames[mo-1] + ' ' + yr;
   const mHindi = ['जनवरी','फरवरी','मार्च','अप्रैल','मई','जून','जुलाई','अगस्त','सितंबर','अक्टूबर','नवंबर','दिसंबर'];
   const monthsHindi = mHindi[mo-1] + ' ' + yr;
-  const isUpdate = _formDirty && REPORTS.find(r=>r.ngo===currentUser.org && r.month===months && String(r.report_locked)==='true');
-  const msg = `⚠️ Submit Monthly Report / मासिक रिपोर्ट जमा करें\n\nAre you sure you want to submit your ${months} report to PMU?\nक्या आप ${monthsHindi} की रिपोर्ट PMU को जमा करना चाहते हैं?\n\nOnce submitted, NO further changes will be allowed for this month.\nएक बार जमा करने के बाद इस माह की रिपोर्ट में कोई भी बदलाव नहीं किया जा सकेगा।\n\nClick OK to Submit / ठीक है दबाएं तो जमा होगी\nClick Cancel to go back / रद्द करें तो वापस जाएं`;
+  const isUpdate = Boolean(REPORTS.find(r=>_normNgo(r.ngo)===_normNgo(currentUser.org) && _normalizeMonth(r.month)===months));
+  const msg = `📤 Submit Monthly Report / मासिक रिपोर्ट जमा करें\n\nAre you sure you want to submit your ${months} report to PMU?\nक्या आप ${monthsHindi} की रिपोर्ट PMU को जमा/अपडेट करना चाहते हैं?\n\nClick OK to Submit / ठीक है दबाएं तो जमा होगी\nClick Cancel to go back / रद्द करें तो वापस जाएं`;
   if(!confirm(msg)) return;
   const btn = document.getElementById('r-lock-btn');
   if(btn){ btn.disabled=true; btn.textContent='Submitting…'; }
   try {
     showLoader('Submitting to PMU…');
-    await submitMonthlyReport(false, true); // save + lock in one API call
-    const rep = REPORTS.find(r=>r.ngo===currentUser.org && r.month===months);
-    if(rep) rep.report_locked = 'true';
+    await submitMonthlyReport(false, false);
+    const rep = REPORTS.find(r=>_normNgo(r.ngo)===_normNgo(currentUser.org) && _normalizeMonth(r.month)===months);
+    if(rep) rep.report_locked = 'false';
     hideLoader();
     _formDirty = false;
     _updateSubmitBtn();
@@ -5010,11 +4902,11 @@ async function lockReportFinal(){
     if(wrap && stEl){
       wrap.style.display = 'block';
       stEl.style.cssText = 'padding:10px 14px;border-radius:7px;font-size:13px;font-weight:600;background:#e8f5e9;color:#2e7d32;border:1px solid #a5d6a7';
-      stEl.textContent = isUpdate ? '🔄 Report updated and resubmitted to PMU.' : '✅ Report submitted to PMU successfully!';
+      stEl.textContent = isUpdate ? '🔄 Report updated and synced with PMU.' : '✅ Report submitted to PMU successfully!';
     }
-    // Rebuild task cards as read-only and disable all other inputs
-    buildReportTaskCards(REPORTS.find(r=>r.ngo===currentUser.org && r.month===months));
-    document.querySelectorAll('#r-section-b input,#r-section-b textarea,#r-section-b select,#r-section-d input,#r-section-d textarea,#r-section-d select').forEach(el=>{el.disabled=true;el.style.background='#f5f5f5';el.style.color='#888';});
+    // Keep all inputs enabled and editable
+    buildReportTaskCards(REPORTS.find(r=>_normNgo(r.ngo)===_normNgo(currentUser.org) && _normalizeMonth(r.month)===months));
+    document.querySelectorAll('#r-section-b input,#r-section-b textarea,#r-section-b select,#r-section-d input,#r-section-d textarea,#r-section-d select').forEach(el=>{el.disabled=false;el.style.background='#fff';el.style.color='#000';});
     renderMyReports();
   } catch(e){ hideLoader(); if(btn){btn.disabled=false;_updateSubmitBtn();} alert('Submission failed: '+e.message); }
 }
@@ -5924,22 +5816,22 @@ function buildOfficialReport(n, selMonth){
       }
     } catch(e){ sessionStorage.removeItem('ngo_session'); }
   }
-// ── UNLOCK CENTER REPORT MANAGEMENT ──
+// ── SUBMISSIONS & MONTH-END MANAGEMENT (Admin) ──
 function renderUnlockReportsPage(){
   const tbody = document.getElementById('unlock-reports-tbody');
   const empty = document.getElementById('unlock-reports-empty');
   if(!tbody) return;
   
-  const lockedReps = REPORTS.filter(r => String(r.report_locked) === 'true');
+  const allReps = REPORTS.filter(r => r.ngo && r.month).sort((a,b) => (+b.id||0)-(+a.id||0));
   
-  if(!lockedReps.length){
+  if(!allReps.length){
     tbody.innerHTML = '';
     if(empty) empty.style.display = 'block';
     return;
   }
   if(empty) empty.style.display = 'none';
   
-  tbody.innerHTML = lockedReps.map((r, i) => {
+  tbody.innerHTML = allReps.map((r, i) => {
     const progressVal = +r.status || 0;
     const progressCol = progressVal >= 75 ? '#1D9E75' : progressVal >= 50 ? '#BA7517' : '#E24B4A';
     const ngoEsc = r.ngo.replace(/'/g, "\\'");
@@ -5948,44 +5840,52 @@ function renderUnlockReportsPage(){
       <td>${i+1}</td>
       <td><strong>${r.ngo}</strong></td>
       <td>${r.month}</td>
-      <td>${r.submitted || '—'}</td>
       <td style="text-align:center;font-weight:700;color:${progressCol}">${progressVal}%</td>
       <td>
-        <button onclick="adminUnlockReport('${ngoEsc}','${monthEsc}',this)"
-          style="padding:5px 16px;font-size:12px;font-weight:700;background:#e65100;color:#fff;border:none;border-radius:5px;cursor:pointer">
-          🔓 Unlock Report
+        <button onclick="downloadMonthReportForAdmin('${ngoEsc}','${monthEsc}')"
+          style="padding:5px 14px;font-size:12px;font-weight:700;background:var(--blue);color:#fff;border:none;border-radius:6px;cursor:pointer">
+          📄 View / Download Report
         </button>
       </td>
     </tr>`;
   }).join('');
 }
 
-async function adminUnlockReport(ngo, month, btn){
-  if(!confirm(`Are you sure you want to Unlock the report for NGO: "${ngo}" for ${month}?\nOnce unlocked, the NGO partner can edit and resubmit this report.`)) return;
-  btn.disabled = true;
-  btn.textContent = '...';
-  try {
-    const res = await apiPost({ action: 'unlockReport', ngo: ngo, month: month });
-    if(res.success){
-      const rep = REPORTS.find(r => r.ngo === ngo && r.month === month);
-      if(rep) rep.report_locked = 'false';
-      
-      showLoader('Reloading data…');
-      await loadSheetData();
-      hideLoader();
-      
-      renderUnlockReportsPage();
-      alert('Report unlocked successfully!');
-    } else {
-      alert('Unlock failed: ' + (res.error || 'Unknown error'));
-      btn.disabled = false;
-      btn.textContent = '🔓 Unlock Report';
-    }
-  } catch(e) {
-    alert('Error: ' + e.message);
-    btn.disabled = false;
-    btn.textContent = '🔓 Unlock Report';
-  }
+function downloadMonthReportForAdmin(ngoName, month){
+  const ngo  = SAMPLE_NGOS.find(n=>_normNgo(n.name)===_normNgo(ngoName)) || { name: ngoName };
+  const projs= PROJECTS.filter(p=>_normNgo(p.ngo)===_normNgo(ngoName) && p.status!=='deleted');
+  const rep  = REPORTS.find(r=>_normNgo(r.ngo)===_normNgo(ngoName) && (r.report_from===month||_normalizeMonth(r.month)===_normalizeMonth(month)));
+  if(!rep){ alert('Report not found for '+ngoName+' ('+month+')'); return; }
+
+  let acts = [];
+  try { acts = JSON.parse(rep.tasks||rep.tasks_json||'[]'); } catch(e){}
+
+  const monthLabel = rep.report_from && rep.report_to
+    ? fmtDate(rep.report_from) + ' – ' + fmtDate(rep.report_to)
+    : (rep.month || month || '—');
+  const today = new Date().toLocaleDateString('en-IN');
+  const pct   = +rep.status||0;
+  const pctCol= pct>=75?'#1D9E75':pct>=50?'#BA7517':'#E24B4A';
+
+  const reportRows = buildReportRows(ngoName, acts, projs);
+  const taskRows = reportRows.map((row, idx) => {
+    const sCol = row.status==='Complete'||row.status==='Completed'?'#1D9E75':row.status==='In progress'?'#BA7517':'#888';
+    return `<tr style="border-bottom:1px solid #eee">
+      <td style="padding:6px 8px">${idx+1}</td>
+      <td style="padding:6px 8px;font-size:11px;color:#1A3C6E;font-weight:600">${row.component}</td>
+      <td style="padding:6px 8px;font-size:11px">${row.activity}</td>
+      <td style="padding:6px 8px;font-size:11px;color:#555">${row.subActivity||'—'}</td>
+      <td style="padding:6px 8px;font-size:11px;white-space:nowrap">${row.startDate}</td>
+      <td style="padding:6px 8px;font-size:11px;white-space:nowrap">${row.endDate}</td>
+      <td style="padding:6px 8px;font-size:11px;line-height:1.5">${row.update||''}</td>
+      <td style="padding:6px 8px;font-size:11px;font-weight:700;color:${sCol}">${row.status}</td>
+      <td style="padding:6px 8px;font-size:11px;white-space:nowrap">${row.completionDate||''}</td>
+    </tr>`;
+  }).join('');
+
+  const win = window.open('','_blank','width=900,height=700');
+  win.document.write(_officialReportPrintTemplate(ngo, rep, monthLabel, today, pct, pctCol, taskRows));
+  win.document.close();
 }
 
 async function adminForceAutoSubmit(btn){
@@ -6100,6 +6000,361 @@ function updateFormProgress(){
   } else {
     pctEl.style.color = 'var(--blue)';
     if(textEl) textEl.textContent = 'Fill in Section A tasks and Section B numbers to complete your report.';
+  }
+}
+
+// ── EXCEL SAMPLE TEMPLATE GENERATION & IMPORT HANDLERS ──
+function downloadExcelSampleTemplate(){
+  if(typeof XLSX === 'undefined'){
+    alert('SheetJS library is loading. Please check your internet connection and try again.');
+    return;
+  }
+
+  const pickVal = document.getElementById('r-month-pick')?.value || '';
+  let monthLabel = 'August 2026';
+  if(pickVal){
+    const [yr, mo] = pickVal.split('-').map(Number);
+    const mNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    monthLabel = mNames[mo-1] + ' ' + yr;
+  }
+
+  const myProjs = PROJECTS.filter(p => _normNgo(p.ngo) === _normNgo(currentUser?.org) && p.status !== 'deleted');
+
+  const wsData = [
+    ["SAMAGRA SHIKSHA SECONDARY UTTAR PRADESH — MONTHLY KPI REPORT"],
+    ["Organisation Name:", currentUser?.org || "", "", "Reporting Month:", monthLabel],
+    ["Nodal Officer:", currentUser?.name || "", "", "Date:", new Date().toLocaleDateString('en-IN')],
+    [""],
+    ["SECTION B — MONTHLY KPI SUMMARY NUMBERS (Fill numerical metrics for " + monthLabel + ")"],
+    ["Schools Covered", "Students Benefited", "Girls Benefited", "Teachers Trained", "Community Meetings", "Events / Workshops", "SC/ST/OBC Students", "Divyang Students", "Dropouts Prevented"],
+    [25, 450, 230, 15, 4, 2, 180, 5, 8],
+    [""],
+    ["SECTION C — NARRATIVE & MILESTONES"],
+    ["Key Milestone Indicator (KMI):", "420 dropout girls re-enrolled across 3 districts"],
+    ["Key Achievements:", "Successfully conducted teacher orientation and textbooks distribution"],
+    ["Key Challenges:", "Delay in transport material delivery in remote blocks"],
+    ["Support Required from PMU:", "Approval for additional training kits"],
+    ["Plans for Next Month:", "Conduct district-level community awareness workshops"],
+    [""],
+    ["SECTION D — OTHER SUPPORT METRICS"],
+    ["Equipment / Material provided:", "Sports kit to 50 schools"],
+    ["Training material / kits:", "Activity kit to 30 teachers"],
+    ["Machine / Infrastructure:", "Computers to 3 schools"],
+    ["Cash / Monetary donation:", "₹50,000"],
+    ["Any other support:", "Uniform and stationery"],
+    [""],
+    ["SECTION A — TASK ACTIVITIES & UPDATES"],
+    ["Component", "Activity / Task Name", "Status (Not started / In progress / Completed)", "Start Date (YYYY-MM-DD)", "End Date (YYYY-MM-DD)", "What was done? (Details)", "Photo / Proof Link"]
+  ];
+
+  if(myProjs.length){
+    myProjs.forEach(p => {
+      wsData.push([
+        p.component || 'General',
+        p.task_name || 'Activity',
+        'In progress',
+        '2026-08-01',
+        '2026-08-15',
+        'Activity implemented in 5 schools benefiting 120 students.',
+        ''
+      ]);
+    });
+  } else {
+    wsData.push([
+      "Access & Retention",
+      "KGBV - Type I",
+      "In progress",
+      "2026-08-01",
+      "2026-08-15",
+      "Sample activity update text",
+      ""
+    ]);
+  }
+
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet(wsData);
+
+  // Set column widths for clean presentation
+  ws['!cols'] = [
+    {wch: 24}, {wch: 32}, {wch: 22}, {wch: 16}, {wch: 16}, {wch: 45}, {wch: 25}
+  ];
+
+  XLSX.utils.book_append_sheet(wb, ws, "Monthly_KPI_Report");
+  XLSX.writeFile(wb, `NGO_Monthly_KPI_Report_Template_${monthLabel.replace(/\s+/g,'_')}.xlsx`);
+}
+
+function handleExcelFileUpload(input){
+  const file = input.files?.[0];
+  if(!file) return;
+  if(typeof XLSX === 'undefined'){
+    alert('SheetJS library loading... Please check internet connection.');
+    return;
+  }
+
+  const statusEl = document.getElementById('excel-import-status');
+  if(statusEl){
+    statusEl.style.display = 'block';
+    statusEl.style.background = '#e0f2fe';
+    statusEl.style.color = '#0369a1';
+    statusEl.textContent = '⏳ Reading Excel file…';
+  }
+
+  const reader = new FileReader();
+  reader.onload = function(e){
+    try {
+      const data = new Uint8Array(e.target.result);
+      const wb = XLSX.read(data, { type: 'array' });
+
+      let filledCount = 0;
+      let taskCount = 0;
+
+      wb.SheetNames.forEach(sheetName => {
+        const ws = wb.Sheets[sheetName];
+        const json = XLSX.utils.sheet_to_json(ws, { header: 1 });
+        
+        json.forEach((row, rIdx) => {
+          if(!Array.isArray(row)) return;
+          const rStr = row.map(c => String(c||'').trim()).join(' ');
+
+          // Section B Header Detection
+          if(rStr.includes('Schools Covered') && rStr.includes('Students Benefited')){
+            const nextRow = json[rIdx+1];
+            if(Array.isArray(nextRow) && nextRow.length >= 9){
+              const setVal = (id, val) => {
+                const el = document.getElementById(id);
+                if(el && val !== undefined && val !== null && val !== ''){
+                  el.value = val;
+                  filledCount++;
+                }
+              };
+              setVal('r-schools',  nextRow[0]);
+              setVal('r-students', nextRow[1]);
+              setVal('r-girls',    nextRow[2]);
+              setVal('r-teachers', nextRow[3]);
+              setVal('r-meetings', nextRow[4]);
+              setVal('r-events',   nextRow[5]);
+              setVal('r-scst',     nextRow[6]);
+              setVal('r-divyang',  nextRow[7]);
+              setVal('r-dropout',  nextRow[8]);
+              if(nextRow[9]) setVal('r-kmi', nextRow[9]);
+            }
+          }
+
+          // Key Milestone Indicator / KMI
+          if(rStr.toLowerCase().includes('key milestone indicator') || rStr.toLowerCase().includes('kmi:')){
+            const val = row[1] || row[2];
+            if(val) { const el = document.getElementById('r-kmi'); if(el){ el.value = val; filledCount++; } }
+          }
+          // Achievements
+          if(rStr.toLowerCase().includes('key achievements:')){
+            const val = row[1] || row[2];
+            if(val) { const el = document.getElementById('r-achieve'); if(el){ el.value = val; filledCount++; } }
+          }
+          // Challenges
+          if(rStr.toLowerCase().includes('key challenges:')){
+            const val = row[1] || row[2];
+            if(val) { const el = document.getElementById('r-challenges'); if(el){ el.value = val; filledCount++; } }
+          }
+          // Support Required
+          if(rStr.toLowerCase().includes('support required from pmu:')){
+            const val = row[1] || row[2];
+            if(val) { const el = document.getElementById('r-support'); if(el){ el.value = val; filledCount++; } }
+          }
+          // Plans for Next Month
+          if(rStr.toLowerCase().includes('plans for next month:')){
+            const val = row[1] || row[2];
+            if(val) { const el = document.getElementById('r-plans'); if(el){ el.value = val; filledCount++; } }
+          }
+          // Equipment
+          if(rStr.toLowerCase().includes('equipment / material provided:')){
+            const val = row[1] || row[2];
+            if(val) { const el = document.getElementById('r-equipment'); if(el){ el.value = val; filledCount++; } }
+          }
+          // Training
+          if(rStr.toLowerCase().includes('training material / kits:')){
+            const val = row[1] || row[2];
+            if(val) { const el = document.getElementById('r-training'); if(el){ el.value = val; filledCount++; } }
+          }
+          // Machine
+          if(rStr.toLowerCase().includes('machine / infrastructure:')){
+            const val = row[1] || row[2];
+            if(val) { const el = document.getElementById('r-machine'); if(el){ el.value = val; filledCount++; } }
+          }
+          // Donation
+          if(rStr.toLowerCase().includes('cash / monetary donation:')){
+            const val = row[1] || row[2];
+            if(val) { const el = document.getElementById('r-donation'); if(el){ el.value = val; filledCount++; } }
+          }
+          // Other support
+          if(rStr.toLowerCase().includes('any other support:')){
+            const val = row[1] || row[2];
+            if(val) { const el = document.getElementById('r-other-support'); if(el){ el.value = val; filledCount++; } }
+          }
+
+          // Section A Activity Rows parsing
+          if(row.length >= 6 && rIdx > 0 && !rStr.startsWith('SECTION') && !rStr.startsWith('Component') && !rStr.startsWith('SAMAGRA')){
+            const taskName = String(row[1]||'').trim();
+            const statusVal = String(row[2]||'In progress').trim();
+            const sDate = String(row[3]||'').trim();
+            const eDate = String(row[4]||'').trim();
+            const updateText = String(row[5]||'').trim();
+            const photoLink = String(row[6]||'').trim();
+
+            if(taskName && updateText){
+              const taskCards = document.querySelectorAll('#r-task-cards .card');
+              taskCards.forEach(card => {
+                const titleEl = card.querySelector('div[style*="font-weight:700"]');
+                if(titleEl && titleEl.textContent.trim().toLowerCase().includes(taskName.toLowerCase())){
+                  const selStatus = card.querySelector('select[id$="_status"]');
+                  if(selStatus && statusVal){
+                    if(statusVal.toLowerCase().includes('complete')) selStatus.value = 'Completed';
+                    else if(statusVal.toLowerCase().includes('progress')) selStatus.value = 'In progress';
+                    else if(statusVal.toLowerCase().includes('not')) selStatus.value = 'Not started';
+                  }
+                  const form = card.querySelector('.task-entry-form');
+                  if(form){
+                    const fromEl = form.querySelector('.entry-from');
+                    const toEl   = form.querySelector('.entry-to');
+                    const detEl  = form.querySelector('.entry-details');
+                    const photoEl= form.querySelector('.entry-photo');
+
+                    if(fromEl && sDate) fromEl.value = sDate;
+                    if(toEl && eDate)   toEl.value = eDate;
+                    if(detEl && updateText) detEl.value = updateText;
+                    if(photoEl && photoLink) photoEl.value = photoLink;
+                    taskCount++;
+                  }
+                }
+              });
+            }
+          }
+        });
+      });
+
+      _markDirty();
+      _scheduleAutoSave();
+      updateFormProgress();
+
+      if(statusEl){
+        statusEl.style.background = '#dcfce7';
+        statusEl.style.color = '#15803d';
+        statusEl.textContent = `✅ Excel file uploaded! ${filledCount} summary metrics and ${taskCount} task updates populated automatically. Please review below and click Submit.`;
+      }
+      input.value = '';
+    } catch(err){
+      if(statusEl){
+        statusEl.style.background = '#fee2e2';
+        statusEl.style.color = '#b91c1c';
+        statusEl.textContent = '❌ Failed to parse Excel file: ' + err.message;
+      }
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// ── QUICK ADD ACTIVITY MODAL HANDLERS ──
+function showQuickAddActivityModal(){
+  let modal = document.getElementById('quick-act-modal');
+  if(!modal){
+    modal = document.createElement('div');
+    modal.id = 'quick-act-modal';
+    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px';
+    modal.innerHTML = `
+      <div style="background:#fff;border-radius:12px;width:100%;max-width:480px;padding:20px;box-shadow:0 10px 25px rgba(0,0,0,0.2)">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+          <div style="font-size:16px;font-weight:700;color:var(--blue)">➕ Add New Activity / नई गतिविधि जोड़ें</div>
+          <button onclick="document.getElementById('quick-act-modal').style.display='none'" style="background:none;border:none;font-size:22px;cursor:pointer;color:#888">&times;</button>
+        </div>
+        <div style="margin-bottom:12px">
+          <label style="font-size:12px;font-weight:700;color:#333;display:block;margin-bottom:4px">Activity Name / गतिविधि का नाम <span style="color:var(--red)">*</span></label>
+          <input id="qa-name" placeholder="e.g. KGBV - Type I, Remedial Classes, Teacher Training..." style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:7px;font-size:13px;outline:none">
+        </div>
+        <div style="margin-bottom:12px">
+          <label style="font-size:12px;font-weight:700;color:#333;display:block;margin-bottom:4px">Component / घटक <span style="color:var(--red)">*</span></label>
+          <select id="qa-comp" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:7px;font-size:13px;outline:none">
+            <option>Access & Retention</option>
+            <option>Career Guidance</option>
+            <option>Community Engagement</option>
+            <option>Digital Literacy</option>
+            <option>Inclusion</option>
+            <option>Quality Education</option>
+            <option>School Governance</option>
+            <option>Sports & Physical Education</option>
+            <option>Teacher Education</option>
+          </select>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
+          <div>
+            <label style="font-size:11px;font-weight:700;color:#333;display:block;margin-bottom:4px">Start Date</label>
+            <input type="date" id="qa-start" value="2026-04-01" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px">
+          </div>
+          <div>
+            <label style="font-size:11px;font-weight:700;color:#333;display:block;margin-bottom:4px">End Date</label>
+            <input type="date" id="qa-end" value="2027-03-31" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px">
+          </div>
+        </div>
+        <div style="display:flex;justify-content:flex-end;gap:10px">
+          <button onclick="document.getElementById('quick-act-modal').style.display='none'" type="button" style="padding:8px 16px;background:#f1f5f9;color:#475569;border:none;border-radius:7px;font-size:13px;font-weight:600;cursor:pointer">Cancel</button>
+          <button onclick="submitQuickAddActivity(this)" type="button" style="padding:8px 20px;background:#2563eb;color:#fff;border:none;border-radius:7px;font-size:13px;font-weight:700;cursor:pointer">💾 Save & Add Activity</button>
+        </div>
+      </div>`;
+    document.body.appendChild(modal);
+  }
+  document.getElementById('qa-name').value = '';
+  modal.style.display = 'flex';
+  document.getElementById('qa-name').focus();
+}
+
+async function submitQuickAddActivity(btn){
+  const nameEl = document.getElementById('qa-name');
+  const compEl = document.getElementById('qa-comp');
+  const startEl = document.getElementById('qa-start');
+  const endEl = document.getElementById('qa-end');
+
+  const taskName = nameEl?.value.trim();
+  if(!taskName){ alert('Please enter an Activity Name.'); nameEl.focus(); return; }
+
+  const comp = compEl?.value || 'Access & Retention';
+  const start_date = startEl?.value || '2026-04-01';
+  const end_date = endEl?.value || '2027-03-31';
+
+  btn.disabled = true;
+  btn.textContent = 'Saving…';
+  try {
+    showLoader('Saving activity…');
+    const res = await apiPost({
+      action: 'saveProject',
+      ngo: currentUser.org,
+      component: comp,
+      task_name: taskName,
+      description: '',
+      sub_activities: '[]',
+      target_schools: 0, target_students: 0, target_girls: 0, target_teachers: 0, target_meetings: 0, target_events: 0,
+      start_date, end_date,
+      task_dist: 'All', task_schools: 'ALL'
+    });
+    hideLoader();
+
+    const pId = res?.project_id || 'proj_' + Date.now();
+    const newProj = {
+      project_id: pId, id: pId, ngo: currentUser.org, component: comp, task_name: taskName, start_date, end_date, status: 'active'
+    };
+    PROJECTS.push(newProj);
+
+    document.getElementById('quick-act-modal').style.display = 'none';
+
+    // Refresh profile and report task cards live
+    renderProfileView();
+    renderSavedPanel();
+    if(document.getElementById('r-task-cards')) prefillReportForm();
+
+    alert('✅ Activity "' + taskName + '" added successfully!');
+  } catch(e){
+    hideLoader();
+    alert('Failed to save activity: ' + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '💾 Save & Add Activity';
   }
 }
 
