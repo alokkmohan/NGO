@@ -5959,47 +5959,61 @@ function updateFormProgress(){
   let totalWeight = 0;
   let filledWeight = 0;
 
-  // Check month selected
+  // 1. Month selected (10 pts)
   totalWeight += 10;
   if(document.getElementById('r-month-pick')?.value) filledWeight += 10;
 
-  // Check Task Cards Statuses
-  const taskSelects = document.querySelectorAll('#r-task-cards select, #r-task-cards textarea');
-  if(taskSelects.length){
-    taskSelects.forEach(el => {
-      totalWeight += 15;
-      if(el.value && el.value.trim() !== '' && el.value !== 'Not started') filledWeight += 15;
-    });
-  } else {
-    totalWeight += 30;
-    filledWeight += 15;
-  }
-
-  // Check Section B numbers
+  // 2. Section B KPI Summary Numbers (9 fields * 5 pts = 45 pts)
   const numInputs = ['r-schools','r-students','r-girls','r-teachers','r-meetings','r-events','r-scst','r-divyang','r-dropout'];
   numInputs.forEach(id => {
     totalWeight += 5;
     const val = document.getElementById(id)?.value;
-    if(val && Number(val) > 0) filledWeight += 5;
+    if(val !== undefined && val !== null && String(val).trim() !== '') {
+      filledWeight += 5;
+    }
   });
 
-  // Check KMI
-  totalWeight += 15;
-  if(document.getElementById('r-kmi')?.value?.trim()) filledWeight += 15;
+  // 3. Section A Task Activity Cards (Status dropdowns & entries)
+  const taskStatusSelects = document.querySelectorAll('#r-task-cards select[id$="_status"]');
+  if(taskStatusSelects.length){
+    taskStatusSelects.forEach(el => {
+      totalWeight += 10;
+      if(el.value && String(el.value).trim() !== '') filledWeight += 10;
+    });
+  } else {
+    totalWeight += 10;
+    filledWeight += 5;
+  }
 
-  const pct = Math.min(100, Math.round((filledWeight / Math.max(1, totalWeight)) * 100));
+  const taskEntries = document.querySelectorAll('#r-task-cards textarea, #r-task-cards input[type="text"]');
+  if(taskEntries.length){
+    taskEntries.forEach(el => {
+      totalWeight += 5;
+      if(el.value && String(el.value).trim() !== '') filledWeight += 5;
+    });
+  }
+
+  // 4. Section C Narrative & Section D Support fields
+  const textFields = ['r-kmi', 'r-achieve', 'r-challenges', 'r-support', 'r-plans', 'r-equipment', 'r-training', 'r-machine', 'r-donation', 'r-other-support'];
+  textFields.forEach(id => {
+    totalWeight += 5;
+    const val = document.getElementById(id)?.value;
+    if(val && String(val).trim() !== '') filledWeight += 5;
+  });
+
+  const pct = Math.min(100, Math.max(0, Math.round((filledWeight / Math.max(1, totalWeight)) * 100)));
   pctEl.textContent = pct + '% Complete';
   barEl.style.width = pct + '%';
 
-  if(pct === 100) {
+  if(pct >= 90) {
     pctEl.style.color = '#10b981';
-    if(textEl) textEl.textContent = '🎉 Form 100% complete! All sections filled out.';
-  } else if(pct >= 60) {
+    if(textEl) textEl.textContent = '🎉 Report ' + pct + '% complete! Ready to click Submit.';
+  } else if(pct >= 50) {
     pctEl.style.color = '#3b82f6';
-    if(textEl) textEl.textContent = '👍 Great progress! Keep going to complete remaining fields.';
+    if(textEl) textEl.textContent = '👍 Great progress (' + pct + '% complete)! Fill remaining fields or upload Excel.';
   } else {
     pctEl.style.color = 'var(--blue)';
-    if(textEl) textEl.textContent = 'Fill in Section A tasks and Section B numbers to complete your report.';
+    if(textEl) textEl.textContent = 'Fill in Section A tasks, Section B numbers, or upload Excel to complete your report.';
   }
 }
 
